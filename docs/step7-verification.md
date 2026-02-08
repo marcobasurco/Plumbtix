@@ -1,432 +1,297 @@
-# PlumbTix — Step 7 Verification: Admin Screens (proroto_admin)
+# PlumbTix — Step 7 Final Verification (Section 7)
 
-## Table of Contents
-
-1. [Preconditions](#1-preconditions)
-2. [Positive Tests — /admin/companies](#2-positive-tests--admincompanies)
-3. [Positive Tests — /admin/users](#3-positive-tests--adminusers)
-4. [Positive Tests — /admin/dispatch](#4-positive-tests--admindispatch)
-5. [Negative Tests — Access Control](#5-negative-tests--access-control)
-6. [Security Confirmations](#6-security-confirmations)
+**Version:** Step 7 Final (UI Parity Pass)
+**Date:** 2026-02-08
 
 ---
 
-## 1. Preconditions
+## 1. Complete Feature Inventory
 
-### Environment Variables
+### 1.1 Database Tables (11)
+| Table | Purpose | CRUD via UI |
+|-------|---------|-------------|
+| companies | Tenant companies | ✅ List, Create, Edit, Detail |
+| users | User accounts (all roles) | ✅ List, Invite flow |
+| buildings | Property buildings | ✅ Full CRUD |
+| spaces | Units & common areas | ✅ Full CRUD |
+| occupants | Residents linked to spaces | ✅ List, Create, Delete per space |
+| building_entitlements | PM User → Building access | ✅ Assign, Remove per building |
+| invitations | PM invitation tokens | ✅ Send, List pending/accepted |
+| tickets | Work order tickets | ✅ Create, Update, List, Detail |
+| ticket_attachments | File attachments on tickets | ✅ Upload, List, Download |
+| ticket_comments | Threaded comments | ✅ Create, List (via Edge Functions) |
+| ticket_status_log | Status transition audit trail | ✅ Read-only timeline display |
 
-| Variable | Example Value | Where Set |
-|----------|---------------|-----------|
-| `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` | `.env.local` or Netlify env |
-| `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJI…` | `.env.local` or Netlify env |
-| `VITE_EDGE_BASE_URL` | `https://<ref>.supabase.co` | `.env.local` or Netlify env |
+### 1.2 Edge Functions (8)
+| Function | Auth | UI Support |
+|----------|------|------------|
+| accept-invitation | Public (token) | ✅ /accept-invite page |
+| claim-resident | Public (token) | ✅ /claim-account page |
+| create-ticket | JWT | ✅ CreateTicketWizard |
+| update-ticket | JWT | ✅ ActionPanel + DispatchBoard |
+| get-ticket-comments | JWT | ✅ CommentsThread |
+| create-comment | JWT | ✅ CommentsThread |
+| register-attachment | JWT | ✅ AttachmentsList |
+| send-invitation | JWT (admin) | ✅ UsersPage invite form |
 
-### Migrations Applied (in order)
-
-| Migration | Purpose | Locked? |
-|-----------|---------|---------|
-| `00001_section4_schema.sql` | Tables, types, indexes, constraints | ✅ Locked |
-| `00002_section5_security.sql` | RLS, triggers, helper functions | ✅ Locked |
-| `00003_section6_storage.sql` | Storage bucket + policies | ✅ Locked |
-| `00004_section7_seed.sql` | Seed data | ✅ Locked |
-| `00005_additive_transition_trigger.sql` | Status transition enforcement trigger | Do not modify |
-| `00006_revoke_ticket_comments_postgrest.sql` | REVOKE PostgREST access on ticket_comments | Do not modify |
-
-### Verification Query — All Migrations Applied
-
-```sql
--- Trigger count = 9 (Section 5's 8 + migration 00005's 1)
-SELECT COUNT(*) FROM pg_trigger
-  WHERE tgrelid IN (
-    SELECT oid FROM pg_class WHERE relnamespace = 'public'::regnamespace
-  ) AND NOT tgisinternal;
--- Expected: 9
-
--- RLS policy count = 41 (Section 5 unchanged)
-SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'public';
--- Expected: 41
-
--- ticket_comments revoked from authenticated
-SELECT has_table_privilege('authenticated', 'public.ticket_comments', 'SELECT');
--- Expected: false
-```
-
-### Required Roles (from seed or manual setup)
-
-| Role | Purpose | Test Account |
-|------|---------|--------------|
-| `proroto_admin` | Full platform admin | `admin@proroto.com` |
-| `pm_admin` | Property management admin | Any PM admin in seed data |
-| `pm_user` | Property manager (read-only buildings) | Any PM user in seed data |
-| `resident` | Tenant/homeowner | Any resident in seed data |
-
-### Required Edge Functions Deployed
-
-| Edge Function | Used By |
-|---------------|---------|
-| `send-invitation` | UsersPage → Send Invitation form |
-| `update-ticket` | DispatchBoard → Transition buttons |
-| `create-ticket` | (existing, not new in Step 7) |
-| `get-ticket-comments` | (existing, not new in Step 7) |
-| `create-comment` | (existing, not new in Step 7) |
+### 1.3 User Roles (4)
+| Role | Route | Capabilities |
+|------|-------|-------------|
+| proroto_admin | /admin | Full system access. All CRUD on all tables. Dispatch. |
+| pm_admin | /dashboard | CRUD on own-company buildings/spaces/occupants. Create tickets. Invite users. |
+| pm_user | /dashboard | Read entitled buildings. Create/manage entitled tickets. |
+| resident | /my | Read own space/building. Create tickets for own space. Public comments. |
 
 ---
 
-## 2. Positive Tests — /admin/companies
+## 2. Role-Based Capabilities Matrix
 
-### T-7.2.1 — Company List Loads
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Log in as `admin@proroto.com` | Redirected to `/admin` |
-| 2 | Click "Companies" tab in nav | Navigated to `/admin/companies` |
-| 3 | Observe company cards | Each card shows: company name, slug, building count, user count, created date |
-| 4 | Confirm all seeded companies appear | Count matches `SELECT COUNT(*) FROM companies` |
-
-### T-7.2.2 — Company Detail Page
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | On company list, click any company card | Navigated to `/admin/companies/<uuid>` |
-| 2 | Observe header | Company name, slug, created date displayed |
-| 3 | Observe "Buildings" section | Lists all buildings for this company with address and city/state |
-| 4 | Click a building row | Navigated to `/admin/buildings/<building_uuid>` |
-| 5 | Navigate back → observe "Users" section | Table shows: Name, Email, Role (badge), Joined date |
-| 6 | Click "← Back to companies" | Returns to `/admin/companies` |
-
-### T-7.2.3 — Company Detail Data Accuracy
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | On company detail for company X | Note building count |
-| 2 | Run: `SELECT COUNT(*) FROM buildings WHERE company_id = '<X>'` | Matches UI count |
-| 3 | Note user count | |
-| 4 | Run: `SELECT COUNT(*) FROM users WHERE company_id = '<X>'` | Matches UI count |
-
----
-
-## 3. Positive Tests — /admin/users
-
-### T-7.3.1 — Users List Loads
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Click "Users" tab in nav | Navigated to `/admin/users` |
-| 2 | Observe "Registered Users" table | Columns: Name, Email, Role, Company, Joined |
-| 3 | Confirm all users visible | Count matches `SELECT COUNT(*) FROM users` |
-| 4 | proroto_admin users show blue badge | Role badge has `#dbeafe` background |
-
-### T-7.3.2 — Company Filter
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Select a company from the dropdown | Users table filters to show only that company's users |
-| 2 | Pending invitations also filter to that company | Invitation list updates |
-| 3 | Select "All Companies" | Full list restored |
-
-### T-7.3.3 — Pending Invitations Display
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Below users table, find "Pending Invitations" section | Lists invitations where `accepted_at IS NULL` |
-| 2 | Each row shows: Name, Email, Role, Company, Status, Sent date | All columns populated |
-| 3 | Invitations past `expires_at` show "Expired" in red | Status column correctly differentiates |
-| 4 | Non-expired invitations show "Active" in green | |
-
-### T-7.3.4 — Send Invitation (Success)
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Click "+ Invite User" | Inline form appears |
-| 2 | Select a Company from dropdown | Required field |
-| 3 | Enter Full Name: "Test User" | Required field |
-| 4 | Enter Email: `testuser@example.com` | Required field |
-| 5 | Select Role: "Property Manager Admin" | Dropdown shows pm_admin, pm_user |
-| 6 | Click "Send Invitation" | Button shows "Sending…" |
-| 7 | On success | Green box appears with: email, token UUID, full accept URL |
-| 8 | Accept URL format | `{origin}/accept-invite?token=<uuid>` |
-| 9 | Invitations list refreshes | New invitation appears at top with status "Active" |
-| 10 | Verify in DB | `SELECT token, email FROM invitations WHERE email = 'testuser@example.com'` — token matches displayed |
-
-### T-7.3.5 — Send Invitation (Failure — Duplicate Email)
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Attempt to invite same email again | |
-| 2 | Click "Send Invitation" | Red error banner appears with Edge Function error message |
-| 3 | No duplicate invitation created | `SELECT COUNT(*) FROM invitations WHERE email = '...'` unchanged |
-
-### T-7.3.6 — Token Validity Check
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Copy the accept URL from T-7.3.4 success box | |
-| 2 | Open in incognito/new browser | Accept Invite page loads |
-| 3 | Token resolves to correct invitation | Name and company pre-displayed |
-| 4 | Verify `expires_at` is in the future | `SELECT expires_at FROM invitations WHERE token = '<token>'` > NOW() |
-
-### T-7.3.7 — Accepted Invitations Section
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | If any invitations have been accepted | Collapsed `<details>` at bottom: "Accepted invitations (N)" |
-| 2 | Expand it | Table shows: Name, Email, Company, Accepted date |
+| Capability | proroto_admin | pm_admin | pm_user | resident |
+|-----------|:---:|:---:|:---:|:---:|
+| **Companies** |
+| List companies | ✅ | own | own | — |
+| Create company | ✅ | — | — | — |
+| Edit company | ✅ | — | — | — |
+| **Buildings** |
+| List buildings | ✅ all | ✅ company | ✅ entitled | ✅ own |
+| Create building | ✅ | ✅ | — | — |
+| Edit building | ✅ | ✅ | — | — |
+| Delete building | ✅ | ✅ | — | — |
+| **Spaces** |
+| List spaces | ✅ | ✅ company | ✅ entitled | ✅ own |
+| Create/Edit/Delete | ✅ | ✅ | — | — |
+| **Occupants** |
+| List occupants | ✅ | ✅ company | ✅ entitled | own record |
+| Create occupant | ✅ | ✅ | — | — |
+| Delete occupant | ✅ | ✅ | — | — |
+| **Building Entitlements** |
+| Assign PM User | ✅ | ✅ | — | — |
+| Remove PM User | ✅ | ✅ | — | — |
+| **Users & Invitations** |
+| List users | ✅ all | — | — | — |
+| Send invitation | ✅ any co. | ✅ own co. | — | — |
+| **Tickets** |
+| Create ticket | ✅ any | ✅ company | ✅ entitled | ✅ own space |
+| View tickets | ✅ all | ✅ company | ✅ entitled | ✅ own |
+| Update status | ✅ full matrix | partial | partial | — |
+| Assign technician | ✅ | — | — | — |
+| Set schedule/quote | ✅ | — | — | — |
+| **Comments** |
+| Read comments | ✅ all | ✅ entitled | ✅ entitled | ✅ public only |
+| Create comment | ✅ + internal | ✅ public | ✅ public | ✅ public |
+| **Attachments** |
+| Upload/View | ✅ | ✅ entitled | ✅ entitled | ✅ own ticket |
+| **Dispatch Board** |
+| View/Transition | ✅ | — | — | — |
 
 ---
 
-## 4. Positive Tests — /admin/dispatch
+## 3. End-to-End Verification Steps
 
-### T-7.4.1 — Board Layout
+### Pre-requisites
+- Supabase project with all migrations (00001–00007) applied
+- Edge Functions deployed
+- Netlify build passing with correct env vars
+- At least one proroto_admin user created
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Click "Dispatch" tab in nav | Navigated to `/admin/dispatch` |
-| 2 | Observe board columns | 7 columns: New, Needs Info, Scheduled, Dispatched, On Site, In Progress, Waiting Approval |
-| 3 | Each column header shows count | Count matches tickets in that status |
-| 4 | Total ticket count in header | Matches sum of all visible column counts |
-| 5 | Board scrolls horizontally if needed | Overflow-x works |
+### Step 1: Login as Pro Roto Admin
+- [ ] Navigate to /login
+- [ ] Enter admin credentials
+- [ ] Verify redirect to /admin
+- [ ] Verify "PRO ROTO ADMIN" badge in header
+- [ ] Verify 5 tabs: Tickets, Buildings, Companies, Users, Dispatch
 
-### T-7.4.2 — Terminal Status Toggle
+### Step 2: Create a Company
+- [ ] Click Companies tab
+- [ ] Click "+ Add Company"
+- [ ] Enter: Name = "Bay Area Properties", Slug auto-generates to "bay-area-properties"
+- [ ] Click "Create Company"
+- [ ] Verify company appears in grid
+- [ ] Click into company detail
+- [ ] Verify "Edit" button visible
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Observe "Show closed (N)" checkbox | N = count of Completed + Invoiced + Cancelled tickets |
-| 2 | Check the checkbox | 3 additional columns appear: Completed, Invoiced, Cancelled |
-| 3 | Uncheck | Terminal columns hidden again |
+### Step 3: Edit a Company
+- [ ] On company detail, click "Edit"
+- [ ] Change name to "Bay Area Property Management"
+- [ ] Click "Save"
+- [ ] Verify name updates immediately
 
-### T-7.4.3 — Ticket Card Content
+### Step 4: Add a Building
+- [ ] Click Buildings tab
+- [ ] Click "+ Add Building"
+- [ ] Fill in address: 123 Main St, San Mateo, CA 94401
+- [ ] Submit form
+- [ ] Verify building appears in list
+- [ ] Click into building detail
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Observe any ticket card | Shows: `#<number>`, severity (colored), issue type label |
-| 2 | Below issue type | Building name/address, space (unit # or common area type) |
-| 3 | If technician assigned | Shows `🔧 <technician name>` |
-| 4 | If scheduled_date set | Shows `📅 <formatted date>` |
+### Step 5: Add Spaces
+- [ ] Click "+ Add Space"
+- [ ] Create Unit: Unit 101, Floor 1, 2 bed, 1 bath
+- [ ] Click "Save Space"
+- [ ] Create Common Area: Pool, Floor 0
+- [ ] Click "Save Space"
+- [ ] Verify both appear in building detail
 
-### T-7.4.4 — Navigate to Ticket Detail
+### Step 6: Add Occupants
+- [ ] Click the ▸ arrow next to Unit 101 to expand
+- [ ] Click "+ Add Occupant"
+- [ ] Enter: Name = "Jane Tenant", Email = "jane@test.com", Type = Tenant
+- [ ] Click "Add"
+- [ ] Verify occupant appears with invite token/claim URL
+- [ ] Verify claim URL format: /claim-account?token=UUID
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Click the body of any ticket card (not a transition button) | Navigated to `/admin/tickets/<uuid>` |
-| 2 | Ticket detail page loads | Full ticket info, comments, attachments, status timeline |
-| 3 | Browser back button | Returns to dispatch board |
+### Step 7: Manage Building Entitlements
+- [ ] Scroll to "PM User Access" section on building detail
+- [ ] If PM Users exist: Click "+ Assign PM User", select user, click "Assign"
+- [ ] Verify user appears in entitlement list
+- [ ] Click "Remove" to revoke access
+- [ ] If no PM Users exist: verify "No PM Users" message
 
-### T-7.4.5 — Status Transition via Dispatch Board
+### Step 8: Invite a PM User
+- [ ] Click Users tab
+- [ ] Click "+ Invite User"
+- [ ] Select company, enter name/email, role = PM Admin
+- [ ] Click "Send Invitation"
+- [ ] Verify success message with token and accept URL
+- [ ] Verify invitation appears in Pending Invitations
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Find a ticket in "New" column | Card shows transition buttons: `→ Needs Info`, `→ Scheduled`, `→ Cancelled` |
-| 2 | Click `→ Scheduled` | Card moves to "Scheduled" column (optimistic update) |
-| 3 | Count in "New" column decrements | Count in "Scheduled" column increments |
-| 4 | Verify in DB | `SELECT status FROM tickets WHERE id = '<id>'` → `'scheduled'` |
-| 5 | Verify status log | `SELECT * FROM ticket_status_log WHERE ticket_id = '<id>' ORDER BY created_at DESC LIMIT 1` → `old_status='new', new_status='scheduled'` |
+### Step 9: Create a Ticket
+- [ ] Click Tickets tab (or navigate to /admin)
+- [ ] Click "+ New Ticket" (if button exists in TicketList)
+- [ ] OR navigate to /admin/tickets/new
+- [ ] Select building, space, issue type, severity
+- [ ] Enter description
+- [ ] Submit
+- [ ] Verify ticket appears in list
 
-### T-7.4.6 — Transition Matrix Enforcement on Board
+### Step 10: Ticket Lifecycle
+- [ ] Click into ticket detail
+- [ ] Verify ActionPanel shows available transitions
+- [ ] Change status: new → scheduled (set technician name, date)
+- [ ] Verify StatusTimeline updates
+- [ ] Add a comment
+- [ ] Verify comment appears in thread
+- [ ] Upload an attachment (if storage configured)
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Find a ticket in "Scheduled" column | Buttons: `→ Dispatched`, `→ Needs Info`, `→ Cancelled` |
-| 2 | No `→ Completed` or `→ Invoiced` button visible | Transition matrix restricts options |
-| 3 | Find a "Completed" ticket (show closed) | Only button: `→ Invoiced` |
-| 4 | Find an "Invoiced" ticket | No transition buttons (terminal) |
-| 5 | Find a "Cancelled" ticket | No transition buttons (terminal) |
+### Step 11: Dispatch Board
+- [ ] Click Dispatch tab
+- [ ] Verify Kanban columns show tickets by status
+- [ ] Use "→ Status" buttons to move tickets between columns
+- [ ] Filter by company and building
+- [ ] Search by ticket number or address
 
-### T-7.4.7 — Cross-Company Visibility
+### Step 12: Accept Invitation (separate browser/incognito)
+- [ ] Open accept-invite URL from Step 8
+- [ ] Fill in name, email (must match), password
+- [ ] Submit
+- [ ] Verify redirect to /dashboard (PM role)
+- [ ] Verify can see company buildings
 
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | With no company filter, observe board | Tickets from ALL companies visible |
-| 2 | Verify with DB | `SELECT COUNT(*) FROM tickets` matches total on board |
-
-### T-7.4.8 — Filter by Company
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Select a company from the "All Companies" dropdown | Board shows only tickets for buildings owned by that company |
-| 2 | Ticket count in header updates | Reduced count |
-| 3 | Select "All Companies" | Full board restored |
-
-### T-7.4.9 — Filter by Building
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Select a building from the "All Buildings" dropdown | Only tickets for that building shown |
-| 2 | Other columns may be empty | |
-| 3 | Select "All Buildings" | Full board restored |
-
-### T-7.4.10 — Search Filter
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Type a ticket number (e.g., `#1`) in search box | Only matching tickets visible |
-| 2 | Type a technician name | Filters to tickets assigned to that technician |
-| 3 | Type a building address fragment | Filters to tickets at matching buildings |
-| 4 | Clear search | Full board restored |
-
-### T-7.4.11 — Refresh Button
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Click `↻ Refresh` | Board reloads from server |
-| 2 | If another admin changed a status in DB | Board reflects the new state |
-
----
-
-## 5. Negative Tests — Access Control
-
-### T-7.5.1 — pm_admin Cannot Access Admin Routes
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Log in as `pm_admin` | Redirected to `/dashboard` |
-| 2 | Manually navigate to `/admin/companies` | Redirected to `/dashboard` by RoleGate |
-| 3 | Manually navigate to `/admin/users` | Redirected to `/dashboard` |
-| 4 | Manually navigate to `/admin/dispatch` | Redirected to `/dashboard` |
-| 5 | Nav tabs show only: Tickets, Buildings | No Companies/Users/Dispatch tabs |
-
-### T-7.5.2 — pm_user Cannot Access Admin Routes
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Log in as `pm_user` | Redirected to `/dashboard` |
-| 2 | Manually navigate to `/admin/dispatch` | Redirected to `/dashboard` |
-| 3 | Manually navigate to `/admin/companies` | Redirected to `/dashboard` |
-
-### T-7.5.3 — Resident Cannot Access Admin Routes
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Log in as `resident` | Redirected to `/my` |
-| 2 | Manually navigate to `/admin/users` | Redirected to `/my` |
-| 3 | Manually navigate to `/admin/dispatch` | Redirected to `/my` |
-
-### T-7.5.4 — Unauthenticated Cannot Access Admin Routes
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Without logging in, navigate to `/admin/companies` | Redirected to `/login` |
-| 2 | Navigate to `/admin/dispatch` | Redirected to `/login` |
-
-### T-7.5.5 — PM Cannot See Dispatch Tab
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Log in as `pm_admin` | At `/dashboard` |
-| 2 | Inspect nav tabs | Only "Tickets" and "Buildings" present |
-| 3 | No "Dispatch", "Companies", or "Users" tab rendered | DOM inspection confirms absence |
-
-### T-7.5.6 — PostgREST Direct Access Blocked for ticket_comments
-
-```bash
-# As authenticated user (any role), attempt direct PostgREST read
-curl -s "$SUPABASE_URL/rest/v1/ticket_comments" \
-  -H "apikey: $ANON_KEY" \
-  -H "Authorization: Bearer $USER_JWT"
-# Expected: 403 or permission denied (REVOKE ALL in migration 00006)
-```
-
-### T-7.5.7 — Resident Cannot Transition Ticket Status
-
-```bash
-# Attempt direct PATCH on tickets table as resident (bypasses UI)
-curl -s -X PATCH "$SUPABASE_URL/rest/v1/tickets?id=eq.<ticket_id>" \
-  -H "apikey: $ANON_KEY" \
-  -H "Authorization: Bearer $RESIDENT_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "cancelled"}'
-# Expected: DB trigger trg_tickets_enforce_transition raises:
-#   P0001 "Status transition from \"new\" to \"cancelled\" is not permitted for role \"resident\""
-```
+### Step 13: Claim Resident Account (separate browser/incognito)
+- [ ] Open claim-account URL from Step 6
+- [ ] Enter email (jane@test.com) and password
+- [ ] Submit
+- [ ] Verify redirect to /my (resident role)
+- [ ] Verify can see own building and space
 
 ---
 
-## 6. Security Confirmations
+## 4. Pass/Fail Acceptance Criteria
 
-### S-7.1 — ticket_comments Never Accessed via PostgREST
+| # | Criteria | Expected |
+|---|---------|----------|
+| 1 | `npm run build` passes with zero errors | ✅ |
+| 2 | /admin loads without console errors | No RLS recursion errors |
+| 3 | All 5 admin tabs render content | Tickets, Buildings, Companies, Users, Dispatch |
+| 4 | Company CRUD: create, edit, list, detail | All work |
+| 5 | Building CRUD: create, edit, delete, detail | All work |
+| 6 | Space CRUD: create unit, create common area, edit, delete | All work |
+| 7 | Occupant management: add/remove per space | Works with claim token |
+| 8 | Building entitlements: assign/remove PM Users | Works |
+| 9 | Invitation flow: send → accept → login | Complete |
+| 10 | Resident claim flow: occupant → claim → login | Complete |
+| 11 | Ticket lifecycle: create → transition → complete | All statuses reachable |
+| 12 | Comments: create, read (internal for admin) | Via Edge Functions |
+| 13 | Attachments: upload, list, download | Via Storage + Edge Function |
+| 14 | Dispatch board: Kanban, transitions, filters | Works |
+| 15 | RLS: no infinite recursion errors | Fixed by migration 00007 |
+| 16 | Role isolation: PM can't see other companies | RLS enforced |
+| 17 | Resident isolation: can only see own space/tickets | RLS enforced |
 
-| Check | Evidence | Result |
-|-------|----------|--------|
-| Frontend code audit | `grep -rn 'ticket_comments' src/lib/admin.ts src/components/admin/` → no results | ✅ |
-| Migration 00006 in effect | `REVOKE ALL ON public.ticket_comments FROM anon; REVOKE ALL … FROM authenticated;` | ✅ |
-| DB verification | `SELECT has_table_privilege('authenticated', 'public.ticket_comments', 'SELECT')` → `false` | ✅ |
-| Step 7 files | No file in Step 7 reads, writes, or references ticket_comments | ✅ |
+---
 
-### S-7.2 — Status Changes Only via update-ticket Edge Function
+## 5. Backend-Only by Design (Disabled)
 
-| Check | Evidence | Result |
-|-------|----------|--------|
-| DispatchBoard.tsx | `import { updateTicket } from '@/lib/api'` — calls `PATCH /functions/v1/update-ticket` | ✅ |
-| No direct PostgREST UPDATE on tickets.status in Step 7 | `grep -rn "\.update.*status" src/components/admin/` → only via `updateTicket()` API wrapper | ✅ |
-| Edge Function validates transition | update-ticket checks `isTransitionAllowed()` from shared matrix before DB call | ✅ |
-| DB trigger as seatbelt | Migration 00005 `trg_tickets_enforce_transition` rejects invalid status UPDATEs at the database level | ✅ |
+| Capability | Reason | Status |
+|-----------|--------|--------|
+| Company DELETE | Destructive cascade (buildings→spaces→tickets). No UI delete button. Backend RLS allows it for proroto_admin but UI intentionally omits it. | **By design** — use SQL Editor for exceptional cases |
+| User profile editing | No UI to edit existing user name/phone/role. Backend UPDATE is allowed by RLS for proroto_admin. | **Deferred** — use Supabase Dashboard for now |
+| Occupant UPDATE | Backend allows update (e.g., change name/email). UI only supports add/delete. | **Minimal risk** — delete and re-add if needed |
+| Ticket DELETE | No delete policy or UI. Tickets are permanent records. | **By design** — use cancel status instead |
 
-### S-7.3 — Transition Matrix Enforced (Three Layers)
+---
 
-| Layer | File | Mechanism |
-|-------|------|-----------|
-| **Frontend** | `shared/types/transitions.ts` → `getAllowedTransitions()` | DispatchBoard renders only valid transition buttons per role and current status |
-| **Edge Function** | `supabase/functions/update-ticket/index.ts` → `isTransitionAllowed()` | Validates request body before touching DB; returns 403 on violation |
-| **Database** | `00005_additive_transition_trigger.sql` → `enforce_ticket_status_transition()` | BEFORE UPDATE trigger raises P0001 exception on invalid transitions even if Edge Function is bypassed |
+## 6. Migration Summary
 
-All three layers reference the **same transition rules**:
+| Migration | Purpose |
+|-----------|---------|
+| 00001_section4_schema.sql | Core schema (11 tables, 8 enums) |
+| 00002_section5_security.sql | RLS policies (41), helper functions, triggers |
+| 00003_section6_storage.sql | Storage bucket + policies for attachments |
+| 00004_section7_seed.sql | Seed data (Pro Roto company) |
+| 00005_additive_transition_trigger.sql | Ticket status transition enforcement trigger |
+| 00006_revoke_ticket_comments_postgrest.sql | Revoke PostgREST access to ticket_comments |
+| 00007_fix_buildings_rls_recursion.sql | Fix infinite recursion in RLS policies |
+
+---
+
+## 7. File Structure (Key Files)
 
 ```
-new              → proroto_admin: [needs_info, scheduled, cancelled]
-                 → pm_admin/pm_user: [cancelled]
-needs_info       → proroto_admin: [new, scheduled, cancelled]
-                 → pm_admin/pm_user: [new, cancelled]
-scheduled        → proroto_admin: [dispatched, needs_info, cancelled]
-dispatched       → proroto_admin: [on_site, scheduled, cancelled]
-on_site          → proroto_admin: [in_progress, cancelled]
-in_progress      → proroto_admin: [waiting_approval, completed, cancelled]
-waiting_approval → proroto_admin: [scheduled, in_progress, cancelled]
-                 → pm_admin/pm_user: [scheduled, cancelled]
-completed        → proroto_admin: [invoiced]
-invoiced         → (terminal — no transitions)
-cancelled        → (terminal — no transitions)
-resident         → (no transitions at any status)
+src/
+├── App.tsx                              # Router
+├── routes/
+│   ├── login.tsx                        # Login page
+│   ├── accept-invite.tsx               # PM invitation acceptance
+│   ├── claim-account.tsx               # Resident claim flow
+│   ├── dashboard-admin.tsx             # Admin routes
+│   ├── dashboard-pm.tsx                # PM routes
+│   └── dashboard-resident.tsx          # Resident routes
+├── components/
+│   ├── DashboardLayout.tsx             # Nav tabs + header
+│   ├── RoleGate.tsx                    # Role-based access control
+│   ├── admin/
+│   │   ├── CompanyList.tsx             # Companies grid + create form
+│   │   ├── CompanyDetail.tsx           # Company detail + edit + users/buildings
+│   │   ├── UsersPage.tsx               # Users list + invitation management
+│   │   └── DispatchBoard.tsx           # Kanban dispatch board
+│   ├── buildings/
+│   │   ├── BuildingList.tsx            # Buildings grid
+│   │   ├── BuildingDetail.tsx          # Building detail + spaces + occupants + entitlements
+│   │   ├── BuildingForm.tsx            # Create/edit building
+│   │   ├── SpaceForm.tsx               # Create/edit space
+│   │   ├── OccupantList.tsx            # Occupants per space (add/delete + claim URL)
+│   │   └── EntitlementManager.tsx      # PM User access management per building
+│   └── tickets/
+│       ├── TicketList.tsx              # Ticket grid + filters
+│       ├── TicketDetail.tsx            # Full ticket view
+│       ├── CreateTicketWizard.tsx       # Multi-step ticket creation
+│       ├── ActionPanel.tsx             # Status transitions + field updates
+│       ├── CommentsThread.tsx          # Comment read/write
+│       ├── AttachmentsList.tsx         # File upload/download
+│       ├── StatusTimeline.tsx          # Audit trail
+│       └── [badges/filters]
+├── lib/
+│   ├── admin.ts                        # Companies, users, invitations data
+│   ├── buildings.ts                    # Buildings, spaces, occupants, entitlements data
+│   ├── tickets.ts                      # Tickets, status log, attachments data
+│   ├── api.ts                          # Edge Function client
+│   ├── auth.tsx                        # Auth context + session management
+│   └── supabaseClient.ts              # Supabase client singleton
+shared/types/
+├── api.ts                              # Edge Function request/response types
+├── database.ts                         # Table row types
+├── enums.ts                            # Enum types + labels
+├── transitions.ts                      # Status transition matrix
+└── index.ts                            # Re-exports
 ```
-
-### S-7.4 — No New Edge Functions Introduced
-
-| Check | Evidence | Result |
-|-------|----------|--------|
-| Edge Functions directory | 8 functions unchanged: `accept-invitation`, `claim-resident`, `create-comment`, `create-ticket`, `get-ticket-comments`, `register-attachment`, `send-invitation`, `update-ticket` | ✅ |
-| Step 7 only calls 2 existing Edge Functions | `sendInvitation()` in UsersPage, `updateTicket()` in DispatchBoard | ✅ |
-
-### S-7.5 — No Service Role Key in Frontend
-
-| Check | Evidence | Result |
-|-------|----------|--------|
-| Code audit | `grep -rn 'service.role\|SERVICE_ROLE' src/` → no results | ✅ |
-| supabaseClient.ts | Uses only `VITE_SUPABASE_ANON_KEY` | ✅ |
-
-### S-7.6 — No Locked Migrations Modified
-
-| File | MD5 | Modified? |
-|------|-----|-----------|
-| `00001_section4_schema.sql` | `3249867a…` | ❌ |
-| `00002_section5_security.sql` | `3fd2ac98…` | ❌ |
-| `00003_section6_storage.sql` | `c1c9c2fd…` | ❌ |
-| `00004_section7_seed.sql` | `f1514eb8…` | ❌ |
-
-### S-7.7 — RoleGate Protection
-
-| Check | Evidence | Result |
-|-------|----------|--------|
-| App.tsx | `/admin/*` wrapped in `<RoleGate allowed={['proroto_admin']}>` | ✅ |
-| RoleGate behavior | Non-matching roles redirected to `roleHome()` | ✅ |
-| DashboardLayout | Admin tabs rendered only when `role === 'proroto_admin'` | ✅ |
-
----
-
-## Summary
-
-| Category | Tests | Count |
-|----------|-------|-------|
-| Companies (list + detail) | T-7.2.1 — T-7.2.3 | 3 |
-| Users & Invitations | T-7.3.1 — T-7.3.7 | 7 |
-| Dispatch Board | T-7.4.1 — T-7.4.11 | 11 |
-| Negative / Access Control | T-7.5.1 — T-7.5.7 | 7 |
-| Security Confirmations | S-7.1 — S-7.7 | 7 |
-| **Total** | | **35 verification items** |

@@ -77,6 +77,18 @@ export async function createCompany(name: string, slug: string): Promise<Company
   return { ...data, building_count: 0, user_count: 0 } as CompanyListRow;
 }
 
+export async function updateCompany(id: string, fields: { name?: string; slug?: string }): Promise<CompanyDetailRow> {
+  const { data, error } = await supabase
+    .from('companies')
+    .update(fields)
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as CompanyDetailRow;
+}
+
 export async function fetchCompanyDetail(id: string): Promise<CompanyDetailRow> {
   const { data, error } = await supabase
     .from('companies')

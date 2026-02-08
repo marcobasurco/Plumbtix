@@ -292,6 +292,141 @@ export async function deleteSpace(id: string) {
 // Error helper
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Occupant types
+// ---------------------------------------------------------------------------
+
+export interface OccupantRow {
+  id: string;
+  space_id: string;
+  user_id: string | null;
+  occupant_type: 'homeowner' | 'tenant';
+  name: string;
+  email: string;
+  phone: string | null;
+  invite_token: string | null;
+  invite_sent_at: string | null;
+  claimed_at: string | null;
+  created_at: string;
+}
+
+export interface OccupantFormData {
+  occupant_type: 'homeowner' | 'tenant';
+  name: string;
+  email: string;
+  phone: string;
+}
+
+// ---------------------------------------------------------------------------
+// Occupant CRUD
+// ---------------------------------------------------------------------------
+
+export async function fetchOccupants(spaceId: string): Promise<OccupantRow[]> {
+  const { data, error } = await supabase
+    .from('occupants')
+    .select('*')
+    .eq('space_id', spaceId)
+    .order('name');
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OccupantRow[];
+}
+
+export async function fetchBuildingOccupants(buildingId: string): Promise<OccupantRow[]> {
+  // Get all spaces for this building, then get occupants
+  const { data: spaceData } = await supabase
+    .from('spaces')
+    .select('id')
+    .eq('building_id', buildingId);
+
+  if (!spaceData || spaceData.length === 0) return [];
+
+  const spaceIds = spaceData.map((s) => s.id);
+  const { data, error } = await supabase
+    .from('occupants')
+    .select('*')
+    .in('space_id', spaceIds)
+    .order('name');
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OccupantRow[];
+}
+
+export async function createOccupant(spaceId: string, form: OccupantFormData): Promise<OccupantRow> {
+  const inviteToken = crypto.randomUUID();
+
+  const { data, error } = await supabase
+    .from('occupants')
+    .insert({
+      space_id: spaceId,
+      occupant_type: form.occupant_type,
+      name: form.name.trim(),
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim() || null,
+      invite_token: inviteToken,
+    })
+    .select()
+    .single();
+
+  if (error) throw parseRLSError(error);
+  return data as OccupantRow;
+}
+
+export async function deleteOccupant(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('occupants')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw parseRLSError(error);
+}
+
+// ---------------------------------------------------------------------------
+// Building Entitlement types & CRUD
+// ---------------------------------------------------------------------------
+
+export interface EntitlementRow {
+  id: string;
+  user_id: string;
+  building_id: string;
+  created_at: string;
+}
+
+export async function fetchEntitlements(buildingId: string): Promise<EntitlementRow[]> {
+  const { data, error } = await supabase
+    .from('building_entitlements')
+    .select('*')
+    .eq('building_id', buildingId)
+    .order('created_at');
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as EntitlementRow[];
+}
+
+export async function createEntitlement(buildingId: string, userId: string): Promise<EntitlementRow> {
+  const { data, error } = await supabase
+    .from('building_entitlements')
+    .insert({ building_id: buildingId, user_id: userId })
+    .select()
+    .single();
+
+  if (error) throw parseRLSError(error);
+  return data as EntitlementRow;
+}
+
+export async function deleteEntitlement(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('building_entitlements')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw parseRLSError(error);
+}
+
+// ---------------------------------------------------------------------------
+// Error helper
+// ---------------------------------------------------------------------------
+
 function parseRLSError(error: { message: string; code?: string }): Error {
   if (error.code === '42501' || error.message.includes('policy')) {
     return new Error("You don't have permission to perform this action.");

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   fetchBuildingDetail,
@@ -11,6 +11,8 @@ import {
 import { COMMON_AREA_LABELS } from '@shared/types/enums';
 import { useAuth } from '@/lib/auth';
 import { SpaceForm } from './SpaceForm';
+import { OccupantList } from './OccupantList';
+import { EntitlementManager } from './EntitlementManager';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 
@@ -30,6 +32,7 @@ export function BuildingDetail() {
   // Space form state
   const [showSpaceForm, setShowSpaceForm] = useState(false);
   const [editingSpace, setEditingSpace] = useState<SpaceRow | null>(null);
+  const [expandedSpace, setExpandedSpace] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!buildingId) return;
@@ -188,8 +191,13 @@ export function BuildingDetail() {
                 </thead>
                 <tbody>
                   {units.map((s) => (
-                    <tr key={s.id}>
-                      <td style={tdStyle}><strong>{s.unit_number}</strong></td>
+                    <React.Fragment key={s.id}>
+                    <tr>
+                      <td style={tdStyle}>
+                        <strong style={{ cursor: 'pointer' }} onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}>
+                          {expandedSpace === s.id ? '▾' : '▸'} {s.unit_number}
+                        </strong>
+                      </td>
                       <td style={tdStyle}>{s.floor ?? '—'}</td>
                       <td style={tdStyle}>{s.bedrooms ?? '—'}</td>
                       <td style={tdStyle}>{s.bathrooms ?? '—'}</td>
@@ -202,6 +210,12 @@ export function BuildingDetail() {
                         </td>
                       )}
                     </tr>
+                    {expandedSpace === s.id && (
+                      <tr><td colSpan={canWrite ? 5 : 4} style={{ padding: '4px 12px 12px', borderBottom: '1px solid #f3f4f6' }}>
+                        <OccupantList spaceId={s.id} spaceLabel={`Unit ${s.unit_number}`} canWrite={canWrite} />
+                      </td></tr>
+                    )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -223,11 +237,14 @@ export function BuildingDetail() {
                   </tr>
                 </thead>
                 <tbody>
-                  {commonAreas.map((s) => (
-                    <tr key={s.id}>
+                  {commonAreas.map((s) => {
+                    const areaLabel = COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type;
+                    return (
+                    <React.Fragment key={s.id}>
+                    <tr>
                       <td style={tdStyle}>
-                        <strong>
-                          {COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type}
+                        <strong style={{ cursor: 'pointer' }} onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}>
+                          {expandedSpace === s.id ? '▾' : '▸'} {areaLabel}
                         </strong>
                       </td>
                       <td style={tdStyle}>{s.floor ?? '—'}</td>
@@ -240,7 +257,14 @@ export function BuildingDetail() {
                         </td>
                       )}
                     </tr>
-                  ))}
+                    {expandedSpace === s.id && (
+                      <tr><td colSpan={canWrite ? 3 : 2} style={{ padding: '4px 12px 12px', borderBottom: '1px solid #f3f4f6' }}>
+                        <OccupantList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} canWrite={canWrite} />
+                      </td></tr>
+                    )}
+                    </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -253,6 +277,21 @@ export function BuildingDetail() {
           </div>
         )}
       </section>
+
+      {/* Building Entitlements (PM User access) */}
+      {canWrite && building.company_id && (
+        <section style={{ marginTop: '24px' }}>
+          <div style={{ marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>PM User Access</h3>
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '2px 0 0' }}>
+              Assign PM Users who can view and manage tickets for this building.
+            </p>
+          </div>
+          <div style={entitlementCard}>
+            <EntitlementManager buildingId={building.id} companyId={building.company_id} />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -303,4 +342,7 @@ const deleteBtn: React.CSSProperties = {
 const linkBtn: React.CSSProperties = {
   background: 'none', border: 'none', color: '#2563eb',
   cursor: 'pointer', fontSize: '0.8rem', padding: '2px 6px',
+};
+const entitlementCard: React.CSSProperties = {
+  padding: '12px 16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb',
 };
