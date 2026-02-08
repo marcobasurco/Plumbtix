@@ -7,6 +7,7 @@ import {
   type BuildingFormData,
 } from '@/lib/buildings';
 import { useAuth } from '@/lib/auth';
+import { fetchCompanyOptions, type CompanyOption } from '@/lib/admin';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Loading } from '@/components/Loading';
 
@@ -26,6 +27,24 @@ export function BuildingForm() {
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Company picker (proroto_admin picks any; pm_admin auto-scoped)
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(companyId ?? '');
+
+  // Load companies for proroto_admin
+  useEffect(() => {
+    if (role !== 'proroto_admin' || isEdit) return;
+    fetchCompanyOptions().then((opts) => {
+      setCompanies(opts);
+      // Pre-select the admin's own company if it exists
+      if (companyId && opts.some((c) => c.id === companyId)) {
+        setSelectedCompanyId(companyId);
+      } else if (opts.length === 1) {
+        setSelectedCompanyId(opts[0].id);
+      }
+    }).catch(() => { /* ignore — will fail at submit */ });
+  }, [role, isEdit, companyId]);
 
   // Load existing building for edit
   useEffect(() => {
@@ -67,11 +86,10 @@ export function BuildingForm() {
         await updateBuilding(buildingId!, form);
         navigate(`..`, { replace: true }); // back to building detail
       } else {
-        // For proroto_admin creating buildings for other companies,
-        // we'd need a company picker — for now use caller's company
-        const targetCompanyId = companyId;
+        // Determine target company
+        const targetCompanyId = role === 'proroto_admin' ? selectedCompanyId : companyId;
         if (!targetCompanyId) {
-          setError('No company associated with your account.');
+          setError('Please select a company for this building.');
           setSubmitting(false);
           return;
         }
@@ -105,6 +123,31 @@ export function BuildingForm() {
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       <form onSubmit={handleSubmit}>
+        {/* Company picker — proroto_admin selects, pm_admin sees own company */}
+        {!isEdit && (
+          role === 'proroto_admin' ? (
+            <div className="form-group">
+              <label htmlFor="company">Company *</label>
+              <select
+                id="company"
+                value={selectedCompanyId}
+                onChange={(e) => setSelectedCompanyId(e.target.value)}
+                required
+                style={inputStyle}
+              >
+                <option value="">Select a company…</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : companyId ? (
+            <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '12px', padding: '8px 12px', background: '#f9fafb', borderRadius: '6px' }}>
+              Creating building for your company
+            </div>
+          ) : null
+        )}
+
         <div className="form-group">
           <label htmlFor="name">Building Name (optional)</label>
           <input id="name" type="text" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="e.g. Sunset Terrace" style={inputStyle} />
@@ -171,7 +214,7 @@ export function BuildingForm() {
         </div>
 
         <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-          <button type="submit" className="btn btn-primary" disabled={submitting || !form.address_line1.trim() || !form.city.trim() || !form.state.trim() || !form.zip.trim()} style={{ flex: 1 }}>
+          <button type="submit" className="btn btn-primary" disabled={submitting || !form.address_line1.trim() || !form.city.trim() || !form.state.trim() || !form.zip.trim() || (!isEdit && role === 'proroto_admin' && !selectedCompanyId)} style={{ flex: 1 }}>
             {submitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Building'}
           </button>
           <button type="button" onClick={() => navigate(-1)} style={{ ...navBtn, flex: 0 }}>Cancel</button>

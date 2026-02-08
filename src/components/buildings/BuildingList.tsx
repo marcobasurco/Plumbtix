@@ -40,7 +40,7 @@ export function BuildingList() {
         <h2 style={{ fontSize: '1.15rem', margin: 0 }}>Buildings</h2>
         {canCreate && (
           <Link
-            to="buildings/new"
+            to="new"
             className="btn btn-primary"
             style={{ width: 'auto', padding: '8px 20px', fontSize: '0.9rem', textDecoration: 'none' }}
           >
@@ -67,7 +67,7 @@ export function BuildingList() {
           {buildings.map((b) => (
             <div
               key={b.id}
-              onClick={() => navigate(`buildings/${b.id}`)}
+              onClick={() => navigate(b.id)}
               style={cardStyle}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#2563eb'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#e5e7eb'; }}
