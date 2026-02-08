@@ -30,20 +30,36 @@ export function BuildingForm() {
 
   // Company picker (proroto_admin picks any; pm_admin auto-scoped)
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(companyId ?? '');
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [companiesLoading, setCompaniesLoading] = useState(false);
 
-  // Load companies for proroto_admin
+  // Sync selectedCompanyId when auth resolves companyId (useState only reads initial value once)
+  useEffect(() => {
+    if (companyId && !selectedCompanyId) {
+      setSelectedCompanyId(companyId);
+    }
+  }, [companyId, selectedCompanyId]);
+
+  // Load company options for proroto_admin
   useEffect(() => {
     if (role !== 'proroto_admin' || isEdit) return;
-    fetchCompanyOptions().then((opts) => {
-      setCompanies(opts);
-      // Pre-select the admin's own company if it exists
-      if (companyId && opts.some((c) => c.id === companyId)) {
-        setSelectedCompanyId(companyId);
-      } else if (opts.length === 1) {
-        setSelectedCompanyId(opts[0].id);
-      }
-    }).catch(() => { /* ignore — will fail at submit */ });
+    setCompaniesLoading(true);
+    fetchCompanyOptions()
+      .then((opts) => {
+        setCompanies(opts);
+        // Auto-select if only one company exists and nothing selected yet
+        setSelectedCompanyId((prev) => {
+          if (prev && opts.some((c) => c.id === prev)) return prev;     // already valid
+          if (companyId && opts.some((c) => c.id === companyId)) return companyId;
+          if (opts.length === 1) return opts[0].id;
+          return prev;
+        });
+      })
+      .catch((err) => {
+        console.error('[BuildingForm] Failed to load companies:', err);
+        setError('Could not load companies. Please refresh the page.');
+      })
+      .finally(() => setCompaniesLoading(false));
   }, [role, isEdit, companyId]);
 
   // Load existing building for edit
@@ -128,18 +144,22 @@ export function BuildingForm() {
           role === 'proroto_admin' ? (
             <div className="form-group">
               <label htmlFor="company">Company *</label>
-              <select
-                id="company"
-                value={selectedCompanyId}
-                onChange={(e) => setSelectedCompanyId(e.target.value)}
-                required
-                style={inputStyle}
-              >
-                <option value="">Select a company…</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              {companiesLoading ? (
+                <div style={{ fontSize: '0.85rem', color: '#6b7280', padding: '8px 0' }}>Loading companies…</div>
+              ) : (
+                <select
+                  id="company"
+                  value={selectedCompanyId}
+                  onChange={(e) => setSelectedCompanyId(e.target.value)}
+                  required
+                  style={inputStyle}
+                >
+                  <option value="">Select a company…</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           ) : companyId ? (
             <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '12px', padding: '8px 12px', background: '#f9fafb', borderRadius: '6px' }}>
@@ -214,7 +234,7 @@ export function BuildingForm() {
         </div>
 
         <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-          <button type="submit" className="btn btn-primary" disabled={submitting || !form.address_line1.trim() || !form.city.trim() || !form.state.trim() || !form.zip.trim() || (!isEdit && role === 'proroto_admin' && !selectedCompanyId)} style={{ flex: 1 }}>
+          <button type="submit" className="btn btn-primary" disabled={submitting || companiesLoading || !form.address_line1.trim() || !form.city.trim() || !form.state.trim() || !form.zip.trim() || (!isEdit && role === 'proroto_admin' && !selectedCompanyId) || (!isEdit && role === 'pm_admin' && !companyId)} style={{ flex: 1 }}>
             {submitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Building'}
           </button>
           <button type="button" onClick={() => navigate(-1)} style={{ ...navBtn, flex: 0 }}>Cancel</button>
