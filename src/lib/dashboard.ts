@@ -53,7 +53,7 @@ export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
     supabase.from('companies').select('id'),
   ]);
 
-  const tickets = (ticketsRes.data ?? []) as Array<{
+  const tickets = (ticketsRes.data ?? []) as unknown as Array<{
     id: string;
     status: TicketStatus;
     severity: TicketSeverity;
