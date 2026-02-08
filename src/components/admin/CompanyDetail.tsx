@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, useCallback, type FormEvent, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   fetchCompanyDetail,
@@ -12,7 +12,7 @@ import {
 import { ROLE_LABELS } from '@shared/types/enums';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
-import { PageTransition, FadeIn } from '@/components/PageTransition';
+import { PageTransition } from '@/components/PageTransition';
 import { useToast } from '@/components/Toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { ChevronLeft, Plus, Pencil, Loader2, Building2, Users2 } from 'lucide-react';
+import { ChevronLeft, Plus, Pencil, Loader2, Building2 } from 'lucide-react';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -231,11 +231,11 @@ export function CompanyDetail() {
               <ErrorBanner message={editError} onDismiss={() => setEditError(null)} />
               <div className="space-y-1.5">
                 <Label htmlFor="edit-name">Company Name <span className="text-destructive">*</span></Label>
-                <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus />
+                <Input id="edit-name" value={editName} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditName(e.target.value)} autoFocus />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="edit-slug">Slug <span className="text-destructive">*</span></Label>
-                <Input id="edit-slug" value={editSlug} onChange={(e) => setEditSlug(e.target.value)} />
+                <Input id="edit-slug" value={editSlug} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditSlug(e.target.value)} />
               </div>
             </div>
             <DialogFooter className="mt-2">

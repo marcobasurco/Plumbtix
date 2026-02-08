@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, useCallback, type FormEvent, type ChangeEvent } from 'react';
 import {
   fetchOccupants,
   createOccupant,
@@ -169,7 +169,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
                 <Label className="text-xs">Name <span className="text-destructive">*</span></Label>
                 <Input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
                   required
                   placeholder="Jane Smith"
                   className="h-8 text-xs"
@@ -180,7 +180,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
                 <Input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   required
                   placeholder="jane@example.com"
                   className="h-8 text-xs"
@@ -191,7 +191,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
                 <Input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
                   placeholder="(555) 123-4567"
                   className="h-8 text-xs"
                 />
@@ -200,7 +200,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
                 <Label className="text-xs">Type</Label>
                 <select
                   value={occType}
-                  onChange={(e) => setOccType(e.target.value as 'homeowner' | 'tenant')}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setOccType(e.target.value as 'homeowner' | 'tenant')}
                   className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="tenant">Tenant</option>
@@ -228,7 +228,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
       {/* Delete confirmation */}
       <AlertDialog
         open={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open: boolean) => { if (!open) setDeleteTarget(null); }}
         title="Remove Occupant"
         description={`Remove "${deleteTarget?.name}" from ${spaceLabel}? They will lose portal access.`}
         confirmLabel="Remove"

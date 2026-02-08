@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   fetchBuildingDetail,
@@ -228,7 +228,7 @@ export function BuildingForm() {
               <Input
                 id="name"
                 value={form.name}
-                onChange={(e) => update('name', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => update('name', e.target.value)}
                 placeholder="e.g. Sunset Terrace Apartments"
               />
             </FormField>
@@ -237,7 +237,7 @@ export function BuildingForm() {
               <Input
                 id="addr1"
                 value={form.address_line1}
-                onChange={(e) => update('address_line1', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => update('address_line1', e.target.value)}
                 onBlur={() => touch('address_line1')}
                 placeholder="123 Main Street"
                 className={showError('address_line1') ? 'border-destructive' : ''}
@@ -248,7 +248,7 @@ export function BuildingForm() {
               <Input
                 id="addr2"
                 value={form.address_line2}
-                onChange={(e) => update('address_line2', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => update('address_line2', e.target.value)}
                 placeholder="Suite, Floor, etc."
               />
             </FormField>
@@ -258,7 +258,7 @@ export function BuildingForm() {
                 <Input
                   id="city"
                   value={form.city}
-                  onChange={(e) => update('city', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('city', e.target.value)}
                   onBlur={() => touch('city')}
                   className={showError('city') ? 'border-destructive' : ''}
                 />
@@ -267,7 +267,7 @@ export function BuildingForm() {
                 <Input
                   id="state"
                   value={form.state}
-                  onChange={(e) => update('state', e.target.value.toUpperCase())}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('state', e.target.value.toUpperCase())}
                   onBlur={() => touch('state')}
                   maxLength={2}
                   placeholder="CA"
@@ -278,7 +278,7 @@ export function BuildingForm() {
                 <Input
                   id="zip"
                   value={form.zip}
-                  onChange={(e) => update('zip', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('zip', e.target.value)}
                   onBlur={() => touch('zip')}
                   maxLength={10}
                   placeholder="94025"
@@ -303,7 +303,7 @@ export function BuildingForm() {
               <Input
                 id="gate"
                 value={form.gate_code}
-                onChange={(e) => update('gate_code', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => update('gate_code', e.target.value)}
                 placeholder="e.g. #4321"
               />
             </FormField>
@@ -313,14 +313,14 @@ export function BuildingForm() {
                 <Input
                   id="water"
                   value={form.water_shutoff_location}
-                  onChange={(e) => update('water_shutoff_location', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('water_shutoff_location', e.target.value)}
                 />
               </FormField>
               <FormField id="gas" label="Gas Shutoff Location">
                 <Input
                   id="gas"
                   value={form.gas_shutoff_location}
-                  onChange={(e) => update('gas_shutoff_location', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('gas_shutoff_location', e.target.value)}
                 />
               </FormField>
             </div>
@@ -330,7 +330,7 @@ export function BuildingForm() {
                 <Input
                   id="contact"
                   value={form.onsite_contact_name}
-                  onChange={(e) => update('onsite_contact_name', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('onsite_contact_name', e.target.value)}
                 />
               </FormField>
               <FormField id="contactPhone" label="Onsite Contact Phone" error={showError('onsite_contact_phone')}>
@@ -338,7 +338,7 @@ export function BuildingForm() {
                   id="contactPhone"
                   type="tel"
                   value={form.onsite_contact_phone}
-                  onChange={(e) => update('onsite_contact_phone', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('onsite_contact_phone', e.target.value)}
                   onBlur={() => touch('onsite_contact_phone')}
                   placeholder="(555) 123-4567"
                   className={showError('onsite_contact_phone') ? 'border-destructive' : ''}
@@ -351,7 +351,7 @@ export function BuildingForm() {
                 id="notes"
                 rows={3}
                 value={form.access_notes}
-                onChange={(e) => update('access_notes', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => update('access_notes', e.target.value)}
                 placeholder="Parking, entry instructions, key box location, etc."
               />
             </FormField>

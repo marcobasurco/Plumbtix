@@ -13,17 +13,15 @@ import { useAuth } from '@/lib/auth';
 import { SpaceForm } from './SpaceForm';
 import { OccupantList } from './OccupantList';
 import { EntitlementManager } from './EntitlementManager';
-import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition, FadeIn } from '@/components/PageTransition';
 import { useToast } from '@/components/Toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Pencil, Trash2, Plus, ChevronRight, ChevronLeft, Loader2,
+  Pencil, Trash2, Plus, ChevronRight, ChevronLeft,
   Home, KeyRound, Droplets, Flame, User, FileText,
 } from 'lucide-react';
 
@@ -420,7 +418,7 @@ export function BuildingDetail() {
       {/* Delete space dialog */}
       <AlertDialog
         open={!!deleteSpaceTarget}
-        onOpenChange={(open) => { if (!open) setDeleteSpaceTarget(null); }}
+        onOpenChange={(open: boolean) => { if (!open) setDeleteSpaceTarget(null); }}
         title="Delete Space"
         description={`Are you sure you want to delete "${deleteSpaceTarget ? spaceLabel(deleteSpaceTarget) : ''}"?`}
         confirmLabel="Delete Space"

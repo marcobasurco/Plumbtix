@@ -17,7 +17,18 @@
 - Loading skeletons instead of spinner-only loading states
 
 ### 📦 New Files
-- `src/components/ui/select.tsx` — shadcn Select component (Radix UI)
+- `src/lib/utils.ts` — `cn()` helper (clsx + tailwind-merge)
+- `src/components/ui/button.tsx` — shadcn Button with variants
+- `src/components/ui/card.tsx` — shadcn Card, CardHeader, CardContent, etc.
+- `src/components/ui/input.tsx` — shadcn Input
+- `src/components/ui/label.tsx` — shadcn Label (Radix UI)
+- `src/components/ui/textarea.tsx` — shadcn Textarea
+- `src/components/ui/badge.tsx` — shadcn Badge with custom variants (info, success, urgent, warning)
+- `src/components/ui/skeleton.tsx` — shadcn Skeleton
+- `src/components/ui/dialog.tsx` — shadcn Dialog (Radix UI)
+- `src/components/ui/alert-dialog.tsx` — Custom AlertDialog wrapper (Radix UI)
+- `src/components/ui/tooltip.tsx` — shadcn Tooltip (Radix UI)
+- `src/components/ui/select.tsx` — shadcn Select (Radix UI)
 - `src/components/PageTransition.tsx` — Framer Motion animation wrappers
 - `src/hooks/useFormValidation.ts` — Reusable form validation hook
 
@@ -42,7 +53,8 @@ Copy all files from this package into your project, overwriting existing files:
 ```bash
 # From your project root:
 cp plumbtix-v3/package.json ./package.json
-cp plumbtix-v3/src/components/ui/select.tsx ./src/components/ui/select.tsx
+cp plumbtix-v3/src/lib/utils.ts ./src/lib/utils.ts
+cp plumbtix-v3/src/components/ui/*.tsx ./src/components/ui/
 cp plumbtix-v3/src/components/PageTransition.tsx ./src/components/PageTransition.tsx
 cp plumbtix-v3/src/hooks/useFormValidation.ts ./src/hooks/useFormValidation.ts
 cp plumbtix-v3/src/components/buildings/* ./src/components/buildings/
@@ -61,7 +73,7 @@ npm install
 This will install the new dependencies added to package.json:
 - `tailwindcss`, `postcss`, `autoprefixer` (dev)
 - `tailwindcss-animate` (dev)
-- `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-label`
+- `@radix-ui/react-alert-dialog`, `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-label`
 - `@radix-ui/react-select`, `@radix-ui/react-separator`, `@radix-ui/react-slot`
 - `@radix-ui/react-switch`, `@radix-ui/react-tabs`, `@radix-ui/react-tooltip`
 - `class-variance-authority`, `clsx`, `tailwind-merge`

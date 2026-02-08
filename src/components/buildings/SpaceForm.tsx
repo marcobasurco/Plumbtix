@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { COMMON_AREA_TYPES, COMMON_AREA_LABELS } from '@shared/types/enums';
 import {
   createSpace,
@@ -141,7 +141,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
                 <Input
                   id="unitNum"
                   value={form.unit_number}
-                  onChange={(e) => update('unit_number', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('unit_number', e.target.value)}
                   placeholder="e.g. 101, A2, PH-1"
                   className={duplicateWarning ? 'border-destructive' : ''}
                 />
@@ -159,7 +159,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
                     type="number"
                     min="0"
                     value={form.bedrooms}
-                    onChange={(e) => update('bedrooms', e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => update('bedrooms', e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -170,7 +170,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
                     min="0"
                     step="0.5"
                     value={form.bathrooms}
-                    onChange={(e) => update('bathrooms', e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => update('bathrooms', e.target.value)}
                   />
                 </div>
               </div>
@@ -184,7 +184,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
                 id="caType"
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={form.common_area_type}
-                onChange={(e) => update('common_area_type', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => update('common_area_type', e.target.value)}
               >
                 <option value="">Select type…</option>
                 {COMMON_AREA_TYPES.map((t) => (
@@ -200,7 +200,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
               id="floor"
               type="number"
               value={form.floor}
-              onChange={(e) => update('floor', e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => update('floor', e.target.value)}
               placeholder="e.g. 1, 2, -1"
             />
           </div>

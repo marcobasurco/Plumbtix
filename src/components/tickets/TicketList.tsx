@@ -5,7 +5,6 @@ import { ISSUE_TYPE_LABELS } from '@shared/types/enums';
 import { StatusBadge } from './StatusBadge';
 import { SeverityBadge } from './SeverityBadge';
 import { TicketFilters } from './TicketFilters';
-import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';

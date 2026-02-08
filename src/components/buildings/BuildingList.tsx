@@ -1,9 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchBuildingList, type BuildingListRow } from '@/lib/buildings';
 import { fetchCompanyOptions, type CompanyOption } from '@/lib/admin';
 import { useAuth } from '@/lib/auth';
-import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition, StaggerChildren, StaggerItem } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
@@ -41,7 +40,7 @@ function BuildingCardSkeleton() {
 
 export function BuildingList() {
   const navigate = useNavigate();
-  const { role, companyId } = useAuth();
+  const { role } = useAuth();
 
   // Both proroto_admin and pm_admin can create buildings
   const canCreate = role === 'proroto_admin' || role === 'pm_admin';
@@ -134,7 +133,7 @@ export function BuildingList() {
             type="text"
             placeholder="Search by address, city, ZIP…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>

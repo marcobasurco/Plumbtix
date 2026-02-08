@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, useCallback, type FormEvent, type ChangeEvent } from 'react';
 import {
   fetchEntitlements,
   createEntitlement,
@@ -9,8 +9,7 @@ import { fetchUserList, type UserListRow } from '@/lib/admin';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Plus, X, Loader2, UserPlus, Shield } from 'lucide-react';
+import { X, Loader2, UserPlus, Shield } from 'lucide-react';
 
 interface EntitlementManagerProps {
   buildingId: string;
@@ -145,7 +144,7 @@ export function EntitlementManager({ buildingId, companyId }: EntitlementManager
               <label className="block text-xs font-semibold mb-1">PM User</label>
               <select
                 value={selectedUser}
-                onChange={(e) => setSelectedUser(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedUser(e.target.value)}
                 required
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
@@ -174,7 +173,7 @@ export function EntitlementManager({ buildingId, companyId }: EntitlementManager
 
       <AlertDialog
         open={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open: boolean) => { if (!open) setDeleteTarget(null); }}
         title="Remove Access"
         description={`Remove access for "${userMap.get(deleteTarget?.user_id ?? '')?.full_name ?? 'this user'}"? They will no longer see tickets for this building.`}
         confirmLabel="Remove"

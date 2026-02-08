@@ -1,7 +1,6 @@
-import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, useCallback, type FormEvent, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCompanyList, createCompany, type CompanyListRow } from '@/lib/admin';
-import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition, StaggerChildren, StaggerItem } from '@/components/PageTransition';
 import { useToast } from '@/components/Toast';
@@ -143,7 +142,7 @@ export function CompanyList() {
       )}
 
       {/* Create Company Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setDialogOpen(open); }}>
+      <Dialog open={dialogOpen} onOpenChange={(open: boolean) => { if (!open) resetForm(); setDialogOpen(open); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New Company</DialogTitle>
@@ -159,7 +158,7 @@ export function CompanyList() {
                 <Input
                   id="co-name"
                   value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
                   placeholder="Acme Property Management"
                   autoFocus
                 />
@@ -169,7 +168,7 @@ export function CompanyList() {
                 <Input
                   id="co-slug"
                   value={slug}
-                  onChange={(e) => { setSlugTouched(true); setSlug(e.target.value); }}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => { setSlugTouched(true); setSlug(e.target.value); }}
                   placeholder="acme-property"
                 />
                 <p className="text-xs text-muted-foreground">Lowercase, numbers, hyphens. Auto-generated from name.</p>
