@@ -29,7 +29,7 @@ function formatDate(iso: string): string {
 }
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const ROLE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'emergency' | 'urgent' | 'standard' | 'success' | 'info'> = {
+const ROLE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive' | 'urgent' | 'warning' | 'success' | 'info'> = {
   proroto_admin: 'info',
   pm_admin: 'urgent',
   pm_user: 'urgent',
