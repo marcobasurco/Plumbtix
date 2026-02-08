@@ -21,6 +21,8 @@ export function AdminDashboard() {
         <Route path="tickets/new" element={<CreateTicketWizard />} />
         <Route path="tickets/:ticketId" element={<TicketDetail />} />
         <Route path="buildings" element={<BuildingList />} />
+        {/* proroto_admin can create buildings directly (will be asked to pick company) */}
+        <Route path="buildings/new" element={<BuildingForm />} />
         <Route path="buildings/:buildingId" element={<BuildingDetail />} />
         <Route path="buildings/:buildingId/edit" element={<BuildingForm />} />
         <Route path="companies" element={<CompanyList />} />

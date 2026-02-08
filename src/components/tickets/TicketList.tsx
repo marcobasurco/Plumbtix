@@ -7,6 +7,9 @@ import { SeverityBadge } from './SeverityBadge';
 import { TicketFilters } from './TicketFilters';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { PageTransition } from '@/components/PageTransition';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Ticket } from 'lucide-react';
 
 function formatDate(iso: string): string {
@@ -17,6 +20,22 @@ function spaceLabel(space: TicketListRow['space']): string {
   if (space.space_type === 'unit' && space.unit_number) return `Unit ${space.unit_number}`;
   if (space.common_area_type) return space.common_area_type.replace(/_/g, ' ');
   return space.space_type;
+}
+
+function TableSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex gap-4 items-center p-3">
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-24 ml-auto" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function TicketList() {
@@ -36,16 +55,17 @@ export function TicketList() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="animate-in">
-      <div className="page-title-bar">
+    <PageTransition>
+      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h2 className="page-title">Tickets</h2>
-          <p className="page-subtitle">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</p>
+          <h2 className="text-xl font-bold tracking-tight">Tickets</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <Link to="new" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-          <Plus size={16} />
-          New Ticket
-        </Link>
+        <Button asChild>
+          <Link to="new"><Plus className="h-4 w-4" /> New Ticket</Link>
+        </Button>
       </div>
 
       <TicketFilters filters={filters} onChange={setFilters} />
@@ -53,48 +73,60 @@ export function TicketList() {
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       {loading ? (
-        <Loading message="Loading tickets…" />
+        <TableSkeleton />
       ) : tickets.length === 0 ? (
-        <div className="empty-state">
-          <Ticket size={48} className="empty-state-icon" />
-          <div className="empty-state-title">No tickets found</div>
-          <div className="empty-state-text">
+        <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+          <Ticket className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <div className="text-base font-semibold mb-1">No tickets found</div>
+          <div className="text-sm text-muted-foreground max-w-sm">
             {Object.keys(filters).length > 0 ? 'Try adjusting your filters.' : 'Tickets will appear here once created.'}
           </div>
         </div>
       ) : (
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
               <tr>
-                <th>#</th><th>Status</th><th>Severity</th><th>Issue</th>
-                <th>Building</th><th>Space</th><th>Created By</th><th>Created</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Severity</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Issue</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Building</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Space</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Created By</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Created</th>
               </tr>
             </thead>
             <tbody>
               {tickets.map((t) => (
-                <tr key={t.id} onClick={() => navigate(t.id)} style={{ cursor: 'pointer' }}>
-                  <td><strong className="text-mono">{t.ticket_number}</strong></td>
-                  <td><StatusBadge status={t.status} /></td>
-                  <td><SeverityBadge severity={t.severity} /></td>
-                  <td style={{ maxWidth: 200 }}>
-                    <div style={{ fontWeight: 500 }}>
+                <tr
+                  key={t.id}
+                  onClick={() => navigate(t.id)}
+                  className="cursor-pointer transition-colors hover:bg-muted/50"
+                >
+                  <td className="px-4 py-3 border-t border-border">
+                    <strong className="font-mono">{t.ticket_number}</strong>
+                  </td>
+                  <td className="px-4 py-3 border-t border-border"><StatusBadge status={t.status} /></td>
+                  <td className="px-4 py-3 border-t border-border"><SeverityBadge severity={t.severity} /></td>
+                  <td className="px-4 py-3 border-t border-border max-w-[200px]">
+                    <div className="font-medium">
                       {ISSUE_TYPE_LABELS[t.issue_type as keyof typeof ISSUE_TYPE_LABELS] ?? t.issue_type}
                     </div>
                     {t.description && (
-                      <div className="truncate text-muted text-xs" style={{ maxWidth: 180 }}>{t.description}</div>
+                      <div className="truncate text-muted-foreground text-xs max-w-[180px]">{t.description}</div>
                     )}
                   </td>
-                  <td>{t.building.name || t.building.address_line1}</td>
-                  <td>{spaceLabel(t.space)}</td>
-                  <td>{t.created_by?.full_name ?? 'Unknown'}</td>
-                  <td className="text-muted">{formatDate(t.created_at)}</td>
+                  <td className="px-4 py-3 border-t border-border">{t.building.name || t.building.address_line1}</td>
+                  <td className="px-4 py-3 border-t border-border">{spaceLabel(t.space)}</td>
+                  <td className="px-4 py-3 border-t border-border">{t.created_by?.full_name ?? 'Unknown'}</td>
+                  <td className="px-4 py-3 border-t border-border text-muted-foreground">{formatDate(t.created_at)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
+    </PageTransition>
   );
 }

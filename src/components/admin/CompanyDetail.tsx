@@ -12,19 +12,29 @@ import {
 import { ROLE_LABELS } from '@shared/types/enums';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
-import { ChevronLeft, Plus, Pencil } from 'lucide-react';
+import { PageTransition, FadeIn } from '@/components/PageTransition';
 import { useToast } from '@/components/Toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import { ChevronLeft, Plus, Pencil, Loader2, Building2, Users2 } from 'lucide-react';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-const ROLE_BADGE: Record<string, string> = {
-  proroto_admin: 'badge-blue', pm_admin: 'badge-amber', pm_user: 'badge-amber', resident: 'badge-green',
+const ROLE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'emergency' | 'urgent' | 'standard' | 'success' | 'info'> = {
+  proroto_admin: 'info',
+  pm_admin: 'urgent',
+  pm_user: 'urgent',
+  resident: 'success',
 };
-
-// Icons from lucide-react
 
 export function CompanyDetail() {
   const { companyId } = useParams<{ companyId: string }>();
@@ -37,7 +47,8 @@ export function CompanyDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [editing, setEditing] = useState(false);
+  // Edit dialog
+  const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editSlug, setEditSlug] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
@@ -60,9 +71,9 @@ export function CompanyDetail() {
 
   useEffect(() => { load(); }, [load]);
 
-  const startEdit = () => {
+  const openEdit = () => {
     if (!company) return;
-    setEditName(company.name); setEditSlug(company.slug); setEditError(null); setEditing(true);
+    setEditName(company.name); setEditSlug(company.slug); setEditError(null); setEditOpen(true);
   };
 
   const handleSave = async (e: FormEvent) => {
@@ -71,11 +82,14 @@ export function CompanyDetail() {
     setEditError(null);
     const trimName = editName.trim(), trimSlug = editSlug.trim();
     if (!trimName) { setEditError('Name is required'); return; }
-    if (!trimSlug || !SLUG_REGEX.test(trimSlug)) { setEditError('Slug must be lowercase letters, numbers, and hyphens'); return; }
+    if (!trimSlug || !SLUG_REGEX.test(trimSlug)) {
+      setEditError('Slug must be lowercase letters, numbers, and hyphens');
+      return;
+    }
     setSaving(true);
     try {
       const updated = await updateCompany(company.id, { name: trimName, slug: trimSlug });
-      setCompany(updated); setEditing(false);
+      setCompany(updated); setEditOpen(false);
       toast('Company updated');
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save');
@@ -87,91 +101,81 @@ export function CompanyDetail() {
   if (!company) return <ErrorBanner message="Company not found" />;
 
   return (
-    <div className="animate-in">
+    <PageTransition>
       <button type="button" className="back-link" onClick={() => navigate('..')}>
-        <ChevronLeft size={14} />
-        Companies
+        <ChevronLeft className="h-3.5 w-3.5" /> Companies
       </button>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+      <div className="flex justify-between items-start flex-wrap gap-3 mb-6">
         <div>
-          <h2 className="page-title">{company.name}</h2>
-          <p className="page-subtitle">
-            <span className="tag text-mono">{company.slug}</span>
-            <span style={{ margin: '0 8px', color: 'var(--slate-300)' }}>·</span>
+          <h2 className="text-xl font-bold tracking-tight">{company.name}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground font-mono">
+              {company.slug}
+            </span>
+            <span className="text-border">·</span>
             Created {formatDate(company.created_at)}
           </p>
         </div>
-        {!editing && (
-          <button onClick={startEdit} className="btn btn-secondary btn-sm"><Pencil size={14} /> Edit</button>
-        )}
+        <Button variant="outline" size="sm" onClick={openEdit}>
+          <Pencil className="h-3.5 w-3.5" /> Edit
+        </Button>
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
-      {editing && (
-        <div className="form-card animate-in" style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 16 }}>Edit Company</div>
-          <ErrorBanner message={editError} onDismiss={() => setEditError(null)} />
-          <form onSubmit={handleSave}>
-            <div className="form-row form-row-2">
-              <div className="form-group">
-                <label className="form-label">Company Name *</label>
-                <input type="text" className="form-input" value={editName} onChange={(e) => setEditName(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Slug *</label>
-                <input type="text" className="form-input" value={editSlug} onChange={(e) => setEditSlug(e.target.value)} required />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="submit" disabled={saving} className="btn btn-primary btn-sm">{saving ? 'Saving…' : 'Save'}</button>
-              <button type="button" onClick={() => setEditing(false)} className="btn btn-secondary btn-sm">Cancel</button>
-            </div>
-          </form>
-        </div>
-      )}
-
       {/* Stats */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">Buildings</div>
-          <div className="stat-value">{buildings.length}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Users</div>
-          <div className="stat-value">{users.length}</div>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        <Card>
+          <CardContent className="px-4 py-3">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Buildings</div>
+            <div className="text-2xl font-bold mt-1 tabular-nums">{buildings.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="px-4 py-3">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Users</div>
+            <div className="text-2xl font-bold mt-1 tabular-nums">{users.length}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Buildings */}
-      <div className="section">
-        <div className="section-header">
-          <div>
-            <div className="section-title">Buildings ({buildings.length})</div>
-          </div>
-          <button onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)} className="btn btn-primary btn-sm">
-            <Plus size={14} /> Add Building
-          </button>
+      <div className="mt-8">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="text-base font-semibold">Buildings ({buildings.length})</div>
+          <Button size="sm" onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)}>
+            <Plus className="h-3.5 w-3.5" /> Add Building
+          </Button>
         </div>
         {buildings.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-title">No buildings</div>
-            <div className="empty-state-text">Add your first building to this company.</div>
-            <button onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)} className="btn btn-primary btn-sm mt-4">
-              <Plus size={14} /> Add Building
-            </button>
+          <div className="flex flex-col items-center justify-center text-center py-12 px-4">
+            <Building2 className="h-10 w-10 text-muted-foreground/30 mb-3" />
+            <div className="text-sm font-semibold mb-1">No buildings</div>
+            <div className="text-xs text-muted-foreground">Add your first building to this company.</div>
+            <Button size="sm" className="mt-3" onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)}>
+              <Plus className="h-3.5 w-3.5" /> Add Building
+            </Button>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Building</th><th>Location</th></tr></thead>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Building</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</th>
+                </tr>
+              </thead>
               <tbody>
                 {buildings.map((b) => (
-                  <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/buildings/${b.id}`)}>
-                    <td style={{ fontWeight: 600 }}>{b.name || b.address_line1}</td>
-                    <td className="text-muted">{b.city}, {b.state}</td>
+                  <tr
+                    key={b.id}
+                    className="cursor-pointer transition-colors hover:bg-muted/50"
+                    onClick={() => navigate(`/admin/buildings/${b.id}`)}
+                  >
+                    <td className="px-4 py-3 border-t border-border font-semibold">{b.name || b.address_line1}</td>
+                    <td className="px-4 py-3 border-t border-border text-muted-foreground">{b.city}, {b.state}</td>
                   </tr>
                 ))}
               </tbody>
@@ -181,23 +185,32 @@ export function CompanyDetail() {
       </div>
 
       {/* Users */}
-      <div className="section">
-        <div className="section-header">
-          <div className="section-title">Users ({users.length})</div>
-        </div>
+      <div className="mt-8">
+        <div className="text-base font-semibold mb-4">Users ({users.length})</div>
         {users.length === 0 ? (
-          <p className="text-muted text-sm">No users.</p>
+          <p className="text-sm text-muted-foreground">No users.</p>
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Joined</th>
+                </tr>
+              </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id}>
-                    <td style={{ fontWeight: 600 }}>{u.full_name}</td>
-                    <td className="text-muted">{u.email}</td>
-                    <td><span className={`badge ${ROLE_BADGE[u.role] ?? 'badge-slate'}`}>{ROLE_LABELS[u.role]}</span></td>
-                    <td className="text-muted">{formatDate(u.created_at)}</td>
+                  <tr key={u.id} className="transition-colors hover:bg-muted/50">
+                    <td className="px-4 py-3 border-t border-border font-semibold">{u.full_name}</td>
+                    <td className="px-4 py-3 border-t border-border text-muted-foreground">{u.email}</td>
+                    <td className="px-4 py-3 border-t border-border">
+                      <Badge variant={ROLE_BADGE_VARIANT[u.role] ?? 'secondary'}>
+                        {ROLE_LABELS[u.role]}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 border-t border-border text-muted-foreground">{formatDate(u.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -205,6 +218,35 @@ export function CompanyDetail() {
           </div>
         )}
       </div>
-    </div>
+
+      {/* Edit Company Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Company</DialogTitle>
+            <DialogDescription>Update the company name and URL slug.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSave}>
+            <div className="space-y-4 py-2">
+              <ErrorBanner message={editError} onDismiss={() => setEditError(null)} />
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-name">Company Name <span className="text-destructive">*</span></Label>
+                <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-slug">Slug <span className="text-destructive">*</span></Label>
+                <Input id="edit-slug" value={editSlug} onChange={(e) => setEditSlug(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter className="mt-2">
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </PageTransition>
   );
 }

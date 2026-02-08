@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   fetchBuildingDetail,
   createBuilding,
@@ -9,7 +9,13 @@ import {
 import { useAuth } from '@/lib/auth';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Loading } from '@/components/Loading';
-import { ChevronLeft, Plus, MapPin, Lock } from 'lucide-react';
+import { PageTransition } from '@/components/PageTransition';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronLeft, Plus, MapPin, Lock, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
 const EMPTY_FORM: BuildingFormData = {
@@ -18,20 +24,89 @@ const EMPTY_FORM: BuildingFormData = {
   onsite_contact_name: '', onsite_contact_phone: '', access_notes: '',
 };
 
+// ---------------------------------------------------------------------------
+// Validation matching DB constraints
+// ---------------------------------------------------------------------------
+
+interface FieldError {
+  address_line1?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  onsite_contact_phone?: string;
+}
+
+function validateForm(form: BuildingFormData): FieldError {
+  const errors: FieldError = {};
+
+  if (!form.address_line1.trim()) errors.address_line1 = 'Address is required';
+  if (!form.city.trim()) errors.city = 'City is required';
+
+  if (!form.state.trim()) {
+    errors.state = 'State is required';
+  } else if (!/^[A-Za-z]{2}$/.test(form.state.trim())) {
+    errors.state = 'Must be 2 letters (e.g. CA)';
+  }
+
+  if (!form.zip.trim()) {
+    errors.zip = 'ZIP is required';
+  } else if (!/^\d{5}(-\d{4})?$/.test(form.zip.trim())) {
+    errors.zip = 'Must be 5 digits (or 12345-6789)';
+  }
+
+  if (form.onsite_contact_phone.trim()) {
+    const cleaned = form.onsite_contact_phone.replace(/[\s\-().+]/g, '');
+    if (!/^\d{7,15}$/.test(cleaned)) {
+      errors.onsite_contact_phone = 'Invalid phone format';
+    }
+  }
+
+  return errors;
+}
+
+// ---------------------------------------------------------------------------
+// Field component with error display
+// ---------------------------------------------------------------------------
+
+function FormField({
+  id, label, required, error, hint, children,
+}: {
+  id: string; label: string; required?: boolean; error?: string; hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-sm font-medium">
+        {label}
+        {required && <span className="text-destructive ml-0.5">*</span>}
+      </Label>
+      {children}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// BuildingForm component
+// ---------------------------------------------------------------------------
+
 export function BuildingForm() {
   const { buildingId, companyId: routeCompanyId } = useParams<{
     buildingId: string;
     companyId: string;
   }>();
+  const [searchParams] = useSearchParams();
   const isEdit = !!buildingId;
   const navigate = useNavigate();
   const { companyId: authCompanyId, role } = useAuth();
   const { toast } = useToast();
 
-  // Company ID: route param (from /companies/:companyId/buildings/new) > auth context
-  const targetCompanyId = routeCompanyId || authCompanyId;
+  // Company ID: route param > query param (?companyId=) > auth context
+  const targetCompanyId = routeCompanyId || searchParams.get('companyId') || authCompanyId;
 
   const [form, setForm] = useState<BuildingFormData>(EMPTY_FORM);
+  const [touched, setTouched] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,11 +136,24 @@ export function BuildingForm() {
     return () => { cancelled = true; };
   }, [buildingId]);
 
-  const update = (field: keyof BuildingFormData, value: string) =>
+  const update = (field: keyof BuildingFormData, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
+  };
+
+  const touch = (field: string) => {
+    setTouched((prev) => new Set(prev).add(field));
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    // Mark all fields as touched to show errors
+    const allFields: (keyof FieldError)[] = ['address_line1', 'city', 'state', 'zip', 'onsite_contact_phone'];
+    setTouched(new Set(allFields));
+
+    const errors = validateForm(form);
+    if (Object.keys(errors).length > 0) return;
+
     setSubmitting(true);
     setError(null);
 
@@ -100,150 +188,203 @@ export function BuildingForm() {
 
   if (!isEdit && !targetCompanyId) {
     return (
-      <div className="animate-in">
+      <PageTransition>
         <button type="button" className="back-link" onClick={() => navigate(-1)}>
-          <ChevronLeft size={14} />
-          Back
+          <ChevronLeft className="h-3.5 w-3.5" /> Back
         </button>
         <ErrorBanner message="No company context. Go to Companies → select a company → Add Building." />
-      </div>
+      </PageTransition>
     );
   }
 
-  // Simple validation — required fields have content
-  const formValid = !!form.address_line1.trim() && !!form.city.trim()
-    && !!form.state.trim() && !!form.zip.trim();
+  const errors = validateForm(form);
+  const formValid = Object.keys(errors).length === 0;
+  const showError = (field: keyof FieldError) =>
+    touched.has(field) ? errors[field] : undefined;
 
   return (
-    <div className="animate-in" style={{ maxWidth: 640 }}>
+    <PageTransition className="max-w-2xl">
       <button type="button" className="back-link" onClick={() => navigate(-1)}>
-        <ChevronLeft size={14} />
-        Back
+        <ChevronLeft className="h-3.5 w-3.5" /> Back
       </button>
 
-      <h2 className="page-title" style={{ marginBottom: 20 }}>
+      <h2 className="text-xl font-bold tracking-tight mb-5">
         {isEdit ? 'Edit Building' : 'New Building'}
       </h2>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* Address section */}
-        <div className="form-card">
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <MapPin size={16} />
-            Address
-          </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Address
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField id="name" label="Building Name" hint="Optional — e.g. Sunset Terrace Apartments">
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) => update('name', e.target.value)}
+                placeholder="e.g. Sunset Terrace Apartments"
+              />
+            </FormField>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="name">Building Name <span className="text-muted">(optional)</span></label>
-            <input id="name" type="text" className="form-input" value={form.name}
-              onChange={(e) => update('name', e.target.value)}
-              placeholder="e.g. Sunset Terrace Apartments" />
-          </div>
+            <FormField id="addr1" label="Address Line 1" required error={showError('address_line1')}>
+              <Input
+                id="addr1"
+                value={form.address_line1}
+                onChange={(e) => update('address_line1', e.target.value)}
+                onBlur={() => touch('address_line1')}
+                placeholder="123 Main Street"
+                className={showError('address_line1') ? 'border-destructive' : ''}
+              />
+            </FormField>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="addr1">Address Line 1 *</label>
-            <input id="addr1" type="text" className="form-input" value={form.address_line1}
-              onChange={(e) => update('address_line1', e.target.value)} required
-              placeholder="123 Main Street" />
-          </div>
+            <FormField id="addr2" label="Address Line 2">
+              <Input
+                id="addr2"
+                value={form.address_line2}
+                onChange={(e) => update('address_line2', e.target.value)}
+                placeholder="Suite, Floor, etc."
+              />
+            </FormField>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="addr2">Address Line 2</label>
-            <input id="addr2" type="text" className="form-input" value={form.address_line2}
-              onChange={(e) => update('address_line2', e.target.value)}
-              placeholder="Suite, Floor, etc." />
-          </div>
-
-          <div className="form-row form-row-3">
-            <div className="form-group">
-              <label className="form-label" htmlFor="city">City *</label>
-              <input id="city" type="text" className="form-input" value={form.city}
-                onChange={(e) => update('city', e.target.value)} required />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField id="city" label="City" required error={showError('city')}>
+                <Input
+                  id="city"
+                  value={form.city}
+                  onChange={(e) => update('city', e.target.value)}
+                  onBlur={() => touch('city')}
+                  className={showError('city') ? 'border-destructive' : ''}
+                />
+              </FormField>
+              <FormField id="state" label="State" required error={showError('state')}>
+                <Input
+                  id="state"
+                  value={form.state}
+                  onChange={(e) => update('state', e.target.value.toUpperCase())}
+                  onBlur={() => touch('state')}
+                  maxLength={2}
+                  placeholder="CA"
+                  className={`uppercase ${showError('state') ? 'border-destructive' : ''}`}
+                />
+              </FormField>
+              <FormField id="zip" label="ZIP" required error={showError('zip')}>
+                <Input
+                  id="zip"
+                  value={form.zip}
+                  onChange={(e) => update('zip', e.target.value)}
+                  onBlur={() => touch('zip')}
+                  maxLength={10}
+                  placeholder="94025"
+                  className={showError('zip') ? 'border-destructive' : ''}
+                />
+              </FormField>
             </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="state">State *</label>
-              <input id="state" type="text" className="form-input" value={form.state}
-                onChange={(e) => update('state', e.target.value)} required maxLength={2}
-                placeholder="CA" style={{ textTransform: 'uppercase' }} />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="zip">ZIP *</label>
-              <input id="zip" type="text" className="form-input" value={form.zip}
-                onChange={(e) => update('zip', e.target.value)} required maxLength={10}
-                placeholder="94025" />
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Site access section */}
-        <div className="form-card">
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Lock size={16} />
-            Site Access
-            <span className="text-muted" style={{ fontWeight: 400 }}>— visible to admins only</span>
-          </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              Site Access
+              <span className="font-normal text-muted-foreground">— visible to admins only</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField id="gate" label="Gate Code">
+              <Input
+                id="gate"
+                value={form.gate_code}
+                onChange={(e) => update('gate_code', e.target.value)}
+                placeholder="e.g. #4321"
+              />
+            </FormField>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="gate">Gate Code</label>
-            <input id="gate" type="text" className="form-input" value={form.gate_code}
-              onChange={(e) => update('gate_code', e.target.value)}
-              placeholder="e.g. #4321" />
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField id="water" label="Water Shutoff Location">
+                <Input
+                  id="water"
+                  value={form.water_shutoff_location}
+                  onChange={(e) => update('water_shutoff_location', e.target.value)}
+                />
+              </FormField>
+              <FormField id="gas" label="Gas Shutoff Location">
+                <Input
+                  id="gas"
+                  value={form.gas_shutoff_location}
+                  onChange={(e) => update('gas_shutoff_location', e.target.value)}
+                />
+              </FormField>
+            </div>
 
-          <div className="form-row form-row-2">
-            <div className="form-group">
-              <label className="form-label" htmlFor="water">Water Shutoff Location</label>
-              <input id="water" type="text" className="form-input" value={form.water_shutoff_location}
-                onChange={(e) => update('water_shutoff_location', e.target.value)} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField id="contact" label="Onsite Contact Name">
+                <Input
+                  id="contact"
+                  value={form.onsite_contact_name}
+                  onChange={(e) => update('onsite_contact_name', e.target.value)}
+                />
+              </FormField>
+              <FormField id="contactPhone" label="Onsite Contact Phone" error={showError('onsite_contact_phone')}>
+                <Input
+                  id="contactPhone"
+                  type="tel"
+                  value={form.onsite_contact_phone}
+                  onChange={(e) => update('onsite_contact_phone', e.target.value)}
+                  onBlur={() => touch('onsite_contact_phone')}
+                  placeholder="(555) 123-4567"
+                  className={showError('onsite_contact_phone') ? 'border-destructive' : ''}
+                />
+              </FormField>
             </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="gas">Gas Shutoff Location</label>
-              <input id="gas" type="text" className="form-input" value={form.gas_shutoff_location}
-                onChange={(e) => update('gas_shutoff_location', e.target.value)} />
-            </div>
-          </div>
 
-          <div className="form-row form-row-2">
-            <div className="form-group">
-              <label className="form-label" htmlFor="contact">Onsite Contact Name</label>
-              <input id="contact" type="text" className="form-input" value={form.onsite_contact_name}
-                onChange={(e) => update('onsite_contact_name', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="contactPhone">Onsite Contact Phone</label>
-              <input id="contactPhone" type="tel" className="form-input" value={form.onsite_contact_phone}
-                onChange={(e) => update('onsite_contact_phone', e.target.value)}
-                placeholder="(555) 123-4567" />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="notes">Access Notes</label>
-            <textarea id="notes" className="form-textarea" rows={3} value={form.access_notes}
-              onChange={(e) => update('access_notes', e.target.value)}
-              placeholder="Parking, entry instructions, key box location, etc." />
-          </div>
-        </div>
+            <FormField id="notes" label="Access Notes">
+              <Textarea
+                id="notes"
+                rows={3}
+                value={form.access_notes}
+                onChange={(e) => update('access_notes', e.target.value)}
+                placeholder="Parking, entry instructions, key box location, etc."
+              />
+            </FormField>
+          </CardContent>
+        </Card>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button type="submit" className="btn btn-primary btn-lg" disabled={submitting || !formValid} style={{ flex: 1 }}>
+        <div className="flex gap-3">
+          <Button
+            type="submit"
+            size="lg"
+            disabled={submitting || !formValid}
+            className="flex-1"
+          >
             {submitting ? (
-              <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Saving…</>
-            ) : isEdit ? 'Save Changes' : (
               <>
-                <Plus size={16} />
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : isEdit ? (
+              'Save Changes'
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
                 Add Building
               </>
             )}
-          </button>
-          <button type="button" className="btn btn-secondary btn-lg" onClick={() => navigate(-1)}>
+          </Button>
+          <Button type="button" variant="outline" size="lg" onClick={() => navigate(-1)}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </PageTransition>
   );
 }

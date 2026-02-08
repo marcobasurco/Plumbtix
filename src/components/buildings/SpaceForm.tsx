@@ -8,6 +8,11 @@ import {
   type SpaceRow,
 } from '@/lib/buildings';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 const EMPTY_FORM: SpaceFormData = {
   space_type: 'unit', unit_number: '', common_area_type: '',
@@ -84,83 +89,138 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
   };
 
   return (
-    <div className="form-card animate-in" style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 16 }}>
-        {isEdit ? 'Edit Space' : 'Add Space'}
-      </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-bold">
+          {isEdit ? 'Edit Space' : 'Add Space'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
-
-      <form onSubmit={handleSubmit}>
-        {/* Type toggle */}
-        <div className="form-group">
-          <label className="form-label">Type *</label>
-          <div className="radio-group">
-            <button type="button"
-              className={`radio-btn ${form.space_type === 'unit' ? 'active' : ''}`}
-              onClick={() => !isEdit && update('space_type', 'unit')}
-              disabled={isEdit}>
-              Unit
-            </button>
-            <button type="button"
-              className={`radio-btn ${form.space_type === 'common_area' ? 'active' : ''}`}
-              onClick={() => !isEdit && update('space_type', 'common_area')}
-              disabled={isEdit}>
-              Common Area
-            </button>
-          </div>
-        </div>
-
-        {form.space_type === 'unit' ? (
-          <>
-            <div className="form-group">
-              <label className="form-label" htmlFor="unitNum">Unit Number *</label>
-              <input id="unitNum" type="text" className="form-input" value={form.unit_number}
-                onChange={(e) => update('unit_number', e.target.value)}
-                placeholder="e.g. 101, A2, PH-1" required />
-              {duplicateWarning && (
-                <p className="form-error-text">Unit "{form.unit_number.trim()}" already exists in this building.</p>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Type toggle */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">
+              Type <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                  form.space_type === 'unit'
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-border bg-background'
+                } ${isEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                onClick={() => !isEdit && update('space_type', 'unit')}
+                disabled={isEdit}
+              >
+                Unit
+              </button>
+              <button
+                type="button"
+                className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                  form.space_type === 'common_area'
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-border bg-background'
+                } ${isEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                onClick={() => !isEdit && update('space_type', 'common_area')}
+                disabled={isEdit}
+              >
+                Common Area
+              </button>
             </div>
-            <div className="form-row form-row-2">
-              <div className="form-group">
-                <label className="form-label" htmlFor="beds">Bedrooms</label>
-                <input id="beds" type="number" min="0" className="form-input" value={form.bedrooms}
-                  onChange={(e) => update('bedrooms', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="baths">Bathrooms</label>
-                <input id="baths" type="number" min="0" step="0.5" className="form-input" value={form.bathrooms}
-                  onChange={(e) => update('bathrooms', e.target.value)} />
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="form-group">
-            <label className="form-label" htmlFor="caType">Area Type *</label>
-            <select id="caType" className="form-select" value={form.common_area_type}
-              onChange={(e) => update('common_area_type', e.target.value)} required>
-              <option value="">Select type…</option>
-              {COMMON_AREA_TYPES.map((t) => (
-                <option key={t} value={t}>{COMMON_AREA_LABELS[t]}</option>
-              ))}
-            </select>
           </div>
-        )}
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="floor">Floor</label>
-          <input id="floor" type="number" className="form-input" value={form.floor}
-            onChange={(e) => update('floor', e.target.value)} placeholder="e.g. 1, 2, -1" />
-        </div>
+          {form.space_type === 'unit' ? (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="unitNum">
+                  Unit Number <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="unitNum"
+                  value={form.unit_number}
+                  onChange={(e) => update('unit_number', e.target.value)}
+                  placeholder="e.g. 101, A2, PH-1"
+                  className={duplicateWarning ? 'border-destructive' : ''}
+                />
+                {duplicateWarning && (
+                  <p className="text-xs text-destructive">
+                    Unit "{form.unit_number.trim()}" already exists in this building.
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="beds">Bedrooms</Label>
+                  <Input
+                    id="beds"
+                    type="number"
+                    min="0"
+                    value={form.bedrooms}
+                    onChange={(e) => update('bedrooms', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="baths">Bathrooms</Label>
+                  <Input
+                    id="baths"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={form.bathrooms}
+                    onChange={(e) => update('bathrooms', e.target.value)}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="caType">
+                Area Type <span className="text-destructive">*</span>
+              </Label>
+              <select
+                id="caType"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={form.common_area_type}
+                onChange={(e) => update('common_area_type', e.target.value)}
+              >
+                <option value="">Select type…</option>
+                {COMMON_AREA_TYPES.map((t) => (
+                  <option key={t} value={t}>{COMMON_AREA_LABELS[t]}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button type="submit" className="btn btn-primary" disabled={submitting || !isValid()} style={{ flex: 1 }}>
-            {submitting ? 'Saving…' : isEdit ? 'Save' : 'Add Space'}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
-        </div>
-      </form>
-    </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="floor">Floor</Label>
+            <Input
+              id="floor"
+              type="number"
+              value={form.floor}
+              onChange={(e) => update('floor', e.target.value)}
+              placeholder="e.g. 1, 2, -1"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              disabled={submitting || !isValid()}
+              className="flex-1"
+            >
+              {submitting ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
+              ) : isEdit ? 'Save' : 'Add Space'}
+            </Button>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

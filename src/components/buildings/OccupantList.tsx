@@ -7,6 +7,12 @@ import {
   type OccupantFormData,
 } from '@/lib/buildings';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Plus, X, Loader2, Copy, Check } from 'lucide-react';
 
 interface OccupantListProps {
   spaceId: string;
@@ -19,7 +25,9 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<OccupantRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -46,6 +54,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
     e.preventDefault();
     setFormError(null);
     if (!name.trim() || !email.trim()) { setFormError('Name and email are required'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setFormError('Invalid email format'); return; }
 
     setSubmitting(true);
     try {
@@ -60,101 +69,173 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
     }
   };
 
-  const handleDelete = async (occ: OccupantRow) => {
-    if (!confirm(`Remove "${occ.name}" from ${spaceLabel}?`)) return;
-    setDeleting(occ.id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteOccupant(occ.id);
-      setOccupants((prev) => prev.filter((o) => o.id !== occ.id));
+      await deleteOccupant(deleteTarget.id);
+      setOccupants((prev) => prev.filter((o) => o.id !== deleteTarget.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete');
     } finally {
-      setDeleting(null);
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
-  if (loading) return <div style={{ fontSize: '0.8rem', color: '#9ca3af', padding: '4px 0' }}>Loading…</div>;
+  const copyClaimUrl = (token: string) => {
+    const url = `${window.location.origin}/claim-account?token=${token}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(null), 2000);
+    });
+  };
+
+  if (loading) return <div className="text-xs text-muted-foreground py-1">Loading…</div>;
 
   return (
-    <div style={{ marginTop: '4px' }}>
+    <div className="mt-1">
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       {occupants.length === 0 && !showForm && (
-        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>No occupants</span>
+        <span className="text-xs text-muted-foreground">No occupants</span>
       )}
 
-      {occupants.map((occ) => (
-        <div key={occ.id} style={occRow}>
-          <div>
-            <strong style={{ fontSize: '0.85rem' }}>{occ.name}</strong>
-            <span style={occTypeBadge}>{occ.occupant_type}</span>
-            {occ.claimed_at && <span style={claimedBadge}>✓ claimed</span>}
-            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-              {occ.email}{occ.phone && ` · ${occ.phone}`}
-            </div>
-            {occ.invite_token && !occ.claimed_at && (
-              <div style={{ fontSize: '0.7rem', color: '#2563eb', marginTop: '2px' }}>
-                Claim URL: {window.location.origin}/claim-account?token={occ.invite_token}
+      <div className="space-y-1">
+        {occupants.map((occ) => (
+          <div
+            key={occ.id}
+            className="flex justify-between items-start p-2 bg-muted/50 rounded-md text-sm"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <strong className="text-sm">{occ.name}</strong>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  {occ.occupant_type}
+                </Badge>
+                {occ.claimed_at && (
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0">
+                    ✓ claimed
+                  </Badge>
+                )}
               </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {occ.email}{occ.phone && ` · ${occ.phone}`}
+              </div>
+              {occ.invite_token && !occ.claimed_at && (
+                <button
+                  className="flex items-center gap-1 text-[11px] text-primary hover:underline mt-0.5 bg-transparent border-none cursor-pointer p-0"
+                  onClick={() => copyClaimUrl(occ.invite_token!)}
+                >
+                  {copiedToken === occ.invite_token ? (
+                    <><Check className="h-3 w-3" /> Copied!</>
+                  ) : (
+                    <><Copy className="h-3 w-3" /> Copy claim link</>
+                  )}
+                </button>
+              )}
+            </div>
+            {canWrite && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-destructive hover:text-destructive shrink-0"
+                onClick={() => setDeleteTarget(occ)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
             )}
           </div>
-          {canWrite && (
-            <button
-              onClick={() => handleDelete(occ)}
-              disabled={deleting === occ.id}
-              style={delBtn}
-            >
-              {deleting === occ.id ? '…' : '✕'}
-            </button>
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
 
       {canWrite && !showForm && (
-        <button onClick={() => setShowForm(true)} style={addBtn}>+ Add Occupant</button>
+        <Button
+          variant="link"
+          size="sm"
+          className="p-0 h-auto mt-1.5 text-xs"
+          onClick={() => setShowForm(true)}
+        >
+          <Plus className="h-3 w-3" /> Add Occupant
+        </Button>
       )}
 
       {showForm && (
-        <form onSubmit={handleCreate} style={formStyle}>
+        <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border">
           <ErrorBanner message={formError} onDismiss={() => setFormError(null)} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-            <div>
-              <label style={lbl}>Name *</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} required style={inp} placeholder="Jane Smith" />
+          <form onSubmit={handleCreate} className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Name <span className="text-destructive">*</span></Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="Jane Smith"
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Email <span className="text-destructive">*</span></Label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="jane@example.com"
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Phone</Label>
+                <Input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Type</Label>
+                <select
+                  value={occType}
+                  onChange={(e) => setOccType(e.target.value as 'homeowner' | 'tenant')}
+                  className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="tenant">Tenant</option>
+                  <option value="homeowner">Homeowner</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label style={lbl}>Email *</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={inp} placeholder="jane@example.com" />
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={submitting}>
+                {submitting ? <><Loader2 className="h-3 w-3 animate-spin" /> Adding…</> : 'Add'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => { setShowForm(false); setFormError(null); }}
+              >
+                Cancel
+              </Button>
             </div>
-            <div>
-              <label style={lbl}>Phone</label>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={inp} placeholder="(555) 123-4567" />
-            </div>
-            <div>
-              <label style={lbl}>Type</label>
-              <select value={occType} onChange={(e) => setOccType(e.target.value as 'homeowner' | 'tenant')} style={inp}>
-                <option value="tenant">Tenant</option>
-                <option value="homeowner">Homeowner</option>
-              </select>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button type="submit" disabled={submitting} className="btn btn-primary" style={{ width: 'auto', padding: '4px 14px', fontSize: '0.8rem' }}>
-              {submitting ? 'Adding…' : 'Add'}
-            </button>
-            <button type="button" onClick={() => { setShowForm(false); setFormError(null); }} style={{ ...addBtn, marginTop: 0 }}>Cancel</button>
-          </div>
-        </form>
+          </form>
+        </div>
       )}
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Remove Occupant"
+        description={`Remove "${deleteTarget?.name}" from ${spaceLabel}? They will lose portal access.`}
+        confirmLabel="Remove"
+        onConfirm={handleDelete}
+        loading={deleting}
+        variant="destructive"
+      />
     </div>
   );
 }
-
-const occRow: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 8px', background: '#fafafa', borderRadius: '4px', marginBottom: '4px', fontSize: '0.85rem' };
-const occTypeBadge: React.CSSProperties = { marginLeft: '6px', fontSize: '0.7rem', padding: '1px 6px', borderRadius: '8px', background: '#e5e7eb', color: '#374151' };
-const claimedBadge: React.CSSProperties = { marginLeft: '4px', fontSize: '0.7rem', color: '#059669' };
-const delBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.85rem', padding: '2px 6px' };
-const addBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '0.8rem', padding: '2px 0', marginTop: '4px' };
-const formStyle: React.CSSProperties = { padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', marginTop: '6px' };
-const lbl: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '2px' };
-const inp: React.CSSProperties = { width: '100%', padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.8rem', boxSizing: 'border-box' };

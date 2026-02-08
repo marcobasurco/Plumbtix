@@ -2,9 +2,12 @@ import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { ROLE_LABELS } from '@shared/types/enums';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   LayoutDashboard, Ticket, Building2, Users2, Kanban,
-  LogOut, Menu, Wrench, Briefcase,
+  LogOut, Menu, Wrench, Briefcase, Moon, Sun,
 } from 'lucide-react';
 
 function roleRoot(role: string | null): string {
@@ -13,11 +16,11 @@ function roleRoot(role: string | null): string {
   return '/my';
 }
 
-const ROLE_BADGE: Record<string, string> = {
-  proroto_admin: 'badge-blue',
-  pm_admin: 'badge-amber',
-  pm_user: 'badge-amber',
-  resident: 'badge-green',
+const ROLE_BADGE_VARIANT: Record<string, 'info' | 'urgent' | 'success' | 'secondary'> = {
+  proroto_admin: 'info',
+  pm_admin: 'urgent',
+  pm_user: 'urgent',
+  resident: 'success',
 };
 
 interface NavItem {
@@ -29,21 +32,21 @@ interface NavItem {
 
 const SHARED_NAV: NavItem[] = [
   { label: 'Overview',  path: '',          matchSegment: '__home__',
-    icon: <LayoutDashboard size={18} /> },
+    icon: <LayoutDashboard className="h-[18px] w-[18px]" /> },
   { label: 'Tickets',   path: 'tickets',   matchSegment: 'tickets',
-    icon: <Ticket size={18} /> },
+    icon: <Ticket className="h-[18px] w-[18px]" /> },
   { label: 'Buildings',  path: 'buildings', matchSegment: 'buildings',
-    icon: <Building2 size={18} /> },
+    icon: <Building2 className="h-[18px] w-[18px]" /> },
 ];
 
 const ADMIN_NAV: NavItem[] = [
   ...SHARED_NAV,
   { label: 'Companies', path: 'companies', matchSegment: 'companies',
-    icon: <Briefcase size={18} /> },
+    icon: <Briefcase className="h-[18px] w-[18px]" /> },
   { label: 'Users',     path: 'users',     matchSegment: 'users',
-    icon: <Users2 size={18} /> },
+    icon: <Users2 className="h-[18px] w-[18px]" /> },
   { label: 'Dispatch',  path: 'dispatch',  matchSegment: 'dispatch',
-    icon: <Kanban size={18} /> },
+    icon: <Kanban className="h-[18px] w-[18px]" /> },
 ];
 
 interface Props { title: string; children: ReactNode; }
@@ -53,6 +56,15 @@ export function DashboardLayout({ title: _title, children }: Props) {
   const location = useLocation();
   const root = roleRoot(role);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() =>
+    typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  );
+
+  const toggleDark = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    document.documentElement.classList.toggle('dark', next);
+  };
 
   const nav = role === 'proroto_admin' ? ADMIN_NAV : SHARED_NAV;
   const pathAfterRoot = location.pathname.replace(root, '').replace(/^\//, '');
@@ -71,101 +83,104 @@ export function DashboardLayout({ title: _title, children }: Props) {
     : '?';
 
   return (
-    <div className="app-shell">
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 39 }}
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+    <TooltipProvider delayDuration={300}>
+      <div className="app-shell">
+        {/* Mobile overlay */}
+        {mobileOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-[39] md:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
 
-      {/* Sidebar */}
-      <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
-        <div className="sidebar-brand">
-          <h1>
-            <span className="logo-icon">
-              <Wrench size={16} />
-            </span>
-            PlumbTix
-          </h1>
-        </div>
+        {/* Sidebar */}
+        <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
+          <div className="sidebar-brand">
+            <h1>
+              <span className="logo-icon">
+                <Wrench className="h-4 w-4" />
+              </span>
+              PlumbTix
+            </h1>
+          </div>
 
-        <div className="sidebar-user">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 'var(--radius-full)',
-              background: 'linear-gradient(135deg, var(--blue-400), var(--blue-600))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'var(--text-xs)', fontWeight: 700, color: '#fff',
-              flexShrink: 0,
-            }}>
-              {initials}
+          <div className="sidebar-user">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <div className="sidebar-user-name">{profile?.full_name ?? 'User'}</div>
+                <div className="sidebar-user-email">{profile?.email ?? ''}</div>
+              </div>
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div className="sidebar-user-name">{profile?.full_name ?? 'User'}</div>
-              <div className="sidebar-user-email">{profile?.email ?? ''}</div>
+            <div className="mt-2">
+              <Badge variant={ROLE_BADGE_VARIANT[role ?? ''] ?? 'secondary'}>
+                {role ? ROLE_LABELS[role] : 'Unknown'}
+              </Badge>
             </div>
           </div>
-          <div style={{ marginTop: 8 }}>
-            <span className={`badge ${ROLE_BADGE[role ?? ''] ?? 'badge-slate'}`}>
-              {role ? ROLE_LABELS[role] : 'Unknown'}
-            </span>
-          </div>
-        </div>
 
-        <nav className="sidebar-nav">
-          {nav.map((item) => (
-            <Link
-              key={item.label}
-              to={item.path ? `${root}/${item.path}` : root}
-              className={`sidebar-link ${isActive(item) ? 'active' : ''}`}
-              onClick={() => setMobileOpen(false)}
+          <nav className="sidebar-nav">
+            {nav.map((item) => (
+              <Link
+                key={item.label}
+                to={item.path ? `${root}/${item.path}` : root}
+                className={`sidebar-link ${isActive(item) ? 'active' : ''}`}
+                onClick={() => setMobileOpen(false)}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="sidebar-footer">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-muted-foreground/60 hover:text-foreground gap-2.5"
+              onClick={signOut}
             >
-              {item.icon}
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <button onClick={signOut} className="btn btn-ghost w-full" style={{ justifyContent: 'flex-start', color: 'var(--slate-400)', gap: '10px' }}>
-            <LogOut size={18} />
-            Sign Out
-          </button>
-        </div>
-      </aside>
-
-      {/* Content */}
-      <div className="content-area">
-        <header className="content-header">
-          {/* Mobile hamburger */}
-          <button
-            className="btn btn-ghost btn-icon mobile-menu-btn"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Menu"
-          >
-            <Menu size={20} />
-          </button>
-          <span className="content-header-title">{activeLabel}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span className="text-xs text-muted" style={{ fontFamily: 'var(--font-mono)' }}>
-              {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-            </span>
+              <LogOut className="h-[18px] w-[18px]" />
+              Sign Out
+            </Button>
           </div>
-        </header>
+        </aside>
 
-        <main className="content-main">
-          {children}
-        </main>
+        {/* Content */}
+        <div className="content-area">
+          <header className="content-header">
+            {/* Mobile hamburger */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mobile-menu-btn"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <span className="content-header-title">{activeLabel}</span>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={toggleDark} className="h-8 w-8">
+                    {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{darkMode ? 'Light mode' : 'Dark mode'}</TooltipContent>
+              </Tooltip>
+              <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
+                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          </header>
+
+          <main className="content-main">
+            {children}
+          </main>
+        </div>
       </div>
-
-      <style>{`
-        .mobile-menu-btn { display: none !important; }
-        @media (max-width: 768px) {
-          .mobile-menu-btn { display: flex !important; }
-        }
-      `}</style>
-    </div>
+    </TooltipProvider>
   );
 }

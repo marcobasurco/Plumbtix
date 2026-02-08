@@ -7,6 +7,10 @@ import {
 } from '@/lib/buildings';
 import { fetchUserList, type UserListRow } from '@/lib/admin';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Plus, X, Loader2, UserPlus, Shield } from 'lucide-react';
 
 interface EntitlementManagerProps {
   buildingId: string;
@@ -21,7 +25,8 @@ export function EntitlementManager({ buildingId, companyId }: EntitlementManager
   const [showForm, setShowForm] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EntitlementRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,82 +70,118 @@ export function EntitlementManager({ buildingId, companyId }: EntitlementManager
     }
   };
 
-  const handleRemove = async (ent: EntitlementRow) => {
-    const user = userMap.get(ent.user_id);
-    if (!confirm(`Remove access for "${user?.full_name ?? 'this user'}"?`)) return;
-    setDeleting(ent.id);
+  const handleRemove = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteEntitlement(ent.id);
-      setEntitlements((prev) => prev.filter((e) => e.id !== ent.id));
+      await deleteEntitlement(deleteTarget.id);
+      setEntitlements((prev) => prev.filter((e) => e.id !== deleteTarget.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to remove');
     } finally {
-      setDeleting(null);
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
-  if (loading) return <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Loading entitlements…</div>;
+  if (loading) return <div className="text-xs text-muted-foreground">Loading entitlements…</div>;
 
   return (
     <div>
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       {entitlements.length === 0 && !showForm && (
-        <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>No PM Users assigned. Only PM Admins can see this building.</p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+          <Shield className="h-4 w-4" />
+          No PM Users assigned. Only PM Admins can see this building.
+        </div>
       )}
 
-      {entitlements.map((ent) => {
-        const user = userMap.get(ent.user_id);
-        return (
-          <div key={ent.id} style={entRow}>
-            <div>
-              <strong style={{ fontSize: '0.85rem' }}>{user?.full_name ?? 'Unknown user'}</strong>
-              <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: '8px' }}>{user?.email ?? ent.user_id}</span>
+      <div className="space-y-1.5">
+        {entitlements.map((ent) => {
+          const user = userMap.get(ent.user_id);
+          return (
+            <div
+              key={ent.id}
+              className="flex justify-between items-center p-2.5 bg-muted/50 rounded-lg"
+            >
+              <div className="min-w-0">
+                <strong className="text-sm">{user?.full_name ?? 'Unknown user'}</strong>
+                <span className="text-xs text-muted-foreground ml-2">
+                  {user?.email ?? ent.user_id}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive shrink-0"
+                onClick={() => setDeleteTarget(ent)}
+              >
+                <X className="h-3.5 w-3.5 mr-1" /> Remove
+              </Button>
             </div>
-            <button onClick={() => handleRemove(ent)} disabled={deleting === ent.id} style={removeBtn}>
-              {deleting === ent.id ? '…' : 'Remove'}
-            </button>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
       {!showForm ? (
         availableUsers.length > 0 && (
-          <button onClick={() => setShowForm(true)} style={addBtn}>+ Assign PM User</button>
+          <Button
+            variant="link"
+            size="sm"
+            className="p-0 h-auto mt-2 text-xs"
+            onClick={() => setShowForm(true)}
+          >
+            <UserPlus className="h-3 w-3" /> Assign PM User
+          </Button>
         )
       ) : (
-        <form onSubmit={handleAdd} style={formStyle}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1 }}>
-              <label style={lbl}>PM User</label>
-              <select value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)} required style={inp}>
+        <form
+          onSubmit={handleAdd}
+          className="mt-2 p-3 bg-muted/50 rounded-lg border border-border"
+        >
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold mb-1">PM User</label>
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                required
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <option value="">Select a PM User…</option>
                 {availableUsers.map((u) => (
                   <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
                 ))}
               </select>
             </div>
-            <button type="submit" disabled={submitting || !selectedUser} className="btn btn-primary" style={{ width: 'auto', padding: '6px 14px', fontSize: '0.8rem' }}>
-              {submitting ? '…' : 'Assign'}
-            </button>
-            <button type="button" onClick={() => setShowForm(false)} style={{ ...removeBtn, color: '#6b7280' }}>Cancel</button>
+            <Button type="submit" size="sm" disabled={submitting || !selectedUser}>
+              {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Assign'}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
           </div>
         </form>
       )}
 
       {availableUsers.length === 0 && companyUsers.length > 0 && !showForm && entitlements.length > 0 && (
-        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '4px' }}>All PM Users are already assigned.</p>
+        <p className="text-xs text-muted-foreground mt-1.5">All PM Users are already assigned.</p>
       )}
       {companyUsers.length === 0 && (
-        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '4px' }}>No PM Users exist in this company yet. Invite one first.</p>
+        <p className="text-xs text-muted-foreground mt-1.5">No PM Users exist in this company yet. Invite one first.</p>
       )}
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Remove Access"
+        description={`Remove access for "${userMap.get(deleteTarget?.user_id ?? '')?.full_name ?? 'this user'}"? They will no longer see tickets for this building.`}
+        confirmLabel="Remove"
+        onConfirm={handleRemove}
+        loading={deleting}
+        variant="destructive"
+      />
     </div>
   );
 }
-
-const entRow: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#f9fafb', borderRadius: '6px', marginBottom: '4px' };
-const removeBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.8rem' };
-const addBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '0.85rem', padding: '4px 0', marginTop: '6px' };
-const formStyle: React.CSSProperties = { padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', marginTop: '8px' };
-const lbl: React.CSSProperties = { display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '2px' };
-const inp: React.CSSProperties = { width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.85rem' };
