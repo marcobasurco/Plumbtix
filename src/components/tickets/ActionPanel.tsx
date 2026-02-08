@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { updateTicket } from '@/lib/api';
+import type { UpdateTicketRequest } from '@shared/types/api';
 import { getAllowedTransitions, isTerminalStatus } from '@shared/types/transitions';
 import { STATUS_LABELS } from '@shared/types/enums';
 import type { TicketStatus } from '@shared/types/enums';
@@ -40,7 +41,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
     setSuccess(null);
 
     // Build payload
-    const payload: Record<string, unknown> = {
+    const payload: Partial<UpdateTicketRequest> & { ticket_id: string; status: TicketStatus } = {
       ticket_id: ticketId,
       status: targetStatus,
     };
@@ -59,7 +60,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
       payload.decline_reason = declineReason.trim();
     }
 
-    const result = await updateTicket(payload as Parameters<typeof updateTicket>[0]);
+    const result = await updateTicket(payload as UpdateTicketRequest);
 
     if (result.ok) {
       setSuccess(`Ticket updated to ${STATUS_LABELS[targetStatus]}`);
@@ -83,7 +84,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
     setError(null);
     setSuccess(null);
 
-    const payload: Record<string, unknown> = { ticket_id: ticketId };
+    const payload: Partial<UpdateTicketRequest> & { ticket_id: string } = { ticket_id: ticketId };
     let hasChanges = false;
 
     if (technician.trim()) { payload.assigned_technician = technician.trim(); hasChanges = true; }
@@ -98,7 +99,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
       return;
     }
 
-    const result = await updateTicket(payload as Parameters<typeof updateTicket>[0]);
+    const result = await updateTicket(payload as UpdateTicketRequest);
     if (result.ok) {
       setSuccess('Ticket fields updated');
       setTechnician(''); setScheduledDate(''); setTimeWindow('');

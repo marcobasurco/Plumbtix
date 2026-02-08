@@ -1,6 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { COMMON_AREA_TYPES, COMMON_AREA_LABELS } from '@shared/types/enums';
-import type { CommonAreaType } from '@shared/types/enums';
 import {
   createSpace,
   updateSpace,
@@ -9,7 +8,6 @@ import {
   type SpaceRow,
 } from '@/lib/buildings';
 import { ErrorBanner } from '@/components/ErrorBanner';
-import { Loading } from '@/components/Loading';
 
 const EMPTY_FORM: SpaceFormData = {
   space_type: 'unit',
