@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { DashboardOverview } from '@/components/DashboardOverview';
 import { TicketList } from '@/components/tickets/TicketList';
 import { TicketDetail } from '@/components/tickets/TicketDetail';
 import { CreateTicketWizard } from '@/components/tickets/CreateTicketWizard';
@@ -11,7 +12,8 @@ export function PMDashboard() {
   return (
     <DashboardLayout title="Property Manager">
       <Routes>
-        <Route index element={<TicketList />} />
+        <Route index element={<DashboardOverview />} />
+        <Route path="tickets" element={<TicketList />} />
         <Route path="tickets/new" element={<CreateTicketWizard />} />
         <Route path="tickets/:ticketId" element={<TicketDetail />} />
         <Route path="buildings" element={<BuildingList />} />

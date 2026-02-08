@@ -15,11 +15,25 @@ import { OccupantList } from './OccupantList';
 import { EntitlementManager } from './EntitlementManager';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { useToast } from '@/components/Toast';
+
+import { Pencil, Trash2, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
+
+const IconEdit = ({ size = 14 }: { size?: number }) => <Pencil size={size} />;
+const IconTrash = ({ size = 14 }: { size?: number }) => <Trash2 size={size} />;
+const IconPlus = ({ size = 14 }: { size?: number }) => <Plus size={size} />;
+const IconChevron = ({ open }: { open: boolean }) => (
+  <ChevronRight
+    size={14}
+    style={{ transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'rotate(0)' }}
+  />
+);
 
 export function BuildingDetail() {
   const { buildingId } = useParams<{ buildingId: string }>();
   const navigate = useNavigate();
   const { role } = useAuth();
+  const { toast } = useToast();
   const canWrite = role === 'proroto_admin' || role === 'pm_admin';
 
   const [building, setBuilding] = useState<BuildingDetailRow | null>(null);
@@ -29,7 +43,6 @@ export function BuildingDetail() {
   const [deleting, setDeleting] = useState(false);
   const [deletingSpace, setDeletingSpace] = useState<string | null>(null);
 
-  // Space form state
   const [showSpaceForm, setShowSpaceForm] = useState(false);
   const [editingSpace, setEditingSpace] = useState<SpaceRow | null>(null);
   const [expandedSpace, setExpandedSpace] = useState<string | null>(null);
@@ -60,14 +73,14 @@ export function BuildingDetail() {
       setError('Cannot delete building with existing spaces. Remove all spaces first.');
       return;
     }
-    if (!confirm(`Delete building "${building.name || building.address_line1}"? This cannot be undone.`)) return;
-
+    if (!confirm(`Delete "${building.name || building.address_line1}"? This cannot be undone.`)) return;
     setDeleting(true);
     try {
       await deleteBuilding(building.id);
+      toast('Building deleted');
       navigate('..', { replace: true });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete building');
+      setError(e instanceof Error ? e.message : 'Failed to delete');
     } finally {
       setDeleting(false);
     }
@@ -77,13 +90,13 @@ export function BuildingDetail() {
     const label = space.space_type === 'unit'
       ? `Unit ${space.unit_number}`
       : COMMON_AREA_LABELS[space.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? space.common_area_type;
-    if (!confirm(`Delete "${label}"? This cannot be undone.`)) return;
-
+    if (!confirm(`Delete "${label}"?`)) return;
     setDeletingSpace(space.id);
     setError(null);
     try {
       await deleteSpace(space.id);
       setSpaces((prev) => prev.filter((s) => s.id !== space.id));
+      toast('Space deleted');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete space');
     } finally {
@@ -94,7 +107,8 @@ export function BuildingDetail() {
   const handleSpaceSaved = () => {
     setShowSpaceForm(false);
     setEditingSpace(null);
-    load(); // reload spaces
+    toast(editingSpace ? 'Space updated' : 'Space created');
+    load();
   };
 
   if (loading) return <Loading message="Loading building…" />;
@@ -105,26 +119,27 @@ export function BuildingDetail() {
   const commonAreas = spaces.filter((s) => s.space_type === 'common_area');
 
   return (
-    <div>
-      <button type="button" onClick={() => navigate('..')} style={backLink}>← Back to buildings</button>
+    <div className="animate-in">
+      <button type="button" className="back-link" onClick={() => navigate('..')}>
+        <ChevronLeft size={14} />
+        Buildings
+      </button>
 
-      {/* Building header */}
-      <div style={headerStyle}>
-        <div>
-          <h2 style={{ fontSize: '1.25rem', margin: 0 }}>
-            {building.name || building.address_line1}
-          </h2>
-          <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: '2px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 className="page-title">{building.name || building.address_line1}</h2>
+          <p className="page-subtitle">
             {building.address_line1}
             {building.address_line2 && `, ${building.address_line2}`}
             {' — '}{building.city}, {building.state} {building.zip}
           </p>
         </div>
         {canWrite && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => navigate('edit')} style={editBtn}>Edit</button>
-            <button onClick={handleDeleteBuilding} disabled={deleting} style={deleteBtn}>
-              {deleting ? '…' : 'Delete'}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => navigate('edit')} className="btn btn-secondary btn-sm"><IconEdit /> Edit</button>
+            <button onClick={handleDeleteBuilding} disabled={deleting} className="btn btn-danger btn-sm">
+              {deleting ? '…' : <><IconTrash /> Delete</>}
             </button>
           </div>
         )}
@@ -132,39 +147,56 @@ export function BuildingDetail() {
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
-      {/* Building details */}
-      <section style={cardStyle}>
-        <h3 style={sectionTitle}>Building Details</h3>
-        <dl style={dlStyle}>
-          {building.gate_code && <><dt>Gate Code</dt><dd>{building.gate_code}</dd></>}
-          {building.water_shutoff_location && <><dt>Water Shutoff</dt><dd>{building.water_shutoff_location}</dd></>}
-          {building.gas_shutoff_location && <><dt>Gas Shutoff</dt><dd>{building.gas_shutoff_location}</dd></>}
-          {building.onsite_contact_name && <><dt>Onsite Contact</dt><dd>{building.onsite_contact_name}{building.onsite_contact_phone && ` — ${building.onsite_contact_phone}`}</dd></>}
-          {building.access_notes && <><dt>Access Notes</dt><dd>{building.access_notes}</dd></>}
-          {!building.gate_code && !building.water_shutoff_location && !building.gas_shutoff_location && !building.onsite_contact_name && !building.access_notes && (
-            <><dt></dt><dd style={{ color: '#9ca3af' }}>No site details recorded.</dd></>
-          )}
-        </dl>
-      </section>
+      {/* Stats row */}
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
+        <div className="stat-card">
+          <div className="stat-label">Units</div>
+          <div className="stat-value">{units.length}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Common Areas</div>
+          <div className="stat-value">{commonAreas.length}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Total Spaces</div>
+          <div className="stat-value">{spaces.length}</div>
+        </div>
+      </div>
 
-      {/* Spaces */}
-      <section style={{ marginTop: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-            Spaces ({spaces.length})
-          </h3>
+      {/* Building details card */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-header">
+          <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Site Details</span>
+        </div>
+        <div className="card-body">
+          {building.gate_code || building.water_shutoff_location || building.gas_shutoff_location || building.onsite_contact_name || building.access_notes ? (
+            <dl className="dl-grid">
+              {building.gate_code && <><dt>Gate Code</dt><dd><span className="tag text-mono">{building.gate_code}</span></dd></>}
+              {building.water_shutoff_location && <><dt>Water Shutoff</dt><dd>{building.water_shutoff_location}</dd></>}
+              {building.gas_shutoff_location && <><dt>Gas Shutoff</dt><dd>{building.gas_shutoff_location}</dd></>}
+              {building.onsite_contact_name && <><dt>Onsite Contact</dt><dd>{building.onsite_contact_name}{building.onsite_contact_phone && ` — ${building.onsite_contact_phone}`}</dd></>}
+              {building.access_notes && <><dt>Access Notes</dt><dd>{building.access_notes}</dd></>}
+            </dl>
+          ) : (
+            <p className="text-muted text-sm">No site details recorded. Edit the building to add gate codes, shutoff locations, and contacts.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Spaces section */}
+      <div className="section">
+        <div className="section-header">
+          <div>
+            <div className="section-title">Spaces ({spaces.length})</div>
+            <div className="section-subtitle">Units and common areas in this building</div>
+          </div>
           {canWrite && !showSpaceForm && (
-            <button
-              onClick={() => { setEditingSpace(null); setShowSpaceForm(true); }}
-              className="btn btn-primary"
-              style={{ width: 'auto', padding: '6px 16px', fontSize: '0.85rem' }}
-            >
-              + Add Space
+            <button onClick={() => { setEditingSpace(null); setShowSpaceForm(true); }} className="btn btn-primary btn-sm">
+              <IconPlus /> Add Space
             </button>
           )}
         </div>
 
-        {/* Inline space form */}
         {showSpaceForm && (
           <SpaceForm
             buildingId={building.id}
@@ -174,47 +206,50 @@ export function BuildingDetail() {
           />
         )}
 
-        {/* Units */}
+        {/* Units table */}
         {units.length > 0 && (
-          <div style={{ marginBottom: '16px' }}>
-            <h4 style={subHeading}>Units ({units.length})</h4>
-            <div style={tableWrapper}>
-              <table style={tableStyle}>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+              Units ({units.length})
+            </div>
+            <div className="table-wrap">
+              <table className="table">
                 <thead>
                   <tr>
-                    <th style={thStyle}>Unit #</th>
-                    <th style={thStyle}>Floor</th>
-                    <th style={thStyle}>Beds</th>
-                    <th style={thStyle}>Baths</th>
-                    {canWrite && <th style={thStyle}></th>}
+                    <th>Unit #</th><th>Floor</th><th>Beds</th><th>Baths</th>
+                    {canWrite && <th style={{ width: 100 }}></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {units.map((s) => (
                     <React.Fragment key={s.id}>
-                    <tr>
-                      <td style={tdStyle}>
-                        <strong style={{ cursor: 'pointer' }} onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}>
-                          {expandedSpace === s.id ? '▾' : '▸'} {s.unit_number}
-                        </strong>
-                      </td>
-                      <td style={tdStyle}>{s.floor ?? '—'}</td>
-                      <td style={tdStyle}>{s.bedrooms ?? '—'}</td>
-                      <td style={tdStyle}>{s.bathrooms ?? '—'}</td>
-                      {canWrite && (
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>
-                          <button onClick={() => { setEditingSpace(s); setShowSpaceForm(true); }} style={linkBtn}>Edit</button>
-                          <button onClick={() => handleDeleteSpace(s)} disabled={deletingSpace === s.id} style={{ ...linkBtn, color: '#dc2626' }}>
-                            {deletingSpace === s.id ? '…' : 'Delete'}
+                      <tr>
+                        <td>
+                          <button className="btn-link" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                            onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}>
+                            <IconChevron open={expandedSpace === s.id} />
+                            {s.unit_number}
                           </button>
                         </td>
+                        <td>{s.floor ?? <span className="text-muted">—</span>}</td>
+                        <td>{s.bedrooms ?? <span className="text-muted">—</span>}</td>
+                        <td>{s.bathrooms ?? <span className="text-muted">—</span>}</td>
+                        {canWrite && (
+                          <td style={{ textAlign: 'right' }}>
+                            <button onClick={() => { setEditingSpace(s); setShowSpaceForm(true); }} className="btn btn-ghost btn-sm"><IconEdit /></button>
+                            <button onClick={() => handleDeleteSpace(s)} disabled={deletingSpace === s.id} className="btn btn-ghost btn-sm" style={{ color: 'var(--red-500)' }}>
+                              {deletingSpace === s.id ? '…' : <IconTrash />}
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                      {expandedSpace === s.id && (
+                        <tr>
+                          <td colSpan={canWrite ? 5 : 4} style={{ padding: '4px 16px 16px', background: 'var(--slate-50)' }}>
+                            <OccupantList spaceId={s.id} spaceLabel={`Unit ${s.unit_number}`} canWrite={canWrite} />
+                          </td>
+                        </tr>
                       )}
-                    </tr>
-                    {expandedSpace === s.id && (
-                      <tr><td colSpan={canWrite ? 5 : 4} style={{ padding: '4px 12px 12px', borderBottom: '1px solid #f3f4f6' }}>
-                        <OccupantList spaceId={s.id} spaceLabel={`Unit ${s.unit_number}`} canWrite={canWrite} />
-                      </td></tr>
-                    )}
                     </React.Fragment>
                   ))}
                 </tbody>
@@ -223,46 +258,45 @@ export function BuildingDetail() {
           </div>
         )}
 
-        {/* Common areas */}
+        {/* Common areas table */}
         {commonAreas.length > 0 && (
-          <div style={{ marginBottom: '16px' }}>
-            <h4 style={subHeading}>Common Areas ({commonAreas.length})</h4>
-            <div style={tableWrapper}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>Type</th>
-                    <th style={thStyle}>Floor</th>
-                    {canWrite && <th style={thStyle}></th>}
-                  </tr>
-                </thead>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+              Common Areas ({commonAreas.length})
+            </div>
+            <div className="table-wrap">
+              <table className="table">
+                <thead><tr><th>Type</th><th>Floor</th>{canWrite && <th style={{ width: 100 }}></th>}</tr></thead>
                 <tbody>
                   {commonAreas.map((s) => {
                     const areaLabel = COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type;
                     return (
-                    <React.Fragment key={s.id}>
-                    <tr>
-                      <td style={tdStyle}>
-                        <strong style={{ cursor: 'pointer' }} onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}>
-                          {expandedSpace === s.id ? '▾' : '▸'} {areaLabel}
-                        </strong>
-                      </td>
-                      <td style={tdStyle}>{s.floor ?? '—'}</td>
-                      {canWrite && (
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>
-                          <button onClick={() => { setEditingSpace(s); setShowSpaceForm(true); }} style={linkBtn}>Edit</button>
-                          <button onClick={() => handleDeleteSpace(s)} disabled={deletingSpace === s.id} style={{ ...linkBtn, color: '#dc2626' }}>
-                            {deletingSpace === s.id ? '…' : 'Delete'}
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                    {expandedSpace === s.id && (
-                      <tr><td colSpan={canWrite ? 3 : 2} style={{ padding: '4px 12px 12px', borderBottom: '1px solid #f3f4f6' }}>
-                        <OccupantList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} canWrite={canWrite} />
-                      </td></tr>
-                    )}
-                    </React.Fragment>
+                      <React.Fragment key={s.id}>
+                        <tr>
+                          <td>
+                            <button className="btn-link" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+                              onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}>
+                              <IconChevron open={expandedSpace === s.id} /> {areaLabel}
+                            </button>
+                          </td>
+                          <td>{s.floor ?? <span className="text-muted">—</span>}</td>
+                          {canWrite && (
+                            <td style={{ textAlign: 'right' }}>
+                              <button onClick={() => { setEditingSpace(s); setShowSpaceForm(true); }} className="btn btn-ghost btn-sm"><IconEdit /></button>
+                              <button onClick={() => handleDeleteSpace(s)} disabled={deletingSpace === s.id} className="btn btn-ghost btn-sm" style={{ color: 'var(--red-500)' }}>
+                                {deletingSpace === s.id ? '…' : <IconTrash />}
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                        {expandedSpace === s.id && (
+                          <tr>
+                            <td colSpan={canWrite ? 3 : 2} style={{ padding: '4px 16px 16px', background: 'var(--slate-50)' }}>
+                              <OccupantList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} canWrite={canWrite} />
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -272,77 +306,36 @@ export function BuildingDetail() {
         )}
 
         {spaces.length === 0 && !showSpaceForm && (
-          <div style={{ textAlign: 'center', padding: '32px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#9ca3af', fontSize: '0.85rem' }}>
-            No spaces yet. {canWrite && 'Click "+ Add Space" to create units or common areas.'}
+          <div className="empty-state">
+            <div className="empty-state-title">No spaces yet</div>
+            <div className="empty-state-text">
+              {canWrite ? 'Add units or common areas to start managing this building.' : 'No spaces have been added to this building.'}
+            </div>
+            {canWrite && (
+              <button onClick={() => { setEditingSpace(null); setShowSpaceForm(true); }} className="btn btn-primary btn-sm mt-4">
+                <IconPlus /> Add Space
+              </button>
+            )}
           </div>
         )}
-      </section>
+      </div>
 
-      {/* Building Entitlements (PM User access) */}
+      {/* Entitlements */}
       {canWrite && building.company_id && (
-        <section style={{ marginTop: '24px' }}>
-          <div style={{ marginBottom: '12px' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>PM User Access</h3>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '2px 0 0' }}>
-              Assign PM Users who can view and manage tickets for this building.
-            </p>
+        <div className="section">
+          <div className="section-header">
+            <div>
+              <div className="section-title">PM User Access</div>
+              <div className="section-subtitle">Assign PM Users who can view and manage tickets for this building</div>
+            </div>
           </div>
-          <div style={entitlementCard}>
-            <EntitlementManager buildingId={building.id} companyId={building.company_id} />
+          <div className="card">
+            <div className="card-body">
+              <EntitlementManager buildingId={building.id} companyId={building.company_id} />
+            </div>
           </div>
-        </section>
+        </div>
       )}
     </div>
   );
 }
-
-// Styles
-const backLink: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#2563eb',
-  cursor: 'pointer', fontSize: '0.85rem', padding: 0, marginBottom: '16px',
-};
-const headerStyle: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-  flexWrap: 'wrap', gap: '12px', marginBottom: '24px',
-  paddingBottom: '16px', borderBottom: '1px solid #e5e7eb',
-};
-const cardStyle: React.CSSProperties = {
-  padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb',
-};
-const sectionTitle: React.CSSProperties = {
-  fontSize: '1rem', fontWeight: 600, marginBottom: '12px',
-  paddingBottom: '8px', borderBottom: '1px solid #e5e7eb',
-};
-const dlStyle: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'auto 1fr',
-  gap: '6px 16px', fontSize: '0.9rem', margin: 0,
-};
-const subHeading: React.CSSProperties = {
-  fontSize: '0.85rem', fontWeight: 600, color: '#6b7280',
-  textTransform: 'uppercase', letterSpacing: '0.025em', marginBottom: '8px',
-};
-const tableWrapper: React.CSSProperties = { overflowX: 'auto' };
-const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' };
-const thStyle: React.CSSProperties = {
-  textAlign: 'left', padding: '6px 12px', borderBottom: '2px solid #e5e7eb',
-  fontSize: '0.8rem', fontWeight: 600, color: '#6b7280',
-};
-const tdStyle: React.CSSProperties = {
-  padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle',
-};
-const editBtn: React.CSSProperties = {
-  padding: '4px 12px', fontSize: '0.85rem', fontWeight: 500,
-  background: '#fff', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer',
-};
-const deleteBtn: React.CSSProperties = {
-  padding: '4px 12px', fontSize: '0.85rem', fontWeight: 500,
-  background: '#fff', border: '1px solid #fca5a5', borderRadius: '6px',
-  cursor: 'pointer', color: '#dc2626',
-};
-const linkBtn: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#2563eb',
-  cursor: 'pointer', fontSize: '0.8rem', padding: '2px 6px',
-};
-const entitlementCard: React.CSSProperties = {
-  padding: '12px 16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb',
-};

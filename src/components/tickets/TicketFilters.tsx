@@ -11,67 +11,40 @@ interface TicketFiltersProps {
 export function TicketFilters({ filters, onChange }: TicketFiltersProps) {
   const [buildings, setBuildings] = useState<BuildingOption[]>([]);
 
-  useEffect(() => {
-    fetchBuildingOptions().then(setBuildings);
-  }, []);
+  useEffect(() => { fetchBuildingOptions().then(setBuildings); }, []);
 
   const update = (patch: Partial<TicketListFilters>) =>
     onChange({ ...filters, ...patch });
 
   return (
-    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-      <select
+    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
+      <select className="form-select" style={{ width: 'auto', minWidth: 140 }}
         value={filters.status ?? 'all'}
-        onChange={(e) => update({ status: e.target.value as TicketListFilters['status'] })}
-        style={selectStyle}
-      >
+        onChange={(e) => update({ status: e.target.value as TicketListFilters['status'] })}>
         <option value="all">All Statuses</option>
-        {TICKET_STATUSES.map((s) => (
-          <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-        ))}
+        {TICKET_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
       </select>
 
-      <select
+      <select className="form-select" style={{ width: 'auto', minWidth: 140 }}
         value={filters.severity ?? 'all'}
-        onChange={(e) => update({ severity: e.target.value as TicketListFilters['severity'] })}
-        style={selectStyle}
-      >
+        onChange={(e) => update({ severity: e.target.value as TicketListFilters['severity'] })}>
         <option value="all">All Severities</option>
-        {TICKET_SEVERITIES.map((s) => (
-          <option key={s} value={s}>{SEVERITY_LABELS[s]}</option>
-        ))}
+        {TICKET_SEVERITIES.map((s) => <option key={s} value={s}>{SEVERITY_LABELS[s]}</option>)}
       </select>
 
       {buildings.length > 1 && (
-        <select
+        <select className="form-select" style={{ width: 'auto', minWidth: 160 }}
           value={filters.building_id ?? ''}
-          onChange={(e) => update({ building_id: e.target.value || undefined })}
-          style={selectStyle}
-        >
+          onChange={(e) => update({ building_id: e.target.value || undefined })}>
           <option value="">All Buildings</option>
-          {buildings.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name || b.address_line1}, {b.city}
-            </option>
-          ))}
+          {buildings.map((b) => <option key={b.id} value={b.id}>{b.name || b.address_line1}, {b.city}</option>)}
         </select>
       )}
 
-      <input
-        type="text"
+      <input type="text" className="form-input" style={{ width: 'auto', minWidth: 180 }}
         placeholder="Search # or description…"
         value={filters.search ?? ''}
-        onChange={(e) => update({ search: e.target.value })}
-        style={{ ...selectStyle, minWidth: '180px' }}
-      />
+        onChange={(e) => update({ search: e.target.value })} />
     </div>
   );
 }
-
-const selectStyle: React.CSSProperties = {
-  padding: '6px 10px',
-  border: '1px solid #d1d5db',
-  borderRadius: '6px',
-  fontSize: '0.85rem',
-  background: '#fff',
-};

@@ -243,7 +243,7 @@ export function CreateTicketWizard() {
 
     // 3. Redirect to detail page (relative to current dashboard)
     setSubmitting(false);
-    navigate(`tickets/${ticketId}`, { replace: true });
+    navigate(`../${ticketId}`, { replace: true });
   }, [state, validFiles, submitting, navigate]);
 
   // ── Render helpers ───────────────────────────────────────────────────

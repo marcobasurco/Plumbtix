@@ -12,16 +12,24 @@ import {
 import { ROLE_LABELS } from '@shared/types/enums';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { ChevronLeft, Plus, Pencil } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
-
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const ROLE_BADGE: Record<string, string> = {
+  proroto_admin: 'badge-blue', pm_admin: 'badge-amber', pm_user: 'badge-amber', resident: 'badge-green',
+};
+
+// Icons from lucide-react
 
 export function CompanyDetail() {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [company, setCompany] = useState<CompanyDetailRow | null>(null);
   const [buildings, setBuildings] = useState<CompanyBuildingRow[]>([]);
@@ -29,7 +37,6 @@ export function CompanyDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Edit state
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editSlug, setEditSlug] = useState('');
@@ -38,57 +45,41 @@ export function CompanyDetail() {
 
   const load = useCallback(async () => {
     if (!companyId) return;
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const [c, b, u] = await Promise.all([
         fetchCompanyDetail(companyId),
         fetchCompanyBuildings(companyId),
         fetchUserList(companyId),
       ]);
-      setCompany(c);
-      setBuildings(b);
-      setUsers(u);
+      setCompany(c); setBuildings(b); setUsers(u);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, [companyId]);
 
   useEffect(() => { load(); }, [load]);
 
   const startEdit = () => {
     if (!company) return;
-    setEditName(company.name);
-    setEditSlug(company.slug);
-    setEditError(null);
-    setEditing(true);
+    setEditName(company.name); setEditSlug(company.slug); setEditError(null); setEditing(true);
   };
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     if (!company) return;
     setEditError(null);
-
-    const trimName = editName.trim();
-    const trimSlug = editSlug.trim();
+    const trimName = editName.trim(), trimSlug = editSlug.trim();
     if (!trimName) { setEditError('Name is required'); return; }
-    if (!trimSlug || !SLUG_REGEX.test(trimSlug)) {
-      setEditError('Slug must be lowercase letters, numbers, and hyphens only');
-      return;
-    }
-
+    if (!trimSlug || !SLUG_REGEX.test(trimSlug)) { setEditError('Slug must be lowercase letters, numbers, and hyphens'); return; }
     setSaving(true);
     try {
       const updated = await updateCompany(company.id, { name: trimName, slug: trimSlug });
-      setCompany(updated);
-      setEditing(false);
+      setCompany(updated); setEditing(false);
+      toast('Company updated');
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   if (loading) return <Loading message="Loading company…" />;
@@ -96,117 +87,124 @@ export function CompanyDetail() {
   if (!company) return <ErrorBanner message="Company not found" />;
 
   return (
-    <div>
-      <button type="button" onClick={() => navigate('..')} style={backLink}>← Back to companies</button>
+    <div className="animate-in">
+      <button type="button" className="back-link" onClick={() => navigate('..')}>
+        <ChevronLeft size={14} />
+        Companies
+      </button>
 
-      <div style={headerStyle}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{company.name}</h2>
-          <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>slug: {company.slug} · Created {formatDate(company.created_at)}</p>
+          <h2 className="page-title">{company.name}</h2>
+          <p className="page-subtitle">
+            <span className="tag text-mono">{company.slug}</span>
+            <span style={{ margin: '0 8px', color: 'var(--slate-300)' }}>·</span>
+            Created {formatDate(company.created_at)}
+          </p>
         </div>
         {!editing && (
-          <button onClick={startEdit} style={editBtnStyle}>Edit</button>
+          <button onClick={startEdit} className="btn btn-secondary btn-sm"><Pencil size={14} /> Edit</button>
         )}
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       {editing && (
-        <form onSubmit={handleSave} style={formStyle}>
-          <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>Edit Company</h3>
+        <div className="form-card animate-in" style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 16 }}>Edit Company</div>
           <ErrorBanner message={editError} onDismiss={() => setEditError(null)} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-            <div>
-              <label style={labelStyle}>Company Name *</label>
-              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} required style={inputStyle} />
+          <form onSubmit={handleSave}>
+            <div className="form-row form-row-2">
+              <div className="form-group">
+                <label className="form-label">Company Name *</label>
+                <input type="text" className="form-input" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Slug *</label>
+                <input type="text" className="form-input" value={editSlug} onChange={(e) => setEditSlug(e.target.value)} required />
+              </div>
             </div>
-            <div>
-              <label style={labelStyle}>Slug *</label>
-              <input type="text" value={editSlug} onChange={(e) => setEditSlug(e.target.value)} required style={inputStyle} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" disabled={saving} className="btn btn-primary btn-sm">{saving ? 'Saving…' : 'Save'}</button>
+              <button type="button" onClick={() => setEditing(false)} className="btn btn-secondary btn-sm">Cancel</button>
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="submit" disabled={saving} className="btn btn-primary" style={{ width: 'auto', padding: '6px 20px', fontSize: '0.85rem' }}>
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-            <button type="button" onClick={() => setEditing(false)} style={cancelBtn}>Cancel</button>
-          </div>
-        </form>
+          </form>
+        </div>
       )}
 
+      {/* Stats */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-label">Buildings</div>
+          <div className="stat-value">{buildings.length}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Users</div>
+          <div className="stat-value">{users.length}</div>
+        </div>
+      </div>
+
       {/* Buildings */}
-      <section style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Buildings ({buildings.length})</h3>
-          <button
-            onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)}
-            className="btn btn-primary"
-            style={{ width: 'auto', padding: '6px 16px', fontSize: '0.85rem' }}
-          >
-            + Add Building
+      <div className="section">
+        <div className="section-header">
+          <div>
+            <div className="section-title">Buildings ({buildings.length})</div>
+          </div>
+          <button onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)} className="btn btn-primary btn-sm">
+            <Plus size={14} /> Add Building
           </button>
         </div>
         {buildings.length === 0 ? (
-          <p style={muted}>No buildings.</p>
+          <div className="empty-state">
+            <div className="empty-state-title">No buildings</div>
+            <div className="empty-state-text">Add your first building to this company.</div>
+            <button onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)} className="btn btn-primary btn-sm mt-4">
+              <Plus size={14} /> Add Building
+            </button>
+          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {buildings.map((b) => (
-              <div key={b.id} style={rowStyle} onClick={() => navigate(`/admin/buildings/${b.id}`)}>
-                <strong>{b.name || b.address_line1}</strong>
-                <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{b.city}, {b.state}</span>
-              </div>
-            ))}
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>Building</th><th>Location</th></tr></thead>
+              <tbody>
+                {buildings.map((b) => (
+                  <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/buildings/${b.id}`)}>
+                    <td style={{ fontWeight: 600 }}>{b.name || b.address_line1}</td>
+                    <td className="text-muted">{b.city}, {b.state}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </section>
+      </div>
 
       {/* Users */}
-      <section style={{ ...cardStyle, marginTop: '16px' }}>
-        <h3 style={sectionTitle}>Users ({users.length})</h3>
+      <div className="section">
+        <div className="section-header">
+          <div className="section-title">Users ({users.length})</div>
+        </div>
         {users.length === 0 ? (
-          <p style={muted}>No users.</p>
+          <p className="text-muted text-sm">No users.</p>
         ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Name</th>
-                <th style={thStyle}>Email</th>
-                <th style={thStyle}>Role</th>
-                <th style={thStyle}>Joined</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td style={tdStyle}><strong>{u.full_name}</strong></td>
-                  <td style={tdStyle}>{u.email}</td>
-                  <td style={tdStyle}>
-                    <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: '10px', background: '#f3f4f6' }}>
-                      {ROLE_LABELS[u.role]}
-                    </span>
-                  </td>
-                  <td style={tdStyle}><span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{formatDate(u.created_at)}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td style={{ fontWeight: 600 }}>{u.full_name}</td>
+                    <td className="text-muted">{u.email}</td>
+                    <td><span className={`badge ${ROLE_BADGE[u.role] ?? 'badge-slate'}`}>{ROLE_LABELS[u.role]}</span></td>
+                    <td className="text-muted">{formatDate(u.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }
-
-const backLink: React.CSSProperties = { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '0.85rem', padding: 0, marginBottom: '16px' };
-const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb' };
-const editBtnStyle: React.CSSProperties = { padding: '4px 12px', fontSize: '0.85rem', fontWeight: 500, background: '#fff', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer' };
-const cancelBtn: React.CSSProperties = { padding: '6px 16px', fontSize: '0.85rem', background: '#fff', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer' };
-const formStyle: React.CSSProperties = { padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '16px' };
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' };
-const inputStyle: React.CSSProperties = { width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box' };
-const cardStyle: React.CSSProperties = { padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' };
-const sectionTitle: React.CSSProperties = { fontSize: '1rem', fontWeight: 600, marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' };
-const muted: React.CSSProperties = { color: '#9ca3af', fontSize: '0.85rem' };
-const rowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f9fafb', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem' };
-const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' };
-const thStyle: React.CSSProperties = { textAlign: 'left', padding: '6px 12px', borderBottom: '2px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' };
-const tdStyle: React.CSSProperties = { padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' };
