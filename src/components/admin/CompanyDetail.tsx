@@ -136,7 +136,16 @@ export function CompanyDetail() {
 
       {/* Buildings */}
       <section style={cardStyle}>
-        <h3 style={sectionTitle}>Buildings ({buildings.length})</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Buildings ({buildings.length})</h3>
+          <button
+            onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)}
+            className="btn btn-primary"
+            style={{ width: 'auto', padding: '6px 16px', fontSize: '0.85rem' }}
+          >
+            + Add Building
+          </button>
+        </div>
         {buildings.length === 0 ? (
           <p style={muted}>No buildings.</p>
         ) : (

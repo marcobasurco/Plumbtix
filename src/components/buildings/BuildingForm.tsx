@@ -7,7 +7,6 @@ import {
   type BuildingFormData,
 } from '@/lib/buildings';
 import { useAuth } from '@/lib/auth';
-import { fetchCompanyOptions, type CompanyOption } from '@/lib/admin';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Loading } from '@/components/Loading';
 
@@ -18,49 +17,21 @@ const EMPTY_FORM: BuildingFormData = {
 };
 
 export function BuildingForm() {
-  const { buildingId } = useParams<{ buildingId: string }>();
+  const { buildingId, companyId: routeCompanyId } = useParams<{
+    buildingId: string;
+    companyId: string;
+  }>();
   const isEdit = !!buildingId;
   const navigate = useNavigate();
-  const { companyId, role } = useAuth();
+  const { companyId: authCompanyId, role } = useAuth();
+
+  // Company ID priority: route param > auth context
+  const targetCompanyId = routeCompanyId || authCompanyId;
 
   const [form, setForm] = useState<BuildingFormData>(EMPTY_FORM);
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Company picker (proroto_admin picks any; pm_admin auto-scoped)
-  const [companies, setCompanies] = useState<CompanyOption[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
-  const [companiesLoading, setCompaniesLoading] = useState(false);
-
-  // Sync selectedCompanyId when auth resolves companyId (useState only reads initial value once)
-  useEffect(() => {
-    if (companyId && !selectedCompanyId) {
-      setSelectedCompanyId(companyId);
-    }
-  }, [companyId, selectedCompanyId]);
-
-  // Load company options for proroto_admin
-  useEffect(() => {
-    if (role !== 'proroto_admin' || isEdit) return;
-    setCompaniesLoading(true);
-    fetchCompanyOptions()
-      .then((opts) => {
-        setCompanies(opts);
-        // Auto-select if only one company exists and nothing selected yet
-        setSelectedCompanyId((prev) => {
-          if (prev && opts.some((c) => c.id === prev)) return prev;     // already valid
-          if (companyId && opts.some((c) => c.id === companyId)) return companyId;
-          if (opts.length === 1) return opts[0].id;
-          return prev;
-        });
-      })
-      .catch((err) => {
-        console.error('[BuildingForm] Failed to load companies:', err);
-        setError('Could not load companies. Please refresh the page.');
-      })
-      .finally(() => setCompaniesLoading(false));
-  }, [role, isEdit, companyId]);
 
   // Load existing building for edit
   useEffect(() => {
@@ -100,17 +71,16 @@ export function BuildingForm() {
     try {
       if (isEdit) {
         await updateBuilding(buildingId!, form);
-        navigate(`..`, { replace: true }); // back to building detail
+        navigate('..', { replace: true }); // back to building detail
       } else {
-        // Determine target company
-        const targetCompanyId = role === 'proroto_admin' ? selectedCompanyId : companyId;
         if (!targetCompanyId) {
-          setError('Please select a company for this building.');
-          setSubmitting(false);
+          setError('No company context. Please navigate from a company page.');
           return;
         }
         const newBuilding = await createBuilding(targetCompanyId, form);
-        navigate(`../${newBuilding.id}`, { replace: true });
+        // Navigate to the new building detail — use role-appropriate base path
+        const basePath = role === 'proroto_admin' ? '/admin' : '/dashboard';
+        navigate(`${basePath}/buildings/${newBuilding.id}`, { replace: true });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save building');
@@ -126,6 +96,13 @@ export function BuildingForm() {
     return <ErrorBanner message="You don't have permission to manage buildings." />;
   }
 
+  if (!isEdit && !targetCompanyId) {
+    return <ErrorBanner message="No company context. Please go to Companies → select a company → Add Building." />;
+  }
+
+  const formValid = !!form.address_line1.trim() && !!form.city.trim()
+    && !!form.state.trim() && !!form.zip.trim();
+
   return (
     <div style={{ maxWidth: '560px' }}>
       <button type="button" onClick={() => navigate(-1)} style={backLink}>
@@ -139,35 +116,6 @@ export function BuildingForm() {
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       <form onSubmit={handleSubmit}>
-        {/* Company picker — proroto_admin selects, pm_admin sees own company */}
-        {!isEdit && (
-          role === 'proroto_admin' ? (
-            <div className="form-group">
-              <label htmlFor="company">Company *</label>
-              {companiesLoading ? (
-                <div style={{ fontSize: '0.85rem', color: '#6b7280', padding: '8px 0' }}>Loading companies…</div>
-              ) : (
-                <select
-                  id="company"
-                  value={selectedCompanyId}
-                  onChange={(e) => setSelectedCompanyId(e.target.value)}
-                  required
-                  style={inputStyle}
-                >
-                  <option value="">Select a company…</option>
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          ) : companyId ? (
-            <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '12px', padding: '8px 12px', background: '#f9fafb', borderRadius: '6px' }}>
-              Creating building for your company
-            </div>
-          ) : null
-        )}
-
         <div className="form-group">
           <label htmlFor="name">Building Name (optional)</label>
           <input id="name" type="text" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="e.g. Sunset Terrace" style={inputStyle} />
@@ -234,7 +182,7 @@ export function BuildingForm() {
         </div>
 
         <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-          <button type="submit" className="btn btn-primary" disabled={submitting || companiesLoading || !form.address_line1.trim() || !form.city.trim() || !form.state.trim() || !form.zip.trim() || (!isEdit && role === 'proroto_admin' && !selectedCompanyId) || (!isEdit && role === 'pm_admin' && !companyId)} style={{ flex: 1 }}>
+          <button type="submit" className="btn btn-primary" disabled={submitting || !formValid} style={{ flex: 1 }}>
             {submitting ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Building'}
           </button>
           <button type="button" onClick={() => navigate(-1)} style={{ ...navBtn, flex: 0 }}>Cancel</button>

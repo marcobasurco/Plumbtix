@@ -19,11 +19,11 @@ export function AdminDashboard() {
         <Route path="tickets/new" element={<CreateTicketWizard />} />
         <Route path="tickets/:ticketId" element={<TicketDetail />} />
         <Route path="buildings" element={<BuildingList />} />
-        <Route path="buildings/new" element={<BuildingForm />} />
         <Route path="buildings/:buildingId" element={<BuildingDetail />} />
         <Route path="buildings/:buildingId/edit" element={<BuildingForm />} />
         <Route path="companies" element={<CompanyList />} />
         <Route path="companies/:companyId" element={<CompanyDetail />} />
+        <Route path="companies/:companyId/buildings/new" element={<BuildingForm />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="dispatch" element={<DispatchBoard />} />
       </Routes>

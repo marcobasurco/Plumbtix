@@ -14,7 +14,10 @@ function formatDate(iso: string): string {
 export function BuildingList() {
   const navigate = useNavigate();
   const { role } = useAuth();
-  const canCreate = role === 'proroto_admin' || role === 'pm_admin';
+
+  // PM Admin creates buildings from this page (auto-scoped to their company).
+  // Pro Roto Admin creates from Companies → Company Detail → Add Building.
+  const showAddButton = role === 'pm_admin';
 
   const [buildings, setBuildings] = useState<BuildingListRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +41,7 @@ export function BuildingList() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h2 style={{ fontSize: '1.15rem', margin: 0 }}>Buildings</h2>
-        {canCreate && (
+        {showAddButton ? (
           <Link
             to="new"
             className="btn btn-primary"
@@ -46,7 +49,11 @@ export function BuildingList() {
           >
             + Add Building
           </Link>
-        )}
+        ) : role === 'proroto_admin' ? (
+          <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+            To add a building, go to Companies → select a company.
+          </span>
+        ) : null}
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
@@ -56,9 +63,13 @@ export function BuildingList() {
       ) : buildings.length === 0 ? (
         <div style={emptyStyle}>
           <p>No buildings found.</p>
-          {canCreate && (
+          {showAddButton ? (
             <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
               Add your first building to start managing spaces and tickets.
+            </p>
+          ) : (
+            <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>
+              Go to Companies → select a company → Add Building.
             </p>
           )}
         </div>
