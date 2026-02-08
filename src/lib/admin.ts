@@ -66,6 +66,17 @@ export interface CompanyDetailRow {
   updated_at: string;
 }
 
+export async function createCompany(name: string, slug: string): Promise<CompanyListRow> {
+  const { data, error } = await supabase
+    .from('companies')
+    .insert({ name, slug })
+    .select('id, name, slug, created_at')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return { ...data, building_count: 0, user_count: 0 } as CompanyListRow;
+}
+
 export async function fetchCompanyDetail(id: string): Promise<CompanyDetailRow> {
   const { data, error } = await supabase
     .from('companies')
