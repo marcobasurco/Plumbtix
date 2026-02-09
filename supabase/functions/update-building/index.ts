@@ -17,9 +17,9 @@ import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 
 const UpdateBuildingSchema = z.object({
   id: z.string().regex(UUID_REGEX, 'Invalid building id'),
-  name: z.string().max(255).optional().transform((v) => v?.trim() || null),
+  name: z.string().max(255).nullable().optional().transform((v) => v?.trim() || null),
   address_line1: z.string().min(1, 'Address is required').max(255).transform((v) => v.trim()),
-  address_line2: z.string().max(255).optional().transform((v) => v?.trim() || null),
+  address_line2: z.string().max(255).nullable().optional().transform((v) => v?.trim() || null),
   city: z.string().min(1, 'City is required').max(100).transform((v) => v.trim()),
   state: z
     .string()
@@ -31,12 +31,12 @@ const UpdateBuildingSchema = z.object({
     .max(10)
     .regex(/^\d{5}(-\d{4})?$/, 'ZIP must be 5 digits or 5+4 format')
     .transform((v) => v.trim()),
-  gate_code: z.string().max(50).optional().transform((v) => v?.trim() || null),
-  water_shutoff_location: z.string().max(500).optional().transform((v) => v?.trim() || null),
-  gas_shutoff_location: z.string().max(500).optional().transform((v) => v?.trim() || null),
-  onsite_contact_name: z.string().max(255).optional().transform((v) => v?.trim() || null),
-  onsite_contact_phone: z.string().max(20).optional().transform((v) => v?.trim() || null),
-  access_notes: z.string().optional().transform((v) => v?.trim() || null),
+  gate_code: z.string().max(50).nullable().optional().transform((v) => v?.trim() || null),
+  water_shutoff_location: z.string().max(500).nullable().optional().transform((v) => v?.trim() || null),
+  gas_shutoff_location: z.string().max(500).nullable().optional().transform((v) => v?.trim() || null),
+  onsite_contact_name: z.string().max(255).nullable().optional().transform((v) => v?.trim() || null),
+  onsite_contact_phone: z.string().max(20).nullable().optional().transform((v) => v?.trim() || null),
+  access_notes: z.string().nullable().optional().transform((v) => v?.trim() || null),
 });
 
 Deno.serve(async (req: Request) => {
