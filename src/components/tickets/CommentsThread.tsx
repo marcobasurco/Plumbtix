@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { getTicketComments, createComment } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { ROLE_LABELS } from '@shared/types/enums';
 
 interface CommentEntry {
@@ -150,14 +152,15 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
               </label>
             )}
           </div>
-          <button
+          <Button
             type="submit"
-            className="btn btn-primary"
+            size="sm"
             disabled={posting || !text.trim()}
-            style={{ width: 'auto', padding: '6px 16px', fontSize: '0.85rem' }}
           >
-            {posting ? 'Posting…' : isInternal ? 'Post Internal Note' : 'Post Comment'}
-          </button>
+            {posting ? (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Posting…</>
+            ) : isInternal ? 'Post Internal Note' : 'Post Comment'}
+          </Button>
         </div>
       </form>
     </div>

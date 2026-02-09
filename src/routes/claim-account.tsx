@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { claimResident } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 export function ClaimAccountPage() {
   const [searchParams] = useSearchParams();
@@ -107,13 +109,15 @@ export function ClaimAccountPage() {
           />
         </div>
 
-        <button
+        <Button
           type="submit"
-          className="btn btn-primary"
+          className="w-full"
           disabled={submitting || !email || !password}
         >
-          {submitting ? 'Claiming account…' : 'Claim Account'}
-        </button>
+          {submitting ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Claiming account…</>
+          ) : 'Claim Account'}
+        </Button>
       </form>
 
       <p style={{ marginTop: '24px', fontSize: '0.85rem', color: '#666', textAlign: 'center' }}>

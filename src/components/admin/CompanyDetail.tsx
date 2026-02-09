@@ -102,9 +102,9 @@ export function CompanyDetail() {
 
   return (
     <PageTransition>
-      <button type="button" className="back-link" onClick={() => navigate('..')}>
+      <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1" onClick={() => navigate('..')}>
         <ChevronLeft className="h-3.5 w-3.5" /> Companies
-      </button>
+      </Button>
 
       {/* Header */}
       <div className="flex justify-between items-start flex-wrap gap-3 mb-6">

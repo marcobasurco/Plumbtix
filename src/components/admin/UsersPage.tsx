@@ -12,6 +12,8 @@ import { ROLE_LABELS, INVITATION_ROLES } from '@shared/types/enums';
 import type { InvitationRole } from '@shared/types/enums';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -109,13 +111,13 @@ export function UsersPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-          <button
+          <Button
+            size="sm"
+            variant={showInvite ? 'outline' : 'default'}
             onClick={() => setShowInvite(!showInvite)}
-            className="btn btn-primary"
-            style={{ width: 'auto', padding: '6px 16px', fontSize: '0.85rem' }}
           >
             {showInvite ? 'Cancel' : '+ Invite User'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -157,14 +159,14 @@ export function UsersPage() {
                 </select>
               </div>
             </div>
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary"
+              size="sm"
+              className="mt-3"
               disabled={invSubmitting || !invCompany || !invEmail.trim() || !invName.trim()}
-              style={{ width: 'auto', padding: '6px 16px', fontSize: '0.85rem', marginTop: '12px' }}
             >
-              {invSubmitting ? 'Sending…' : 'Send Invitation'}
-            </button>
+              {invSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : 'Send Invitation'}
+            </Button>
           </form>
         </div>
       )}

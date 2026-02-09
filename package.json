@@ -1,6 +1,6 @@
 {
   "name": "plumbtix",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "private": true,
   "description": "PlumbTix — Pro Roto Work Orders Portal",
   "scripts": {
@@ -34,8 +34,12 @@
     "lucide-react": "^0.460.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.0",
+    "@hookform/resolvers": "^3.9.0",
+    "zod": "^3.23.8",
     "react-router-dom": "^7.1.0",
     "recharts": "^2.15.0",
+    "sonner": "^1.7.0",
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {

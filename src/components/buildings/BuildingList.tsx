@@ -1,17 +1,21 @@
+// =============================================================================
+// PlumbTix — Building List
+// =============================================================================
+// Grid of building cards with search, "New Building" button (opens Dialog),
+// and company picker for proroto_admin.
+// =============================================================================
+
 import { useEffect, useState, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchBuildingList, type BuildingListRow } from '@/lib/buildings';
-import { fetchCompanyOptions, type CompanyOption } from '@/lib/admin';
 import { useAuth } from '@/lib/auth';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition, StaggerChildren, StaggerItem } from '@/components/PageTransition';
+import { BuildingFormDialog } from './BuildingFormDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
 import {
   Building2, MapPin, Layers, Ticket, Search, Plus, Calendar,
 } from 'lucide-react';
@@ -42,45 +46,15 @@ export function BuildingList() {
   const navigate = useNavigate();
   const { role } = useAuth();
 
-  // Both proroto_admin and pm_admin can create buildings
   const canCreate = role === 'proroto_admin' || role === 'pm_admin';
-  const isProrotoAdmin = role === 'proroto_admin';
 
   const [buildings, setBuildings] = useState<BuildingListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  // Company picker for proroto_admin (they have no default companyId)
-  const [companyPickerOpen, setCompanyPickerOpen] = useState(false);
-  const [companies, setCompanies] = useState<CompanyOption[]>([]);
-  const [companiesLoading, setCompaniesLoading] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-
-  const handleNewBuilding = async () => {
-    // pm_admin has a companyId in context — navigate directly
-    if (!isProrotoAdmin) {
-      navigate('new');
-      return;
-    }
-    // proroto_admin needs to pick a company first
-    setCompanyPickerOpen(true);
-    setCompaniesLoading(true);
-    try {
-      const list = await fetchCompanyOptions();
-      setCompanies(list);
-    } catch {
-      setError('Failed to load companies');
-    } finally {
-      setCompaniesLoading(false);
-    }
-  };
-
-  const handleCompanySelected = () => {
-    if (!selectedCompanyId) return;
-    setCompanyPickerOpen(false);
-    navigate(`new?companyId=${selectedCompanyId}`);
-  };
+  // Dialog state for creating a new building
+  const [formOpen, setFormOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,7 +92,7 @@ export function BuildingList() {
           </p>
         </div>
         {canCreate && (
-          <Button onClick={handleNewBuilding}>
+          <Button onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4" />
             New Building
           </Button>
@@ -159,7 +133,7 @@ export function BuildingList() {
                 : 'No buildings are available for your account.'}
           </div>
           {canCreate && !search && (
-            <Button size="sm" className="mt-4" onClick={handleNewBuilding}>
+            <Button size="sm" className="mt-4" onClick={() => setFormOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Add Building
             </Button>
           )}
@@ -208,53 +182,12 @@ export function BuildingList() {
         </StaggerChildren>
       )}
 
-      {/* Company Picker Dialog — proroto_admin only */}
-      <Dialog open={companyPickerOpen} onOpenChange={setCompanyPickerOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Select Company</DialogTitle>
-            <DialogDescription>
-              Choose which company this building belongs to.
-            </DialogDescription>
-          </DialogHeader>
-          {companiesLoading ? (
-            <div className="space-y-2 py-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : companies.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">
-              No companies found. Create a company first.
-            </p>
-          ) : (
-            <div className="max-h-64 overflow-y-auto space-y-1 py-2">
-              {companies.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setSelectedCompanyId(c.id)}
-                  className={`w-full text-left px-3 py-2.5 rounded-md text-sm transition-colors ${
-                    selectedCompanyId === c.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-muted'
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCompanyPickerOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCompanySelected} disabled={!selectedCompanyId}>
-              Continue
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create Building Dialog (company picker built into the dialog for proroto_admin) */}
+      <BuildingFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onSaved={load}
+      />
     </PageTransition>
   );
 }

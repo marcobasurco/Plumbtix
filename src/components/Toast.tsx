@@ -1,47 +1,39 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+// =============================================================================
+// PlumbTix — Toast (sonner shim)
+// =============================================================================
+// Backward-compatible wrapper: existing code uses useToast().toast(msg, variant)
+// while new code can import { toast } from 'sonner' directly.
+// The Sonner <Toaster /> is mounted in App.tsx.
+// =============================================================================
 
-interface ToastItem {
-  id: number;
-  message: string;
-  variant: 'success' | 'error' | 'info';
+import { toast as sonnerToast } from 'sonner';
+import type { ReactNode } from 'react';
+
+// ---------------------------------------------------------------------------
+// useToast — drop-in replacement for the old context-based API
+// ---------------------------------------------------------------------------
+
+export function useToast() {
+  return {
+    toast: (message: string, variant?: 'success' | 'error' | 'info') => {
+      switch (variant) {
+        case 'error':
+          sonnerToast.error(message);
+          break;
+        case 'info':
+          sonnerToast.info(message);
+          break;
+        default:
+          sonnerToast.success(message);
+      }
+    },
+  };
 }
 
-interface ToastCtx {
-  toast: (message: string, variant?: 'success' | 'error' | 'info') => void;
-}
-
-const ToastContext = createContext<ToastCtx>({ toast: () => {} });
-export const useToast = () => useContext(ToastContext);
-
-let nextId = 0;
+// ---------------------------------------------------------------------------
+// ToastProvider — kept as a passthrough so App.tsx doesn't need restructuring
+// ---------------------------------------------------------------------------
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const toast = useCallback((message: string, variant: 'success' | 'error' | 'info' = 'success') => {
-    const id = ++nextId;
-    setToasts((prev) => [...prev, { id, message, variant }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
-  }, []);
-
-  return (
-    <ToastContext.Provider value={{ toast }}>
-      {children}
-      <div className="toast-container">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.variant === 'success' ? 'toast-success' : t.variant === 'error' ? 'toast-error' : ''}`}>
-            {t.variant === 'success' && (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-            )}
-            {t.variant === 'error' && (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-            )}
-            {t.message}
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
-  );
+  return <>{children}</>;
 }

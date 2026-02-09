@@ -1,3 +1,11 @@
+// =============================================================================
+// PlumbTix — Building Detail Page
+// =============================================================================
+// Shows building address, site-access details, spaces (units + common areas),
+// occupant lists, and PM-user entitlements.
+// Edit opens BuildingFormDialog; delete uses AlertDialog.
+// =============================================================================
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -11,6 +19,7 @@ import {
 import { COMMON_AREA_LABELS } from '@shared/types/enums';
 import { useAuth } from '@/lib/auth';
 import { SpaceForm } from './SpaceForm';
+import { BuildingFormDialog } from './BuildingFormDialog';
 import { OccupantList } from './OccupantList';
 import { EntitlementManager } from './EntitlementManager';
 import { ErrorBanner } from '@/components/ErrorBanner';
@@ -36,6 +45,9 @@ export function BuildingDetail() {
   const [spaces, setSpaces] = useState<SpaceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Delete building state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -145,9 +157,9 @@ export function BuildingDetail() {
 
   return (
     <PageTransition>
-      <button type="button" className="back-link" onClick={() => navigate('..')}>
+      <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1" onClick={() => navigate('..')}>
         <ChevronLeft className="h-3.5 w-3.5" /> Buildings
-      </button>
+      </Button>
 
       {/* Header */}
       <div className="flex justify-between items-start flex-wrap gap-3 mb-6">
@@ -163,7 +175,7 @@ export function BuildingDetail() {
         </div>
         {canWrite && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('edit')}>
+            <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(true)}>
               <Pencil className="h-3.5 w-3.5" /> Edit
             </Button>
             <Button
@@ -275,13 +287,15 @@ export function BuildingDetail() {
                     <React.Fragment key={s.id}>
                       <tr className="transition-colors hover:bg-muted/50">
                         <td className="px-4 py-3 border-t border-border">
-                          <button
-                            className="font-semibold flex items-center gap-1.5 text-primary hover:underline bg-transparent border-none cursor-pointer p-0"
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0 h-auto font-semibold gap-1.5"
                             onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}
                           >
                             <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${expandedSpace === s.id ? 'rotate-90' : ''}`} />
                             {s.unit_number}
-                          </button>
+                          </Button>
                         </td>
                         <td className="px-4 py-3 border-t border-border">{s.floor ?? <span className="text-muted-foreground">—</span>}</td>
                         <td className="px-4 py-3 border-t border-border">{s.bedrooms ?? <span className="text-muted-foreground">—</span>}</td>
@@ -334,13 +348,15 @@ export function BuildingDetail() {
                       <React.Fragment key={s.id}>
                         <tr className="transition-colors hover:bg-muted/50">
                           <td className="px-4 py-3 border-t border-border">
-                            <button
-                              className="font-semibold flex items-center gap-1.5 text-primary hover:underline bg-transparent border-none cursor-pointer p-0"
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="p-0 h-auto font-semibold gap-1.5"
                               onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}
                             >
                               <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${expandedSpace === s.id ? 'rotate-90' : ''}`} />
                               {areaLabel}
-                            </button>
+                            </Button>
                           </td>
                           <td className="px-4 py-3 border-t border-border">{s.floor ?? <span className="text-muted-foreground">—</span>}</td>
                           {canWrite && (
@@ -402,6 +418,15 @@ export function BuildingDetail() {
           </Card>
         </div>
       )}
+
+      {/* Edit Building Dialog */}
+      <BuildingFormDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        buildingId={building.id}
+        companyId={building.company_id}
+        onSaved={load}
+      />
 
       {/* Delete building dialog */}
       <AlertDialog

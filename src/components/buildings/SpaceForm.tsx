@@ -1,4 +1,15 @@
-import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
+// =============================================================================
+// PlumbTix — Space Form (react-hook-form + Zod)
+// =============================================================================
+// Inline form for adding/editing spaces within BuildingDetail.
+// Uses Zod conditional validation: unit requires unit_number,
+// common_area requires common_area_type.
+// =============================================================================
+
+import { useState, useEffect, useCallback } from 'react';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { SpaceSchema, type SpaceFormValues } from '@/lib/schemas';
 import { COMMON_AREA_TYPES, COMMON_AREA_LABELS } from '@shared/types/enums';
 import {
   createSpace,
@@ -7,6 +18,7 @@ import {
   type SpaceFormData,
   type SpaceRow,
 } from '@/lib/buildings';
+import { useToast } from '@/components/Toast';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,10 +26,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
-const EMPTY_FORM: SpaceFormData = {
-  space_type: 'unit', unit_number: '', common_area_type: '',
-  floor: '', bedrooms: '', bathrooms: '',
-};
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 
 interface SpaceFormProps {
   buildingId: string;
@@ -26,14 +37,45 @@ interface SpaceFormProps {
   onCancel: () => void;
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFormProps) {
   const isEdit = !!editSpace;
-  const [form, setForm] = useState<SpaceFormData>(EMPTY_FORM);
-  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
   const [error, setError] = useState<string | null>(null);
   const [existingUnits, setExistingUnits] = useState<string[]>([]);
   const [duplicateWarning, setDuplicateWarning] = useState(false);
 
+  // react-hook-form
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    setError: setFieldError,
+    clearErrors,
+    reset,
+    formState: { errors, isSubmitting, isValid },
+  } = useForm<SpaceFormValues>({
+    resolver: zodResolver(SpaceSchema),
+    mode: 'onTouched',
+    defaultValues: {
+      space_type: 'unit',
+      unit_number: '',
+      common_area_type: '',
+      floor: '',
+      bedrooms: '',
+      bathrooms: '',
+    },
+  });
+
+  const spaceType = watch('space_type');
+  const unitNumber = watch('unit_number');
+
+  // Load existing units for duplicate detection
   useEffect(() => {
     fetchSpaces(buildingId).then((spaces) => {
       const units = spaces
@@ -44,47 +86,92 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
     });
   }, [buildingId, editSpace]);
 
+  // Populate form when editing
   useEffect(() => {
-    if (!editSpace) { setForm(EMPTY_FORM); return; }
-    setForm({
-      space_type: editSpace.space_type,
+    if (!editSpace) {
+      reset({
+        space_type: 'unit',
+        unit_number: '',
+        common_area_type: '',
+        floor: '',
+        bedrooms: '',
+        bathrooms: '',
+      });
+      return;
+    }
+    reset({
+      space_type: editSpace.space_type as 'unit' | 'common_area',
       unit_number: editSpace.unit_number ?? '',
       common_area_type: editSpace.common_area_type ?? '',
       floor: editSpace.floor?.toString() ?? '',
       bedrooms: editSpace.bedrooms?.toString() ?? '',
       bathrooms: editSpace.bathrooms?.toString() ?? '',
     });
-  }, [editSpace]);
+  }, [editSpace, reset]);
 
+  // Duplicate unit number check
   useEffect(() => {
-    if (form.space_type === 'unit' && form.unit_number.trim()) {
-      setDuplicateWarning(existingUnits.includes(form.unit_number.trim().toLowerCase()));
+    if (spaceType === 'unit' && unitNumber.trim()) {
+      const isDuplicate = existingUnits.includes(unitNumber.trim().toLowerCase());
+      setDuplicateWarning(isDuplicate);
+      if (isDuplicate) {
+        setFieldError('unit_number', {
+          type: 'manual',
+          message: `Unit "${unitNumber.trim()}" already exists in this building.`,
+        });
+      } else {
+        clearErrors('unit_number');
+      }
     } else {
       setDuplicateWarning(false);
     }
-  }, [form.unit_number, form.space_type, existingUnits]);
+  }, [unitNumber, spaceType, existingUnits, setFieldError, clearErrors]);
 
-  const update = (field: keyof SpaceFormData, value: string) =>
-    setForm((f) => ({ ...f, [field]: value }));
+  // Submit
+  const onSubmit: SubmitHandler<SpaceFormValues> = useCallback(
+    async (data) => {
+      if (duplicateWarning) return;
+      setError(null);
 
-  const isValid = (): boolean => {
-    if (form.space_type === 'unit') return !!form.unit_number.trim() && !duplicateWarning;
-    return !!form.common_area_type;
-  };
+      // Cast to the API type
+      const formData: SpaceFormData = {
+        space_type: data.space_type,
+        unit_number: data.unit_number,
+        common_area_type: data.common_area_type as SpaceFormData['common_area_type'],
+        floor: data.floor,
+        bedrooms: data.bedrooms,
+        bathrooms: data.bathrooms,
+      };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!isValid()) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      if (isEdit) await updateSpace(editSpace!.id, form);
-      else await createSpace(buildingId, form);
-      onSaved();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save space');
-    } finally {
-      setSubmitting(false);
+      try {
+        if (isEdit) {
+          await updateSpace(editSpace!.id, formData);
+          toast('Space updated');
+        } else {
+          await createSpace(buildingId, formData);
+          toast('Space created');
+        }
+        onSaved();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to save space';
+        setError(msg);
+        toast(msg, 'error');
+      }
+    },
+    [isEdit, editSpace, buildingId, duplicateWarning, onSaved, toast],
+  );
+
+  // Type toggle handler
+  const handleTypeChange = (type: 'unit' | 'common_area') => {
+    if (isEdit) return;
+    setValue('space_type', type, { shouldValidate: true });
+    // Clear cross-type fields
+    if (type === 'unit') {
+      setValue('common_area_type', '');
+    } else {
+      setValue('unit_number', '');
+      setValue('bedrooms', '');
+      setValue('bathrooms', '');
     }
   };
 
@@ -98,41 +185,35 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
       <CardContent>
         <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Type toggle */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">
               Type <span className="text-destructive">*</span>
             </Label>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
-                className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                  form.space_type === 'unit'
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border bg-background'
-                } ${isEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                onClick={() => !isEdit && update('space_type', 'unit')}
+                variant={spaceType === 'unit' ? 'default' : 'outline'}
+                size="sm"
                 disabled={isEdit}
+                onClick={() => handleTypeChange('unit')}
               >
                 Unit
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                  form.space_type === 'common_area'
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border bg-background'
-                } ${isEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                onClick={() => !isEdit && update('space_type', 'common_area')}
+                variant={spaceType === 'common_area' ? 'default' : 'outline'}
+                size="sm"
                 disabled={isEdit}
+                onClick={() => handleTypeChange('common_area')}
               >
                 Common Area
-              </button>
+              </Button>
             </div>
           </div>
 
-          {form.space_type === 'unit' ? (
+          {spaceType === 'unit' ? (
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="unitNum">
@@ -140,14 +221,17 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
                 </Label>
                 <Input
                   id="unitNum"
-                  value={form.unit_number}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => update('unit_number', e.target.value)}
                   placeholder="e.g. 101, A2, PH-1"
-                  className={duplicateWarning ? 'border-destructive' : ''}
+                  className={
+                    errors.unit_number || duplicateWarning
+                      ? 'border-destructive'
+                      : ''
+                  }
+                  {...register('unit_number')}
                 />
-                {duplicateWarning && (
+                {errors.unit_number && (
                   <p className="text-xs text-destructive">
-                    Unit "{form.unit_number.trim()}" already exists in this building.
+                    {errors.unit_number.message}
                   </p>
                 )}
               </div>
@@ -158,8 +242,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
                     id="beds"
                     type="number"
                     min="0"
-                    value={form.bedrooms}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => update('bedrooms', e.target.value)}
+                    {...register('bedrooms')}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -169,8 +252,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
                     type="number"
                     min="0"
                     step="0.5"
-                    value={form.bathrooms}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => update('bathrooms', e.target.value)}
+                    {...register('bathrooms')}
                   />
                 </div>
               </div>
@@ -182,15 +264,21 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
               </Label>
               <select
                 id="caType"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.common_area_type}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => update('common_area_type', e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                {...register('common_area_type')}
               >
                 <option value="">Select type…</option>
                 {COMMON_AREA_TYPES.map((t) => (
-                  <option key={t} value={t}>{COMMON_AREA_LABELS[t]}</option>
+                  <option key={t} value={t}>
+                    {COMMON_AREA_LABELS[t]}
+                  </option>
                 ))}
               </select>
+              {errors.common_area_type && (
+                <p className="text-xs text-destructive">
+                  {errors.common_area_type.message}
+                </p>
+              )}
             </div>
           )}
 
@@ -199,21 +287,26 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
             <Input
               id="floor"
               type="number"
-              value={form.floor}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => update('floor', e.target.value)}
               placeholder="e.g. 1, 2, -1"
+              {...register('floor')}
             />
           </div>
 
           <div className="flex gap-2">
             <Button
               type="submit"
-              disabled={submitting || !isValid()}
+              disabled={isSubmitting || !isValid || duplicateWarning}
               className="flex-1"
             >
-              {submitting ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
-              ) : isEdit ? 'Save' : 'Add Space'}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                </>
+              ) : isEdit ? (
+                'Save'
+              ) : (
+                'Add Space'
+              )}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel

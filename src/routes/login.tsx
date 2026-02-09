@@ -4,6 +4,8 @@ import { useAuth } from '@/lib/auth';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { roleHome } from '@/components/RoleGate';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 export function LoginPage() {
   const { session, role, loading, error: authError, signIn } = useAuth();
@@ -66,11 +68,11 @@ export function LoginPage() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-lg w-full" disabled={submitting || !email || !password}>
+          <Button type="submit" size="lg" className="w-full" disabled={submitting || !email || !password}>
             {submitting ? (
-              <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Signing in…</>
+              <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</>
             ) : 'Sign In'}
-          </button>
+          </Button>
         </form>
 
         <div className="login-links">

@@ -5,6 +5,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ToastProvider } from '@/components/Toast';
+import { Toaster } from 'sonner';
 import { Loading } from '@/components/Loading';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RoleGate, roleHome } from '@/components/RoleGate';
@@ -29,6 +30,7 @@ export function App() {
       <BrowserRouter>
         <AuthProvider>
           <ToastProvider>
+            <Toaster position="bottom-right" richColors closeButton />
             <Routes>
               {/* Public */}
               <Route path="/login" element={<LoginPage />} />

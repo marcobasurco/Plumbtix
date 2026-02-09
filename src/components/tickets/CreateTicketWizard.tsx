@@ -38,6 +38,8 @@ import type { IssueType, TicketSeverity } from '@shared/types/enums';
 import { DEFAULT_SEVERITY } from '@shared/types/transitions';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Loading } from '@/components/Loading';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -574,30 +576,26 @@ export function CreateTicketWizard() {
         {/* Navigation */}
         <div style={navRow}>
           {step > 1 && (
-            <button type="button" onClick={goBack} disabled={submitting} style={navBtn}>
+            <Button type="button" variant="outline" onClick={goBack} disabled={submitting}>
               ← Previous
-            </button>
+            </Button>
           )}
           <div style={{ flex: 1 }} />
           {step < 6 ? (
-            <button
+            <Button
               type="button"
               onClick={goNext}
               disabled={!canAdvance()}
-              className="btn btn-primary"
-              style={{ width: 'auto', padding: '8px 24px' }}
             >
               Next →
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="submit"
               disabled={submitting}
-              className="btn btn-primary"
-              style={{ width: 'auto', padding: '8px 24px' }}
             >
-              {submitting ? 'Creating Ticket…' : 'Create Ticket'}
-            </button>
+              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating Ticket…</> : 'Create Ticket'}
+            </Button>
           )}
         </div>
       </form>

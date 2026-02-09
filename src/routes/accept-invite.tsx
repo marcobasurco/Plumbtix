@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { acceptInvitation } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 export function AcceptInvitePage() {
   const [searchParams] = useSearchParams();
@@ -134,13 +136,15 @@ export function AcceptInvitePage() {
           />
         </div>
 
-        <button
+        <Button
           type="submit"
-          className="btn btn-primary"
+          className="w-full"
           disabled={submitting || !email || !password || !fullName}
         >
-          {submitting ? 'Creating account…' : 'Create Account'}
-        </button>
+          {submitting ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</>
+          ) : 'Create Account'}
+        </Button>
       </form>
 
       <p style={{ marginTop: '24px', fontSize: '0.85rem', color: '#666', textAlign: 'center' }}>

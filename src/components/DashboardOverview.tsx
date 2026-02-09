@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { Button } from '@/components/ui/button';
 
 // ---------------------------------------------------------------------------
 // Color palette for charts
@@ -312,9 +313,9 @@ export function DashboardOverview() {
               <Clock size={16} style={{ color: 'var(--slate-400)' }} />
               <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Recent Tickets</span>
             </div>
-            <button className="btn-link text-sm" onClick={() => navigate(`${basePath}/tickets`)}>
+            <Button variant="link" size="sm" onClick={() => navigate(`${basePath}/tickets`)}>
               View all <ArrowRight size={13} style={{ marginLeft: 2 }} />
-            </button>
+            </Button>
           </div>
           {metrics.recentTickets.length > 0 ? (
             <div style={{ padding: 0 }}>
@@ -393,16 +394,16 @@ export function DashboardOverview() {
                 Quick Actions
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <button className="btn btn-primary btn-sm w-full" onClick={() => navigate(`${basePath}/tickets/new`)}>
+                <Button size="sm" className="w-full" onClick={() => navigate(`${basePath}/tickets/new`)}>
                   <TicketCheck size={14} /> New Ticket
-                </button>
-                <button className="btn btn-secondary btn-sm w-full" onClick={() => navigate(`${basePath}/buildings`)}>
+                </Button>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`${basePath}/buildings`)}>
                   <Building2 size={14} /> View Buildings
-                </button>
+                </Button>
                 {role === 'proroto_admin' && (
-                  <button className="btn btn-secondary btn-sm w-full" onClick={() => navigate('/admin/companies')}>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/admin/companies')}>
                     <LayoutGrid size={14} /> Manage Companies
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

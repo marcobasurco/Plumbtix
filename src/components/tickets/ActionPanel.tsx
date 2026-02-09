@@ -6,6 +6,8 @@ import { getAllowedTransitions, isTerminalStatus } from '@shared/types/transitio
 import { STATUS_LABELS } from '@shared/types/enums';
 import type { TicketStatus } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 interface ActionPanelProps {
   ticketId: string;
@@ -200,14 +202,16 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
             </div>
           </div>
 
-          <button
+          <Button
+            size="sm"
             onClick={handleFieldUpdate}
             disabled={submitting}
-            className="btn btn-primary"
-            style={{ width: 'auto', padding: '6px 16px', fontSize: '0.85rem', marginTop: '8px' }}
+            className="mt-2"
           >
-            {submitting ? 'Saving…' : 'Save Fields'}
-          </button>
+            {submitting ? (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
+            ) : 'Save Fields'}
+          </Button>
         </div>
       )}
     </div>
