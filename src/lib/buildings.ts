@@ -67,18 +67,6 @@ export interface BuildingFormData {
 // Edge function response types
 // ---------------------------------------------------------------------------
 
-interface ApiSuccess<T> {
-  ok: true;
-  data: T;
-}
-
-interface ApiError {
-  ok: false;
-  error: { code: string; message: string };
-}
-
-type ApiResponse<T> = ApiSuccess<T> | ApiError;
-
 const EDGE_BASE = import.meta.env.VITE_EDGE_BASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
