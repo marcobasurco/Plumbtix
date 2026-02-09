@@ -1,19 +1,19 @@
 // =============================================================================
-// PlumbTix — Building & Space Data Access (PostgREST via User JWT + RLS)
+// PlumbTix — Building & Space Data Access
 // =============================================================================
-// All operations use the anon client with the user's JWT.
-// RLS policies handle authorization:
-//   proroto_admin: ALL on buildings/spaces
-//   pm_admin:      ALL on own company buildings/spaces
-//   pm_user:       SELECT only on entitled buildings/spaces
-//   resident:      SELECT only on own building/space
+// READS:  PostgREST via User JWT + RLS (unchanged)
+// WRITES: Edge functions for server-side validation + consistent pattern
+//
+// Edge function responses follow ApiResponse<T> shape:
+//   Success: { ok: true,  data: T }
+//   Error:   { ok: false, error: { code: string, message: string } }
 // =============================================================================
 
 import { supabase } from './supabaseClient';
 import type { CommonAreaType } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
-// Building types
+// Building types (unchanged)
 // ---------------------------------------------------------------------------
 
 export interface BuildingListRow {
@@ -64,12 +64,53 @@ export interface BuildingFormData {
 }
 
 // ---------------------------------------------------------------------------
-// Building CRUD
+// Edge function response types
+// ---------------------------------------------------------------------------
+
+interface ApiSuccess<T> {
+  ok: true;
+  data: T;
+}
+
+interface ApiError {
+  ok: false;
+  error: { code: string; message: string };
+}
+
+type ApiResponse<T> = ApiSuccess<T> | ApiError;
+
+/**
+ * Invoke an edge function and parse the ApiResponse<T> envelope.
+ * Throws on network errors or { ok: false } responses.
+ */
+async function invokeFunction<T>(
+  name: string,
+  body: Record<string, unknown>,
+): Promise<T> {
+  const { data: raw, error: invokeErr } = await supabase.functions.invoke(name, {
+    body,
+  });
+
+  // Network-level error (function not found, timeout, etc.)
+  if (invokeErr) {
+    throw new Error(invokeErr.message || `Edge function ${name} failed`);
+  }
+
+  // Parse the response envelope
+  const response = raw as ApiResponse<T>;
+
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+
+  return response.data;
+}
+
+// ---------------------------------------------------------------------------
+// Building READS (PostgREST + RLS — unchanged)
 // ---------------------------------------------------------------------------
 
 export async function fetchBuildingList(): Promise<BuildingListRow[]> {
-  // Fetch buildings with aggregated counts via separate queries
-  // (Supabase PostgREST doesn't support COUNT on related tables directly)
   const { data, error } = await supabase
     .from('buildings')
     .select('id, company_id, name, address_line1, city, state, zip, created_at')
@@ -121,67 +162,52 @@ export async function fetchBuildingDetail(id: string): Promise<BuildingDetailRow
   return data as BuildingDetailRow;
 }
 
-export async function createBuilding(companyId: string, form: BuildingFormData) {
-  const { data, error } = await supabase
-    .from('buildings')
-    .insert({
-      company_id: companyId,
-      name: form.name.trim() || null,
-      address_line1: form.address_line1.trim(),
-      address_line2: form.address_line2.trim() || null,
-      city: form.city.trim(),
-      state: form.state.trim().toUpperCase(),
-      zip: form.zip.trim(),
-      gate_code: form.gate_code.trim() || null,
-      water_shutoff_location: form.water_shutoff_location.trim() || null,
-      gas_shutoff_location: form.gas_shutoff_location.trim() || null,
-      onsite_contact_name: form.onsite_contact_name.trim() || null,
-      onsite_contact_phone: form.onsite_contact_phone.trim() || null,
-      access_notes: form.access_notes.trim() || null,
-    })
-    .select()
-    .single();
+// ---------------------------------------------------------------------------
+// Building WRITES (via Edge Functions)
+// ---------------------------------------------------------------------------
 
-  if (error) throw parseRLSError(error);
-  return data as BuildingDetailRow;
+export async function createBuilding(companyId: string, form: BuildingFormData) {
+  return invokeFunction<BuildingDetailRow>('create-building', {
+    company_id: companyId,
+    name: form.name.trim() || null,
+    address_line1: form.address_line1.trim(),
+    address_line2: form.address_line2.trim() || null,
+    city: form.city.trim(),
+    state: form.state.trim().toUpperCase(),
+    zip: form.zip.trim(),
+    gate_code: form.gate_code.trim() || null,
+    water_shutoff_location: form.water_shutoff_location.trim() || null,
+    gas_shutoff_location: form.gas_shutoff_location.trim() || null,
+    onsite_contact_name: form.onsite_contact_name.trim() || null,
+    onsite_contact_phone: form.onsite_contact_phone.trim() || null,
+    access_notes: form.access_notes.trim() || null,
+  });
 }
 
 export async function updateBuilding(id: string, form: BuildingFormData) {
-  const { data, error } = await supabase
-    .from('buildings')
-    .update({
-      name: form.name.trim() || null,
-      address_line1: form.address_line1.trim(),
-      address_line2: form.address_line2.trim() || null,
-      city: form.city.trim(),
-      state: form.state.trim().toUpperCase(),
-      zip: form.zip.trim(),
-      gate_code: form.gate_code.trim() || null,
-      water_shutoff_location: form.water_shutoff_location.trim() || null,
-      gas_shutoff_location: form.gas_shutoff_location.trim() || null,
-      onsite_contact_name: form.onsite_contact_name.trim() || null,
-      onsite_contact_phone: form.onsite_contact_phone.trim() || null,
-      access_notes: form.access_notes.trim() || null,
-    })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw parseRLSError(error);
-  return data as BuildingDetailRow;
+  return invokeFunction<BuildingDetailRow>('update-building', {
+    id,
+    name: form.name.trim() || null,
+    address_line1: form.address_line1.trim(),
+    address_line2: form.address_line2.trim() || null,
+    city: form.city.trim(),
+    state: form.state.trim().toUpperCase(),
+    zip: form.zip.trim(),
+    gate_code: form.gate_code.trim() || null,
+    water_shutoff_location: form.water_shutoff_location.trim() || null,
+    gas_shutoff_location: form.gas_shutoff_location.trim() || null,
+    onsite_contact_name: form.onsite_contact_name.trim() || null,
+    onsite_contact_phone: form.onsite_contact_phone.trim() || null,
+    access_notes: form.access_notes.trim() || null,
+  });
 }
 
 export async function deleteBuilding(id: string) {
-  const { error } = await supabase
-    .from('buildings')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw parseRLSError(error);
+  return invokeFunction<{ deleted: true; id: string }>('delete-building', { id });
 }
 
 // ---------------------------------------------------------------------------
-// Space types
+// Space types (unchanged)
 // ---------------------------------------------------------------------------
 
 export interface SpaceRow {
@@ -206,7 +232,7 @@ export interface SpaceFormData {
 }
 
 // ---------------------------------------------------------------------------
-// Space CRUD
+// Space READS (PostgREST + RLS — unchanged)
 // ---------------------------------------------------------------------------
 
 export async function fetchSpaces(buildingId: string): Promise<SpaceRow[]> {
@@ -221,79 +247,60 @@ export async function fetchSpaces(buildingId: string): Promise<SpaceRow[]> {
   return (data ?? []) as SpaceRow[];
 }
 
+// ---------------------------------------------------------------------------
+// Space WRITES (via Edge Functions)
+// ---------------------------------------------------------------------------
+
 export async function createSpace(buildingId: string, form: SpaceFormData) {
-  const row: Record<string, unknown> = {
+  const body: Record<string, unknown> = {
     building_id: buildingId,
     space_type: form.space_type,
     floor: form.floor ? parseInt(form.floor) : null,
   };
 
   if (form.space_type === 'unit') {
-    row.unit_number = form.unit_number.trim();
-    row.common_area_type = null;
-    row.bedrooms = form.bedrooms ? parseInt(form.bedrooms) : null;
-    row.bathrooms = form.bathrooms ? parseFloat(form.bathrooms) : null;
+    body.unit_number = form.unit_number.trim();
+    body.common_area_type = null;
+    body.bedrooms = form.bedrooms ? parseInt(form.bedrooms) : null;
+    body.bathrooms = form.bathrooms ? parseFloat(form.bathrooms) : null;
   } else {
-    row.unit_number = null;
-    row.common_area_type = form.common_area_type || null;
-    row.bedrooms = null;
-    row.bathrooms = null;
+    body.unit_number = null;
+    body.common_area_type = form.common_area_type || null;
+    body.bedrooms = null;
+    body.bathrooms = null;
   }
 
-  const { data, error } = await supabase
-    .from('spaces')
-    .insert(row)
-    .select()
-    .single();
-
-  if (error) throw parseRLSError(error);
-  return data as SpaceRow;
+  return invokeFunction<SpaceRow>('create-space', body);
 }
 
 export async function updateSpace(id: string, form: SpaceFormData) {
-  const row: Record<string, unknown> = {
+  const body: Record<string, unknown> = {
+    id,
     space_type: form.space_type,
     floor: form.floor ? parseInt(form.floor) : null,
   };
 
   if (form.space_type === 'unit') {
-    row.unit_number = form.unit_number.trim();
-    row.common_area_type = null;
-    row.bedrooms = form.bedrooms ? parseInt(form.bedrooms) : null;
-    row.bathrooms = form.bathrooms ? parseFloat(form.bathrooms) : null;
+    body.unit_number = form.unit_number.trim();
+    body.common_area_type = null;
+    body.bedrooms = form.bedrooms ? parseInt(form.bedrooms) : null;
+    body.bathrooms = form.bathrooms ? parseFloat(form.bathrooms) : null;
   } else {
-    row.unit_number = null;
-    row.common_area_type = form.common_area_type || null;
-    row.bedrooms = null;
-    row.bathrooms = null;
+    body.unit_number = null;
+    body.common_area_type = form.common_area_type || null;
+    body.bedrooms = null;
+    body.bathrooms = null;
   }
 
-  const { data, error } = await supabase
-    .from('spaces')
-    .update(row)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw parseRLSError(error);
-  return data as SpaceRow;
+  return invokeFunction<SpaceRow>('update-space', body);
 }
 
 export async function deleteSpace(id: string) {
-  const { error } = await supabase
-    .from('spaces')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw parseRLSError(error);
+  return invokeFunction<{ deleted: true; id: string }>('delete-space', { id });
 }
 
 // ---------------------------------------------------------------------------
-// Error helper
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Occupant types
+// Occupant types & CRUD (reads via PostgREST, writes unchanged for now)
 // ---------------------------------------------------------------------------
 
 export interface OccupantRow {
@@ -317,10 +324,6 @@ export interface OccupantFormData {
   phone: string;
 }
 
-// ---------------------------------------------------------------------------
-// Occupant CRUD
-// ---------------------------------------------------------------------------
-
 export async function fetchOccupants(spaceId: string): Promise<OccupantRow[]> {
   const { data, error } = await supabase
     .from('occupants')
@@ -333,7 +336,6 @@ export async function fetchOccupants(spaceId: string): Promise<OccupantRow[]> {
 }
 
 export async function fetchBuildingOccupants(buildingId: string): Promise<OccupantRow[]> {
-  // Get all spaces for this building, then get occupants
   const { data: spaceData } = await supabase
     .from('spaces')
     .select('id')
@@ -382,7 +384,7 @@ export async function deleteOccupant(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Building Entitlement types & CRUD
+// Building Entitlement types & CRUD (unchanged — direct PostgREST)
 // ---------------------------------------------------------------------------
 
 export interface EntitlementRow {
@@ -424,7 +426,7 @@ export async function deleteEntitlement(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Error helper
+// Error helper (unchanged)
 // ---------------------------------------------------------------------------
 
 function parseRLSError(error: { message: string; code?: string }): Error {
