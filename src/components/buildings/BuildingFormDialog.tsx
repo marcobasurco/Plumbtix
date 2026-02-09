@@ -123,7 +123,7 @@ export function BuildingFormDialog({
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting, isValid, isDirty },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<BuildingFormValues>({
     resolver: zodResolver(BuildingSchema),
     mode: 'onTouched',

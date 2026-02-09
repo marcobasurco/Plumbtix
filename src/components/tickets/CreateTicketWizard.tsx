@@ -654,7 +654,3 @@ const navRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: '12px',
   marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb',
 };
-const navBtn: React.CSSProperties = {
-  background: 'none', border: '1px solid #d1d5db', borderRadius: '6px',
-  padding: '8px 16px', fontSize: '0.85rem', cursor: 'pointer', color: '#374151',
-};
