@@ -11,9 +11,6 @@
 #   00005 → Transition trigger          ✅ ADDITIVE
 # =============================================================================
 
-[project]
-id = "plumbtix-local"
-
 [api]
 enabled = true
 port = 54321
