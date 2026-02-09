@@ -79,31 +79,48 @@ interface ApiError {
 
 type ApiResponse<T> = ApiSuccess<T> | ApiError;
 
+const EDGE_BASE = import.meta.env.VITE_EDGE_BASE_URL;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 /**
  * Invoke an edge function and parse the ApiResponse<T> envelope.
- * Throws on network errors or { ok: false } responses.
+ * Uses the same fetch pattern as api.ts (VITE_EDGE_BASE_URL + apikey header)
+ * to match all other working edge function calls.
  */
 async function invokeFunction<T>(
   name: string,
   body: Record<string, unknown>,
+  method: 'POST' | 'PATCH' | 'DELETE' = 'POST',
 ): Promise<T> {
-  const { data: raw, error: invokeErr } = await supabase.functions.invoke(name, {
-    body,
+  // Get current session JWT
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Not logged in');
+  }
+
+  const res = await fetch(`${EDGE_BASE}/${name}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': ANON_KEY,
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(body),
   });
 
-  // Network-level error (function not found, timeout, etc.)
-  if (invokeErr) {
-    throw new Error(invokeErr.message || `Edge function ${name} failed`);
+  // Handle non-JSON responses (e.g., 404 HTML from gateway)
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Edge function "${name}" returned ${res.status}: ${res.statusText}`);
   }
 
-  // Parse the response envelope
-  const response = raw as ApiResponse<T>;
+  const json = (await res.json()) as ApiResponse<T>;
 
-  if (!response.ok) {
-    throw new Error(response.error.message);
+  if (!json.ok) {
+    throw new Error(json.error.message);
   }
 
-  return response.data;
+  return json.data;
 }
 
 // ---------------------------------------------------------------------------
