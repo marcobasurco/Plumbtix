@@ -114,13 +114,33 @@ async function invokeFunction<T>(
     throw new Error(`Edge function "${name}" returned ${res.status}: ${res.statusText}`);
   }
 
-  const json = (await res.json()) as ApiResponse<T>;
+  const json = await res.json();
 
-  if (!json.ok) {
+  // Log for debugging (visible in browser DevTools console)
+  if (!res.ok) {
+    console.error(`[invokeFunction] ${name} returned ${res.status}:`, json);
+  }
+
+  // Standard ApiResponse envelope: { ok: true, data } or { ok: false, error: { code, message } }
+  if (json.ok === true) {
+    return json.data as T;
+  }
+
+  // Our edge functions return { ok: false, error: { code, message } }
+  if (json.ok === false && json.error?.message) {
     throw new Error(json.error.message);
   }
 
-  return json.data;
+  // Supabase gateway / Deno boot errors return { msg: "..." } or { message: "..." }
+  if (json.msg) {
+    throw new Error(json.msg);
+  }
+  if (json.message) {
+    throw new Error(json.message);
+  }
+
+  // Completely unexpected shape
+  throw new Error(`Edge function "${name}" failed (HTTP ${res.status})`);
 }
 
 // ---------------------------------------------------------------------------
