@@ -1133,43 +1133,270 @@ body {
    RESPONSIVE
    ══════════════════════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════════════════════
+   TICKET CARDS (mobile list view)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.ticket-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: 14px 40px 14px 14px;
+  position: relative;
+  transition: all var(--duration-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+.ticket-card:active {
+  background: var(--slate-50);
+  transform: scale(0.98);
+}
+.ticket-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.ticket-card-number {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--slate-800);
+}
+.ticket-card-badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ticket-card-issue {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--slate-700);
+  margin-bottom: 2px;
+}
+.ticket-card-desc {
+  font-size: var(--text-xs);
+  color: var(--slate-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 8px;
+}
+.ticket-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ticket-card-location {
+  font-size: var(--text-xs);
+  color: var(--slate-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.ticket-card-date {
+  font-size: var(--text-xs);
+  color: var(--slate-400);
+  flex-shrink: 0;
+}
+.ticket-card-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--slate-300);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TICKET FILTERS (responsive)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.ticket-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.ticket-filters-row {
+  display: flex;
+  gap: 8px;
+}
+.ticket-filter-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px !important; /* prevent iOS zoom */
+}
+.ticket-filter-search-wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+.ticket-filter-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--slate-400);
+  pointer-events: none;
+}
+.ticket-filter-search {
+  padding-left: 32px !important;
+  font-size: 16px !important; /* prevent iOS zoom */
+}
+
+@media (min-width: 769px) {
+  .ticket-filters {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .ticket-filters-row {
+    display: contents;
+  }
+  .ticket-filter-select {
+    flex: none;
+    width: auto;
+    min-width: 140px;
+    font-size: inherit !important;
+  }
+  .ticket-filter-search-wrap {
+    flex: none;
+    min-width: 200px;
+  }
+  .ticket-filter-search {
+    font-size: inherit !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — 768px and below
+   ══════════════════════════════════════════════════════════════════════════ */
+
 @media (max-width: 768px) {
   :root { --sidebar-w: 0px; }
+
+  /* iOS safe-area padding */
+  .content-main {
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .content-header {
+    padding: 0 16px;
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px));
+  }
+
+  /* Sidebar slide-in */
   .sidebar {
     transform: translateX(-100%);
     width: 260px;
   }
   .sidebar.open { transform: translateX(0); }
   .content-area { margin-left: 0; }
-  .content-header { padding: 0 16px; }
-  .content-main { padding: 16px; }
+
+  /* Form rows stack */
   .form-row-2, .form-row-3 { grid-template-columns: 1fr; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .page-title-bar { flex-direction: column; align-items: flex-start; }
+
+  /* Dashboard grids */
   .dashboard-charts { grid-template-columns: 1fr; }
   .dashboard-bottom { grid-template-columns: 1fr; }
-  .metric-grid { grid-template-columns: 1fr 1fr; }
+  .metric-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metric-card { padding: 14px; gap: 12px; }
+  .metric-card-icon { width: 38px; height: 38px; }
+  .metric-card-value { font-size: 1.35rem; }
+  .metric-card-label { font-size: 0.75rem; }
+
   .recent-ticket-row { flex-wrap: wrap; gap: 8px; }
 
-  /* Dispatch board: stack columns vertically on mobile */
+  /* Prevent iOS zoom on inputs */
+  .form-input, .form-select, .form-textarea,
+  input[type="text"], input[type="email"], input[type="tel"],
+  input[type="password"], input[type="number"], input[type="date"],
+  input[type="search"], select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Touch-friendly form controls */
+  .form-input, .form-select, .form-textarea {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+  .form-select {
+    padding-right: 32px;
+  }
+
+  /* Buttons: min touch target 44px */
+  button, .btn, [role="button"] {
+    min-height: 44px;
+  }
+
+  /* Dispatch board: stack */
   .dispatch-filters select,
   .dispatch-filters input { width: 100%; }
 
-  /* Tables: horizontal scroll with min-width on mobile */
+  /* Hide desktop table on mobile (use cards) */
+  /* Tables that do show should scroll properly */
   table { min-width: 500px; }
 
-  /* Dialog: more padding on mobile for touch targets */
+  /* Dialog: touch-friendly padding */
   [data-radix-dialog-content] { padding: 20px 16px; }
+
+  /* Chart cards: reduce height for mobile */
+  .chart-card { min-height: 260px; }
+
+  /* Severity sidebar: horizontal scroll on mobile */
+  .severity-sidebar {
+    min-width: 0;
+  }
+  .severity-card {
+    cursor: pointer;
+  }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   SMALL PHONES — 480px and below (iPhone SE, older iPhones)
+   ══════════════════════════════════════════════════════════════════════════ */
+
 @media (max-width: 480px) {
-  .metric-grid { grid-template-columns: 1fr; }
-  .content-main { padding: 12px; }
-  .content-header { padding: 0 12px; }
+  .metric-grid { grid-template-columns: 1fr; gap: 8px; }
+  .metric-card { padding: 12px; }
+
+  .content-main {
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  .content-header {
+    padding: 0 12px;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px));
+    padding-right: calc(12px + env(safe-area-inset-right, 0px));
+  }
 
   /* Tighter spacing on smallest screens */
   table { min-width: 400px; font-size: 0.8rem; }
   table th, table td { padding: 6px 8px; }
+
+  /* Ticket card: tighter padding */
+  .ticket-card { padding: 12px 36px 12px 12px; }
+
+  /* Filter selects: smaller text */
+  .ticket-filter-select { font-size: 14px !important; }
+  .ticket-filter-search { font-size: 14px !important; }
+
+  /* Dashboard greeting */
+  .page-title { font-size: 1.25rem !important; }
 }
 
 /* ── Legacy compat (gradual migration) ── */
