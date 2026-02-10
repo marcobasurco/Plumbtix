@@ -1,15 +1,18 @@
 // =============================================================================
-// PlumbTix — Attachments List + Upload (v0.4.0)
+// PlumbTix — Attachments List + Upload with Video Compression (v0.4.0)
 // =============================================================================
-// Image thumbnails in a grid with lightbox. "Add Files" button always visible.
-// No dependency on the users JOIN (safe for all roles including resident).
-// Flow: Storage upload → register-attachment edge function → refresh list.
+// • Image thumbnails + video thumbnails with play overlay
+// • Lightbox: images fullscreen, videos with native controls
+// • Upload: images go straight through, videos compress to H.264 MP4 first
+// • Delete: all users can delete their own uploads
+// • No file size limit — videos are compressed client-side before upload
 // =============================================================================
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchAttachments, getAttachmentUrl, type AttachmentRow } from '@/lib/tickets';
 import { registerAttachment, deleteAttachment } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
+import { shouldCompress, compressVideo } from '@/lib/videoCompressor';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,21 +22,21 @@ import {
 import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Config & Helpers
 // ---------------------------------------------------------------------------
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 const ALLOWED_TYPES = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif',
   'application/pdf',
-  'video/mp4', 'video/quicktime',
+  'video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/x-matroska',
 ];
 
 function formatFileSize(bytes: number | null): string {
   if (!bytes) return '—';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 function isImageType(fileType: string | null): boolean {
@@ -61,8 +64,10 @@ interface AttachmentWithUrl extends AttachmentRow {
 
 interface UploadingFile {
   name: string;
-  status: 'uploading' | 'registering' | 'done' | 'failed';
+  status: 'compressing' | 'uploading' | 'registering' | 'done' | 'failed';
   error?: string;
+  compressPercent?: number;
+  compressInfo?: string; // e.g. "85 MB → 12 MB"
 }
 
 interface AttachmentsListProps {
@@ -108,18 +113,15 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
 
   useEffect(() => { load(); }, [load]);
 
-  // ─── Upload handler ───
+  // ─── Upload handler (with video compression) ───
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const fileArray = Array.from(files);
     const valid: File[] = [];
     for (const f of fileArray) {
-      if (f.size > MAX_FILE_SIZE) {
-        toast.error(`${f.name} exceeds 100 MB limit`);
-        continue;
-      }
-      if (!ALLOWED_TYPES.includes(f.type)) {
+      // Accept any video type (will be compressed to mp4)
+      if (!ALLOWED_TYPES.includes(f.type) && !f.type.startsWith('video/')) {
         toast.error(`${f.name}: unsupported file type`);
         continue;
       }
@@ -129,18 +131,48 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
 
     const progress: UploadingFile[] = valid.map((f) => ({
       name: f.name,
-      status: 'uploading',
+      status: shouldCompress(f) ? 'compressing' : 'uploading',
     }));
     setUploading([...progress]);
 
     let successCount = 0;
 
     for (let i = 0; i < valid.length; i++) {
-      const file = valid[i];
+      let file = valid[i];
+
+      // ─── Compress video ───
+      if (shouldCompress(file)) {
+        progress[i] = { ...progress[i], status: 'compressing', compressPercent: 0 };
+        setUploading([...progress]);
+
+        try {
+          const result = await compressVideo(file, {
+            maxHeight: 720,
+            crf: 28,
+            preset: 'fast',
+            onProgress: (percent) => {
+              progress[i] = { ...progress[i], compressPercent: percent };
+              setUploading([...progress]);
+            },
+          });
+
+          const info = `${formatFileSize(result.originalSize)} → ${formatFileSize(result.compressedSize)}`;
+          progress[i] = { ...progress[i], compressInfo: info };
+          file = result.file; // use compressed file from here
+          toast.success(`Compressed ${valid[i].name}: ${info}`);
+        } catch (compErr) {
+          const msg = compErr instanceof Error ? compErr.message : 'Compression failed';
+          progress[i] = { ...progress[i], status: 'failed', error: msg };
+          setUploading([...progress]);
+          toast.error(`Compression failed: ${valid[i].name}`);
+          continue;
+        }
+      }
+
+      // ─── Upload to Storage ───
       const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       const filePath = `tickets/${ticketId}/${safeName}`;
 
-      // Step 1: Upload to Storage
       progress[i] = { ...progress[i], status: 'uploading' };
       setUploading([...progress]);
 
@@ -156,14 +188,14 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         continue;
       }
 
-      // Step 2: Register metadata
+      // ─── Register metadata ───
       progress[i] = { ...progress[i], status: 'registering' };
       setUploading([...progress]);
 
       const result = await registerAttachment({
         ticket_id: ticketId,
         file_path: filePath,
-        file_name: file.name,
+        file_name: valid[i].name, // original filename for display
         file_type: file.type,
         file_size: file.size,
       });
@@ -183,7 +215,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
       toast.success(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`);
       await load();
     }
-    setTimeout(() => setUploading([]), 2000);
+    setTimeout(() => setUploading([]), 3000);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [ticketId, load]);
 
@@ -201,11 +233,10 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     }
 
     toast.success(`Deleted ${att.file_name}`);
-    // Remove from local state immediately (no need to refetch)
     setItems((prev) => prev.filter((a) => a.id !== att.id));
   }, []);
 
-  // ─── Lightbox helpers — images + videos with valid URLs ───
+  // ─── Lightbox helpers ───
   const mediaItems = items.filter((a) => isMediaType(a.file_type) && a.signedUrl);
   const openLightbox = (attId: string) => {
     const idx = mediaItems.findIndex((m) => m.id === attId);
@@ -215,13 +246,15 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
   const prevImage = () => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i));
   const nextImage = () => setLightboxIndex((i) => (i !== null && i < mediaItems.length - 1 ? i + 1 : i));
 
-  const isUploading = uploading.some((u) => u.status === 'uploading' || u.status === 'registering');
+  const isUploading = uploading.some((u) =>
+    u.status === 'compressing' || u.status === 'uploading' || u.status === 'registering'
+  );
 
   const media = items.filter((a) => isMediaType(a.file_type));
   const files = items.filter((a) => !isMediaType(a.file_type));
 
   // =========================================================================
-  // RENDER — Header + Upload button ALWAYS visible regardless of state
+  // RENDER
   // =========================================================================
 
   return (
@@ -236,7 +269,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             ref={fileInputRef}
             type="file"
             multiple
-            accept={ALLOWED_TYPES.join(',')}
+            accept={ALLOWED_TYPES.join(',') + ',video/*'}
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
@@ -252,30 +285,49 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             ) : (
               <Plus className="h-3.5 w-3.5" />
             )}
-            {isUploading ? 'Uploading…' : 'Add Files'}
+            {isUploading ? 'Processing…' : 'Add Files'}
           </Button>
         </div>
       </div>
 
-      {/* ─── Upload progress (always visible when uploading) ─── */}
+      {/* ─── Upload / Compression progress ─── */}
       {uploading.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
           {uploading.map((u, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs">
-              {(u.status === 'uploading' || u.status === 'registering') && (
-                <Loader2 className="h-3 w-3 animate-spin text-primary" />
-              )}
-              {u.status === 'done' && <span className="text-green-600">✓</span>}
-              {u.status === 'failed' && <span className="text-destructive">✗</span>}
-              <span className="truncate flex-1">{u.name}</span>
-              {u.status === 'uploading' && (
-                <span className="text-muted-foreground">Uploading…</span>
-              )}
-              {u.status === 'registering' && (
-                <span className="text-muted-foreground">Saving…</span>
-              )}
-              {u.status === 'failed' && u.error && (
-                <span className="text-destructive truncate max-w-[120px]">{u.error}</span>
+            <div key={i} className="space-y-1">
+              <div className="flex items-center gap-2 text-xs">
+                {(u.status === 'compressing' || u.status === 'uploading' || u.status === 'registering') && (
+                  <Loader2 className="h-3 w-3 animate-spin text-primary shrink-0" />
+                )}
+                {u.status === 'done' && <span className="text-green-600 shrink-0">✓</span>}
+                {u.status === 'failed' && <span className="text-destructive shrink-0">✗</span>}
+                <span className="truncate flex-1 font-medium">{u.name}</span>
+                {u.status === 'compressing' && (
+                  <span className="text-muted-foreground shrink-0">
+                    Compressing{u.compressPercent != null ? ` ${u.compressPercent}%` : '…'}
+                  </span>
+                )}
+                {u.status === 'uploading' && (
+                  <span className="text-muted-foreground shrink-0">Uploading…</span>
+                )}
+                {u.status === 'registering' && (
+                  <span className="text-muted-foreground shrink-0">Saving…</span>
+                )}
+                {u.status === 'done' && u.compressInfo && (
+                  <span className="text-green-600 shrink-0">{u.compressInfo}</span>
+                )}
+                {u.status === 'failed' && u.error && (
+                  <span className="text-destructive truncate max-w-[160px] shrink-0">{u.error}</span>
+                )}
+              </div>
+              {/* Compression progress bar */}
+              {u.status === 'compressing' && u.compressPercent != null && (
+                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-300"
+                    style={{ width: `${u.compressPercent}%` }}
+                  />
+                </div>
               )}
             </div>
           ))}
@@ -290,7 +342,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         </div>
       )}
 
-      {/* ─── Error state (with retry) ─── */}
+      {/* ─── Error state ─── */}
       {!loading && error && (
         <div className="space-y-2">
           <p className="text-sm text-destructive">Error loading attachments: {error}</p>
@@ -301,7 +353,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
       {/* ─── Empty state ─── */}
       {!loading && !error && items.length === 0 && uploading.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No attachments yet. Tap "Add Files" to upload photos.
+          No attachments yet. Tap "Add Files" to upload photos or videos.
         </p>
       )}
 
@@ -338,7 +390,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                         muted
                         preload="metadata"
                       />
-                      {/* Play icon overlay */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="bg-black/60 rounded-full p-3">
                           <Play className="h-6 w-6 text-white fill-white" />
@@ -358,7 +409,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                     <p className="text-[10px] text-white truncate">{att.file_name}</p>
                   </div>
                 </button>
-                {/* Delete button */}
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleDelete(att); }}
@@ -380,7 +430,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         </div>
       )}
 
-      {/* ─── Non-image files ─── */}
+      {/* ─── Non-media files ─── */}
       {!loading && !error && files.map((att) => (
         <div
           key={att.id}
@@ -445,7 +495,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             </button>
           )}
 
-          {/* Render video or image */}
           {isVideoType(mediaItems[lightboxIndex].file_type) ? (
             <video
               key={mediaItems[lightboxIndex].id}

@@ -20,7 +20,7 @@
 
 UPDATE storage.buckets
 SET
-  file_size_limit = 104857600,  -- 100MB
+  file_size_limit = NULL,  -- No limit (videos compressed client-side)
   allowed_mime_types = ARRAY[
     'image/jpeg',
     'image/png',
@@ -30,7 +30,10 @@ SET
     'image/heif',
     'application/pdf',
     'video/mp4',
-    'video/quicktime'
+    'video/quicktime',
+    'video/webm',
+    'video/x-msvideo',
+    'video/x-matroska'
 ]
 WHERE id = 'ticket-attachments';
 

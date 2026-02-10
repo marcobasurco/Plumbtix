@@ -20,13 +20,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   fetchBuildingOptions,
   fetchSpacesForBuilding,
-  MAX_FILE_SIZE,
   ALLOWED_MIME_TYPES,
   type BuildingOption,
   type SpaceOption,
 } from '@/lib/tickets';
 import { createTicket, registerAttachment } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
+import { shouldCompress, compressVideo } from '@/lib/videoCompressor';
 import {
   ISSUE_TYPES,
   ISSUE_TYPE_LABELS,
@@ -62,8 +62,10 @@ interface SelectedFile {
 
 interface UploadProgress {
   fileName: string;
-  status: 'pending' | 'uploading' | 'registering' | 'done' | 'failed';
+  status: 'pending' | 'compressing' | 'uploading' | 'registering' | 'done' | 'failed';
   error?: string;
+  compressPercent?: number;
+  compressInfo?: string;
 }
 
 const INITIAL_STATE: WizardState = {
@@ -128,10 +130,8 @@ export function CreateTicketWizard() {
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const incoming = Array.from(e.target.files ?? []);
     const validated: SelectedFile[] = incoming.map((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        return { file, error: `Exceeds 10 MB limit (${(file.size / 1024 / 1024).toFixed(1)} MB)` };
-      }
-      if (!ALLOWED_MIME_TYPES.includes(file.type as typeof ALLOWED_MIME_TYPES[number])) {
+      // Accept any video type (will be compressed to H.264 MP4)
+      if (!ALLOWED_MIME_TYPES.includes(file.type as typeof ALLOWED_MIME_TYPES[number]) && !file.type.startsWith('video/')) {
         return { file, error: `Unsupported type: ${file.type || 'unknown'}` };
       }
       return { file, error: null };
@@ -196,17 +196,47 @@ export function CreateTicketWizard() {
 
     const ticketId = result.data.ticket.id;
 
-    // 2. Upload files (if any)
+    // 2. Upload files (with video compression)
     if (validFiles.length > 0) {
       const progress: UploadProgress[] = validFiles.map((f) => ({
         fileName: f.file.name,
-        status: 'pending',
+        status: shouldCompress(f.file) ? 'compressing' : 'pending',
       }));
       setUploadProgress([...progress]);
 
       for (let i = 0; i < validFiles.length; i++) {
         const sf = validFiles[i];
-        const filePath = `tickets/${ticketId}/${sf.file.name}`;
+        let file = sf.file;
+
+        // Compress video before upload
+        if (shouldCompress(file)) {
+          progress[i] = { ...progress[i], status: 'compressing', compressPercent: 0 };
+          setUploadProgress([...progress]);
+
+          try {
+            const result = await compressVideo(file, {
+              maxHeight: 720,
+              crf: 28,
+              preset: 'fast',
+              onProgress: (percent) => {
+                progress[i] = { ...progress[i], compressPercent: percent };
+                setUploadProgress([...progress]);
+              },
+            });
+            const origMB = (result.originalSize / (1024 * 1024)).toFixed(1);
+            const compMB = (result.compressedSize / (1024 * 1024)).toFixed(1);
+            progress[i] = { ...progress[i], compressInfo: `${origMB} MB → ${compMB} MB` };
+            file = result.file;
+          } catch (compErr) {
+            const msg = compErr instanceof Error ? compErr.message : 'Compression failed';
+            progress[i] = { ...progress[i], status: 'failed', error: msg };
+            setUploadProgress([...progress]);
+            continue;
+          }
+        }
+
+        const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const filePath = `tickets/${ticketId}/${safeName}`;
 
         // Upload to storage
         progress[i] = { ...progress[i], status: 'uploading' };
@@ -214,7 +244,7 @@ export function CreateTicketWizard() {
 
         const { error: uploadError } = await supabase.storage
           .from('ticket-attachments')
-          .upload(filePath, sf.file, { contentType: sf.file.type, upsert: false });
+          .upload(filePath, file, { contentType: file.type, upsert: false });
 
         if (uploadError) {
           progress[i] = { ...progress[i], status: 'failed', error: uploadError.message };
@@ -229,9 +259,9 @@ export function CreateTicketWizard() {
         const regResult = await registerAttachment({
           ticket_id: ticketId,
           file_path: filePath,
-          file_name: sf.file.name,
-          file_type: sf.file.type,
-          file_size: sf.file.size,
+          file_name: sf.file.name, // original filename for display
+          file_type: file.type,
+          file_size: file.size,
         });
 
         if (!regResult.ok) {
@@ -436,12 +466,12 @@ export function CreateTicketWizard() {
             <div className="form-group" style={{ marginTop: '16px' }}>
               <label>Attachments (optional)</label>
               <p style={{ ...muted, fontSize: '0.8rem', marginBottom: '8px' }}>
-                Photos, PDFs, or videos — max 10 MB each. Accepted: JPEG, PNG, GIF, WebP, PDF, MP4, MOV.
+                Photos, PDFs, or videos — no size limit. Videos are compressed automatically before upload.
               </p>
               <input
                 type="file"
                 multiple
-                accept={ALLOWED_MIME_TYPES.join(',')}
+                accept={ALLOWED_MIME_TYPES.join(',') + ',video/*'}
                 onChange={handleFilesSelected}
                 style={{ fontSize: '0.85rem' }}
               />
@@ -516,21 +546,29 @@ export function CreateTicketWizard() {
               <div style={{ marginTop: '16px' }}>
                 <p style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px' }}>Upload Progress</p>
                 {uploadProgress.map((up, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', padding: '4px 0' }}>
-                    <span style={{ width: '16px', textAlign: 'center' }}>
-                      {up.status === 'done' && '✓'}
-                      {up.status === 'failed' && '✗'}
-                      {(up.status === 'uploading' || up.status === 'registering') && '⟳'}
-                      {up.status === 'pending' && '○'}
-                    </span>
-                    <span style={{ flex: 1 }}>{up.fileName}</span>
-                    <span style={{ color: up.status === 'failed' ? '#991b1b' : '#6b7280', fontSize: '0.8rem' }}>
-                      {up.status === 'uploading' && 'Uploading…'}
-                      {up.status === 'registering' && 'Registering…'}
-                      {up.status === 'done' && 'Done'}
-                      {up.status === 'failed' && (up.error ?? 'Failed')}
-                      {up.status === 'pending' && 'Waiting'}
-                    </span>
+                  <div key={i} style={{ fontSize: '0.85rem', padding: '4px 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ width: '16px', textAlign: 'center' }}>
+                        {up.status === 'done' && '✓'}
+                        {up.status === 'failed' && '✗'}
+                        {(up.status === 'uploading' || up.status === 'registering' || up.status === 'compressing') && '⟳'}
+                        {up.status === 'pending' && '○'}
+                      </span>
+                      <span style={{ flex: 1 }}>{up.fileName}</span>
+                      <span style={{ color: up.status === 'failed' ? '#991b1b' : '#6b7280', fontSize: '0.8rem' }}>
+                        {up.status === 'compressing' && `Compressing${up.compressPercent != null ? ` ${up.compressPercent}%` : '…'}`}
+                        {up.status === 'uploading' && 'Uploading…'}
+                        {up.status === 'registering' && 'Registering…'}
+                        {up.status === 'done' && (up.compressInfo ? `Done (${up.compressInfo})` : 'Done')}
+                        {up.status === 'failed' && (up.error ?? 'Failed')}
+                        {up.status === 'pending' && 'Waiting'}
+                      </span>
+                    </div>
+                    {up.status === 'compressing' && up.compressPercent != null && (
+                      <div style={{ marginTop: '4px', marginLeft: '24px', height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${up.compressPercent}%`, background: '#3b82f6', borderRadius: '2px', transition: 'width 0.3s' }} />
+                      </div>
+                    )}
                   </div>
                 ))}
                 {uploadProgress.some((u) => u.status === 'failed') && (

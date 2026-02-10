@@ -35,7 +35,7 @@ VALUES (
     'ticket-attachments',
     'ticket-attachments',
     false,  -- Private bucket: NO public/anonymous access
-    104857600,  -- 100MB file size limit
+    NULL,  -- No file size limit (videos compressed client-side)
     ARRAY[
         'image/jpeg',
         'image/png', 

@@ -31,8 +31,6 @@ import { createUserClient, getAuthenticatedUserId } from '../_shared/supabase.ts
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-
 const FILE_PATH_REGEX = /^tickets\/[0-9a-f-]{36}\/.+$/i;
 
 const RegisterAttachmentSchema = z.object({
@@ -40,7 +38,7 @@ const RegisterAttachmentSchema = z.object({
   file_path: z.string().regex(FILE_PATH_REGEX, 'file_path must be tickets/{ticket_id}/{filename}'),
   file_name: z.string().min(1).max(255),
   file_type: z.string().min(1).max(100),
-  file_size: z.number().int().positive().max(MAX_FILE_SIZE, `File size must be ≤ ${MAX_FILE_SIZE / (1024 * 1024)}MB`),
+  file_size: z.number().int().positive(),
 });
 
 Deno.serve(async (req: Request) => {

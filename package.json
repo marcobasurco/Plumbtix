@@ -40,7 +40,9 @@
     "react-router-dom": "^7.1.0",
     "recharts": "^2.15.0",
     "sonner": "^1.7.0",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^2.6.0",
+    "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffmpeg/util": "^0.12.1"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
