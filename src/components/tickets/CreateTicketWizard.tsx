@@ -204,6 +204,7 @@ export function CreateTicketWizard() {
       }));
       setUploadProgress([...progress]);
 
+      let videoIndex = 1;
       for (let i = 0; i < validFiles.length; i++) {
         const sf = validFiles[i];
         let file = sf.file;
@@ -259,7 +260,7 @@ export function CreateTicketWizard() {
         const regResult = await registerAttachment({
           ticket_id: ticketId,
           file_path: filePath,
-          file_name: sf.file.name, // original filename for display
+          file_name: shouldCompress(sf.file) ? `video${videoIndex++}.mp4` : sf.file.name,
           file_type: file.type,
           file_size: file.size,
         });

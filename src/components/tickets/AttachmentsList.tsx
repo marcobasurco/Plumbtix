@@ -135,6 +135,9 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     }));
     setUploading([...progress]);
 
+    // Count existing videos to continue sequential naming (video1, video2, ...)
+    const existingVideoCount = items.filter((a) => isVideoType(a.file_type)).length;
+    let videoIndex = 1;
     let successCount = 0;
 
     for (let i = 0; i < valid.length; i++) {
@@ -195,7 +198,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
       const result = await registerAttachment({
         ticket_id: ticketId,
         file_path: filePath,
-        file_name: valid[i].name, // original filename for display
+        file_name: shouldCompress(valid[i]) ? `video${existingVideoCount + videoIndex++}.mp4` : valid[i].name,
         file_type: file.type,
         file_size: file.size,
       });
