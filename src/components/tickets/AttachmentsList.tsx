@@ -8,13 +8,13 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchAttachments, getAttachmentUrl, type AttachmentRow } from '@/lib/tickets';
-import { registerAttachment } from '@/lib/api';
+import { registerAttachment, deleteAttachment } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
   ImageIcon, FileIcon, Download, X, ChevronLeft, ChevronRight,
-  Plus, Loader2,
+  Plus, Loader2, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -70,6 +70,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
   const [error, setError] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState<UploadingFile[]>([]);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Load attachments + signed URLs ───
@@ -176,6 +177,24 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     setTimeout(() => setUploading([]), 2000);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [ticketId, load]);
+
+  // ─── Delete handler ───
+  const handleDelete = useCallback(async (att: AttachmentWithUrl) => {
+    if (!confirm(`Delete "${att.file_name}"? This cannot be undone.`)) return;
+
+    setDeleting(att.id);
+    const result = await deleteAttachment({ id: att.id });
+    setDeleting(null);
+
+    if (!result.ok) {
+      toast.error(`Delete failed: ${result.error.message}`);
+      return;
+    }
+
+    toast.success(`Deleted ${att.file_name}`);
+    // Remove from local state immediately (no need to refetch)
+    setItems((prev) => prev.filter((a) => a.id !== att.id));
+  }, []);
 
   // ─── Lightbox helpers ───
   const imageItems = items.filter((a) => isImageType(a.file_type) && a.signedUrl);
@@ -295,24 +314,40 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
               );
             }
             return (
-              <button
-                key={att.id}
-                type="button"
-                onClick={() => openLightbox(att.id)}
-                className="relative aspect-square rounded-lg overflow-hidden border border-border
-                           hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer group"
-              >
-                <img
-                  src={att.signedUrl}
-                  alt={att.file_name}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
-                  <p className="text-[10px] text-white truncate">{att.file_name}</p>
-                </div>
-              </button>
+              <div key={att.id} className="relative aspect-square rounded-lg overflow-hidden border border-border group">
+                <button
+                  type="button"
+                  onClick={() => openLightbox(att.id)}
+                  className="w-full h-full cursor-pointer"
+                >
+                  <img
+                    src={att.signedUrl}
+                    alt={att.file_name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
+                    <p className="text-[10px] text-white truncate">{att.file_name}</p>
+                  </div>
+                </button>
+                {/* Delete button */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleDelete(att); }}
+                  disabled={deleting === att.id}
+                  className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white/80
+                             hover:bg-red-600 hover:text-white transition-colors
+                             opacity-0 group-hover:opacity-100 z-10"
+                  title="Delete"
+                >
+                  {deleting === att.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
             );
           })}
         </div>
@@ -343,6 +378,19 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
           ) : (
             <span className="text-xs text-destructive">Error</span>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+            disabled={deleting === att.id}
+            onClick={() => handleDelete(att)}
+          >
+            {deleting === att.id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+          </Button>
         </div>
       ))}
 

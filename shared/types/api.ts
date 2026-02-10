@@ -105,6 +105,15 @@ export interface RegisterAttachmentResponse {
   attachment: TicketAttachment;
 }
 
+// --- POST /functions/v1/delete-attachment ---
+export interface DeleteAttachmentRequest {
+  id: string;
+}
+export interface DeleteAttachmentResponse {
+  deleted: true;
+  id: string;
+}
+
 // --- POST /functions/v1/send-invitation ---
 export interface SendInvitationRequest {
   company_id: string;

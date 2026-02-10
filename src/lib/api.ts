@@ -22,6 +22,8 @@ import type {
   CreateCommentResponse,
   RegisterAttachmentRequest,
   RegisterAttachmentResponse,
+  DeleteAttachmentRequest,
+  DeleteAttachmentResponse,
   SendInvitationRequest,
   SendInvitationResponse,
   ApiSuccessResponse,
@@ -196,6 +198,13 @@ export function createComment(body: CreateCommentRequest) {
 
 export function registerAttachment(body: RegisterAttachmentRequest) {
   return callEdge<RegisterAttachmentResponse>('register-attachment', {
+    method: 'POST',
+    body,
+  });
+}
+
+export function deleteAttachment(body: DeleteAttachmentRequest) {
+  return callEdge<DeleteAttachmentResponse>('delete-attachment', {
     method: 'POST',
     body,
   });
