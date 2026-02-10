@@ -1134,6 +1134,30 @@ body {
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════════
+   IMPORT DROPZONE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.import-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  border: 2px dashed var(--slate-300);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+.import-dropzone:hover, .import-dropzone:focus-within {
+  border-color: var(--blue-400);
+  background: var(--blue-50);
+}
+.import-dropzone:active {
+  transform: scale(0.99);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    COMPANY TABS
    ══════════════════════════════════════════════════════════════════════════ */
 

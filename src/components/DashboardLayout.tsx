@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   LayoutDashboard, Ticket, Building2, Users2, Kanban,
   LogOut, Menu, Wrench, Briefcase, Moon, Sun, BarChart3,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 function roleRoot(role: string | null): string {
@@ -49,6 +50,8 @@ const ADMIN_NAV: NavItem[] = [
     icon: <Kanban className="h-[18px] w-[18px]" /> },
   { label: 'Analytics', path: 'analytics', matchSegment: 'analytics',
     icon: <BarChart3 className="h-[18px] w-[18px]" /> },
+  { label: 'Sync',      path: 'import',    matchSegment: 'import',
+    icon: <FileSpreadsheet className="h-[18px] w-[18px]" /> },
 ];
 
 interface Props { title: string; children: ReactNode; }
