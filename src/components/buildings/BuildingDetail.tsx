@@ -97,7 +97,7 @@ export function BuildingDetail() {
     try {
       await deleteBuilding(building.id);
       toast.success('Building deleted');
-      navigate('..', { replace: true });
+      navigate('..', { replace: true, relative: 'path' });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete');
       setDeleteDialogOpen(false);
@@ -161,7 +161,7 @@ export function BuildingDetail() {
 
   return (
     <PageTransition>
-      <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1" onClick={() => navigate('..')}>
+      <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1" onClick={() => navigate('..', { relative: 'path' })}>
         <ChevronLeft className="h-3.5 w-3.5" /> Buildings
       </Button>
 

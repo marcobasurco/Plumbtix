@@ -153,7 +153,7 @@ export function TicketDetail() {
   return (
     <PageTransition>
       {/* Back button */}
-      <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1" onClick={() => navigate('..')}>
+      <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1" onClick={() => navigate('..', { relative: 'path' })}>
         <ChevronLeft className="h-3.5 w-3.5" /> Tickets
       </Button>
 

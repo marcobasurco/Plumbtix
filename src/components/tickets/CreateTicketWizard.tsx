@@ -273,7 +273,7 @@ export function CreateTicketWizard() {
 
     // 3. Redirect to detail page (relative to current dashboard)
     setSubmitting(false);
-    navigate(`../${ticketId}`, { replace: true });
+    navigate(`../${ticketId}`, { replace: true, relative: 'path' });
   }, [state, validFiles, submitting, navigate]);
 
   // ── Render helpers ───────────────────────────────────────────────────
@@ -586,7 +586,7 @@ export function CreateTicketWizard() {
   return (
     <div style={{ maxWidth: '640px' }}>
       {/* Back to list */}
-      <button type="button" onClick={() => navigate('..')} style={backLink}>
+      <button type="button" onClick={() => navigate('..', { relative: 'path' })} style={backLink}>
         ← Back to tickets
       </button>
 

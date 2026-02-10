@@ -26,13 +26,13 @@ export function BuildingForm() {
     routeCompanyId || searchParams.get('companyId') || authCompanyId;
 
   const handleClose = () => {
-    navigate('..', { replace: true });
+    navigate('..', { replace: true, relative: 'path' });
   };
 
   const handleSaved = () => {
     // After save, navigate to the appropriate list
     if (buildingId) {
-      navigate('..', { replace: true }); // back to building detail
+      navigate('..', { replace: true, relative: 'path' }); // back to building detail
     } else {
       const basePath = role === 'proroto_admin' ? '/admin' : '/dashboard';
       navigate(`${basePath}/buildings`, { replace: true });
