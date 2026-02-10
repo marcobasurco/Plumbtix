@@ -128,7 +128,7 @@ function generateTemplate(type: ImportType) {
       { name: 'Bay Area Realty', slug: 'bay-area-realty' },
     ],
     buildings: [
-      { company_name: 'Acme Property Management', address: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', building_name: 'Main Tower', address_line2: 'Suite 100', gate_code: '1234', onsite_contact_name: 'John Doe', onsite_contact_phone: '415-555-0100', water_shutoff: 'Basement left wall', gas_shutoff: 'Utility room', access_notes: 'Key under mat' },
+      { company_name: 'Acme Property Management', address: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', building_name: 'Main Tower', address_line2: 'Suite 100', gate_code: '1234', onsite_contact_name: 'John Doe', onsite_contact_phone: '(415) 555-0100', water_shutoff: 'Basement left wall', gas_shutoff: 'Utility room', access_notes: 'Key under mat' },
       { company_name: 'Acme Property Management', address: '456 Oak Ave', city: 'Oakland', state: 'CA', zip: '94612', building_name: 'Oak Residences', address_line2: '', gate_code: '', onsite_contact_name: '', onsite_contact_phone: '', water_shutoff: '', gas_shutoff: '', access_notes: '' },
     ],
     units: [
@@ -137,11 +137,11 @@ function generateTemplate(type: ImportType) {
       { building_address: '123 Main St', unit_number: '201', floor: '2', bedrooms: '3', bathrooms: '2' },
     ],
     occupants: [
-      { building_address: '123 Main St', unit_number: '101', name: 'Alice Johnson', email: 'alice@email.com', phone: '415-555-1010', type: 'tenant' },
-      { building_address: '123 Main St', unit_number: '102', name: 'Bob Williams', email: 'bob@email.com', phone: '415-555-1020', type: 'homeowner' },
+      { building_address: '123 Main St', unit_number: '101', name: 'Alice Johnson', email: 'alice@email.com', phone: '(415) 555-1010', type: 'tenant' },
+      { building_address: '123 Main St', unit_number: '102', name: 'Bob Williams', email: 'bob@email.com', phone: '(415) 555-1020', type: 'homeowner' },
     ],
     users: [
-      { company_name: 'Acme Property Management', name: 'Jane Smith', email: 'jane@acme.com', role: 'pm_admin', phone: '415-555-2000' },
+      { company_name: 'Acme Property Management', name: 'Jane Smith', email: 'jane@acme.com', role: 'pm_admin', phone: '(415) 555-2000' },
       { company_name: 'Acme Property Management', name: 'Bob Jones', email: 'bob@acme.com', role: 'pm_user', phone: '' },
     ],
   };
@@ -166,7 +166,7 @@ function generateCompleteTemplate() {
     buildings: {
       headers: ['company_name', 'address', 'city', 'state', 'zip', 'building_name', 'address_line2', 'gate_code', 'onsite_contact_name', 'onsite_contact_phone', 'water_shutoff', 'gas_shutoff', 'access_notes'],
       rows: [
-        { company_name: 'Acme Property Management', address: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', building_name: 'Main Tower', address_line2: 'Suite 100', gate_code: '1234', onsite_contact_name: 'John Doe', onsite_contact_phone: '415-555-0100', water_shutoff: 'Basement left wall', gas_shutoff: 'Utility room', access_notes: 'Key under mat' },
+        { company_name: 'Acme Property Management', address: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', building_name: 'Main Tower', address_line2: 'Suite 100', gate_code: '1234', onsite_contact_name: 'John Doe', onsite_contact_phone: '(415) 555-0100', water_shutoff: 'Basement left wall', gas_shutoff: 'Utility room', access_notes: 'Key under mat' },
         { company_name: 'Acme Property Management', address: '456 Oak Ave', city: 'Oakland', state: 'CA', zip: '94612', building_name: 'Oak Residences', address_line2: '', gate_code: '', onsite_contact_name: '', onsite_contact_phone: '', water_shutoff: '', gas_shutoff: '', access_notes: '' },
       ],
     },
@@ -181,14 +181,14 @@ function generateCompleteTemplate() {
     occupants: {
       headers: ['building_address', 'unit_number', 'name', 'email', 'phone', 'type'],
       rows: [
-        { building_address: '123 Main St', unit_number: '101', name: 'Alice Johnson', email: 'alice@email.com', phone: '415-555-1010', type: 'tenant' },
-        { building_address: '123 Main St', unit_number: '102', name: 'Bob Williams', email: 'bob@email.com', phone: '415-555-1020', type: 'homeowner' },
+        { building_address: '123 Main St', unit_number: '101', name: 'Alice Johnson', email: 'alice@email.com', phone: '(415) 555-1010', type: 'tenant' },
+        { building_address: '123 Main St', unit_number: '102', name: 'Bob Williams', email: 'bob@email.com', phone: '(415) 555-1020', type: 'homeowner' },
       ],
     },
     users: {
       headers: ['company_name', 'name', 'email', 'role', 'phone'],
       rows: [
-        { company_name: 'Acme Property Management', name: 'Jane Smith', email: 'jane@acme.com', role: 'pm_admin', phone: '415-555-2000' },
+        { company_name: 'Acme Property Management', name: 'Jane Smith', email: 'jane@acme.com', role: 'pm_admin', phone: '(415) 555-2000' },
         { company_name: 'Acme Property Management', name: 'Bob Jones', email: 'bob@acme.com', role: 'pm_user', phone: '' },
       ],
     },
@@ -238,6 +238,18 @@ function changedFields(existing: Record<string, unknown>, incoming: Record<strin
     if (iv !== '' && ev !== iv) out.push(k);
   }
   return out;
+}
+
+/** Normalize phone to (XXX) XXX-XXXX, or return cleaned digits if not 10-digit US */
+function formatPhone(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '');
+  if (digits.length === 0) return '';
+  // Strip leading 1 for US numbers
+  const d = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+  // Non-standard length — return digits with dashes as-is
+  return String(raw).trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -411,7 +423,7 @@ export function ImportPage() {
                 zip: row.zip,
                 gate_code: row.gate_code || '',
                 onsite_contact_name: row.onsite_contact_name || '',
-                onsite_contact_phone: row.onsite_contact_phone || '',
+                onsite_contact_phone: formatPhone(row.onsite_contact_phone),
                 water_shutoff_location: row.water_shutoff || '',
                 gas_shutoff_location: row.gas_shutoff || '',
                 access_notes: row.access_notes || '',
@@ -508,7 +520,7 @@ export function ImportPage() {
               if (existing) {
                 const diff = changedFields(
                   existing as unknown as Record<string, unknown>,
-                  { name: row.name, phone: row.phone || null, occupant_type: (row.type === 'homeowner' ? 'homeowner' : 'tenant') } as unknown as Record<string, unknown>,
+                  { name: row.name, phone: formatPhone(row.phone) || null, occupant_type: (row.type === 'homeowner' ? 'homeowner' : 'tenant') } as unknown as Record<string, unknown>,
                   ['name', 'phone', 'occupant_type'],
                 );
                 if (diff.length === 0) {
@@ -516,20 +528,20 @@ export function ImportPage() {
                 } else {
                   const { error: upErr } = await supabase.from('occupants').update({
                     name: row.name,
-                    phone: row.phone || null,
+                    phone: formatPhone(row.phone) || null,
                     occupant_type: row.type === 'homeowner' ? 'homeowner' : 'tenant',
                   }).eq('id', existing.id);
                   if (upErr) throw new Error(upErr.message);
                   // Update cache
                   existing.name = row.name;
-                  existing.phone = row.phone || null;
+                  existing.phone = formatPhone(row.phone) || null;
                   (existing as unknown as Record<string, unknown>).occupant_type = row.type === 'homeowner' ? 'homeowner' : 'tenant';
                   rowResults.push({ row: rowNum, status: 'updated', message: `${row.name}: updated ${diff.join(', ')}` });
                 }
               } else {
                 const form: OccupantFormData = {
                   occupant_type: row.type === 'homeowner' ? 'homeowner' : 'tenant',
-                  name: row.name, email: row.email, phone: row.phone || '',
+                  name: row.name, email: row.email, phone: formatPhone(row.phone),
                 };
                 const created = await createOccupant(space.id, form);
                 occupants.push(created); // update cache
@@ -550,18 +562,18 @@ export function ImportPage() {
               if (existing) {
                 const diff = changedFields(
                   { full_name: existing.full_name, phone: existing.phone ?? '', role: existing.role },
-                  { full_name: row.name, phone: row.phone || '', role },
+                  { full_name: row.name, phone: formatPhone(row.phone), role },
                   ['full_name', 'phone', 'role'],
                 );
                 if (diff.length === 0) {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `${row.email} — no changes` });
                 } else {
                   const { error: upErr } = await supabase.from('users')
-                    .update({ full_name: row.name, phone: row.phone || null, role })
+                    .update({ full_name: row.name, phone: formatPhone(row.phone) || null, role })
                     .eq('id', existing.id);
                   if (upErr) throw new Error(upErr.message);
                   existing.full_name = row.name;
-                  existing.phone = row.phone || null;
+                  existing.phone = formatPhone(row.phone) || null;
                   existing.role = role;
                   rowResults.push({ row: rowNum, status: 'updated', message: `${row.email}: updated ${diff.join(', ')}` });
                 }
@@ -627,6 +639,42 @@ export function ImportPage() {
         </p>
       </div>
 
+      {/* Template downloads */}
+      <Card className="mb-5">
+        <CardContent className="p-4">
+          <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <Download className="h-4 w-4 text-primary" /> Download Templates
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+            <button
+              onClick={() => generateCompleteTemplate()}
+              className="flex items-center gap-3 p-3 rounded-lg border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors text-left"
+            >
+              <FileSpreadsheet className="h-5 w-5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">Complete Template</div>
+                <div className="text-xs text-muted-foreground">All 5 sheets + instructions</div>
+              </div>
+            </button>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => generateTemplate(t.key)}
+                  className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                >
+                  {t.icon}
+                  <span className="text-[10px] text-muted-foreground font-medium">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            Import order: Companies → Buildings → Units → Occupants → Users
+          </div>
+        </CardContent>
+      </Card>
+
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       {/* Type tabs */}
@@ -663,14 +711,6 @@ export function ImportPage() {
                   <span className="font-medium">Optional:</span> {tab.optionalColumns.join(', ')}
                 </div>
               )}
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <Button variant="outline" size="sm" onClick={() => generateTemplate(activeTab)}>
-                <Download className="h-3.5 w-3.5" /> Template
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => generateCompleteTemplate()}>
-                <Download className="h-3.5 w-3.5" /> All Sheets
-              </Button>
             </div>
           </div>
         </CardContent>
