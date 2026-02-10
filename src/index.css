@@ -1134,6 +1134,67 @@ body {
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════════
+   COMPANY TABS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.company-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 2px solid var(--slate-200);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.company-tabs::-webkit-scrollbar { display: none; }
+.company-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--slate-500);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  transition: all var(--duration-fast);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+}
+.company-tab:hover {
+  color: var(--slate-700);
+}
+.company-tab.active {
+  color: var(--blue-600);
+  border-bottom-color: var(--blue-600);
+}
+.company-tab-count {
+  font-size: var(--text-xs);
+  color: var(--slate-400);
+  font-weight: 500;
+}
+.company-tab.active .company-tab-count {
+  color: var(--blue-400);
+}
+.company-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--red-500);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    TICKET CARDS (mobile list view)
    ══════════════════════════════════════════════════════════════════════════ */
 

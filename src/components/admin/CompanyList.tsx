@@ -84,9 +84,9 @@ export function CompanyList() {
 
   return (
     <PageTransition>
-      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight">Companies</h2>
+      <div className="flex items-start justify-between gap-3 mb-4 sm:mb-6">
+        <div className="min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Companies</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             {companies.length} compan{companies.length !== 1 ? 'ies' : 'y'}
           </p>
@@ -125,7 +125,7 @@ export function CompanyList() {
             <StaggerItem key={c.id}>
               <Card
                 className="cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-primary/20"
-                onClick={() => navigate(`companies/${c.id}`)}
+                onClick={() => navigate(c.id)}
               >
                 <CardContent className="p-4">
                   <div className="font-semibold text-foreground mb-0.5">{c.name}</div>
