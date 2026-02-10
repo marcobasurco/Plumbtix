@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function Shared: Supabase Client Factories
+// Work Orders — Edge Function Shared: Supabase Client Factories
 // =============================================================================
 // Two client patterns:
 //   1. Service role — bypasses ALL RLS. Use ONLY for onboarding flows

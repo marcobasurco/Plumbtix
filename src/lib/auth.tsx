@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Auth Context (Frontend)
+// Work Orders — Auth Context (Frontend)
 // =============================================================================
 // Provides: session, user profile (from public.users), role, companyId.
 //

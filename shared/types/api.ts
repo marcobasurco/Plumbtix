@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — API Request & Response Types
+// Work Orders — API Request & Response Types
 // =============================================================================
 // Contracts for all Edge Function endpoints.
 // Edge Functions validate with Zod; frontend uses for type-safe calls.

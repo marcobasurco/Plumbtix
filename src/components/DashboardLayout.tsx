@@ -105,7 +105,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
               <span className="logo-icon">
                 <Wrench className="h-4 w-4" />
               </span>
-              PlumbTix
+              Work Orders
             </h1>
           </div>
 

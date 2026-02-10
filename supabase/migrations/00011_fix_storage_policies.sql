@@ -1,5 +1,5 @@
 -- =============================================================================
--- PlumbTix — Migration 00011: Fix Storage Policies
+-- Work Orders — Migration 00011: Fix Storage Policies
 -- =============================================================================
 -- PROBLEM: Storage policies in 00003 use split_part(name, '/', 2)::uuid to
 -- extract the ticket_id from the file path. This is fragile:

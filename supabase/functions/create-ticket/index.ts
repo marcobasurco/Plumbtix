@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: create-ticket
+// Work Orders — Edge Function: create-ticket
 // =============================================================================
 // Route:  POST /functions/v1/create-ticket
 // Auth:   JWT required

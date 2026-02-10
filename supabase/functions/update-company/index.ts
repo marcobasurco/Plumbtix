@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: update-company
+// Work Orders — Edge Function: update-company
 // =============================================================================
 
 import { handleCors } from '../_shared/cors.ts';

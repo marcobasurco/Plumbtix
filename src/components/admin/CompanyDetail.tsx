@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Company Detail (Admin)
+// Work Orders — Company Detail (Admin)
 // =============================================================================
 // Full company management: buildings, users, invitations.
 // Mobile-first card layout with desktop table fallback.

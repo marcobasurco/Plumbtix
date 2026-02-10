@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: create-entitlement
+// Work Orders — Edge Function: create-entitlement
 // =============================================================================
 // Grants a pm_user access to a specific building.
 // Only proroto_admin and pm_admin (for their own company) can grant entitlements.

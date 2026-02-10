@@ -1,4 +1,4 @@
-# PlumbTix — Step-by-Step Deployment Guide
+# Work Orders — Step-by-Step Deployment Guide
 
 ## Overview
 
@@ -29,7 +29,7 @@
 1. Go to [supabase.com/dashboard](https://supabase.com/dashboard)
 2. Click **New Project**
 3. Settings:
-   - **Name:** `plumbtix`
+   - **Name:** `work-orders`
    - **Database Password:** generate a strong password (save it — you'll need it)
    - **Region:** `us-west-1` (closest to Bay Area)
    - **Plan:** Free tier is fine to start; Pro for production
@@ -68,7 +68,7 @@ supabase --version
 ### Step 1.4 — Link Local Project to Cloud
 
 ```bash
-cd /path/to/plumbtix
+cd /path/to/work-orders
 
 # Login to Supabase
 supabase login
@@ -257,7 +257,7 @@ Go to **Authentication → URL Configuration**:
 Go to **Authentication → Email Templates** and customize:
 - **Confirm signup** — not currently used (email confirmations disabled)
 - **Reset password** — update if you plan to offer password reset
-- **Invite user** — not used (PlumbTix has its own invitation system via Edge Functions)
+- **Invite user** — not used (Work Orders has its own invitation system via Edge Functions)
 
 ### Step 5.3 — Disable Unused Auth Providers
 
@@ -270,15 +270,15 @@ Go to **Authentication → Providers** and ensure only **Email** is enabled (Goo
 ### Step 6.1 — Push to Git
 
 ```bash
-cd /path/to/plumbtix
+cd /path/to/work-orders
 
 # Initialize if not already
 git init
 git add .
-git commit -m "PlumbTix v1.0 — Steps 0-7 complete"
+git commit -m "Work Orders v1.0 — Steps 0-7 complete"
 
 # Push to GitHub (create repo first at github.com)
-git remote add origin https://github.com/YOUR_ORG/plumbtix.git
+git remote add origin https://github.com/YOUR_ORG/work-orders.git
 git branch -M main
 git push -u origin main
 ```
@@ -289,7 +289,7 @@ git push -u origin main
 
 1. Go to [app.netlify.com](https://app.netlify.com)
 2. Click **Add new site → Import an existing project**
-3. Connect to GitHub → select `plumbtix` repo
+3. Connect to GitHub → select `work-orders` repo
 4. Build settings (auto-detected from `netlify.toml`):
    - **Build command:** `npm ci && npm run build`
    - **Publish directory:** `dist`
@@ -308,7 +308,7 @@ netlify login
 netlify init
 # Select: "Create & configure a new site"
 # Team: your team
-# Site name: plumbtix (or auto-generate)
+# Site name: work-orders (or auto-generate)
 ```
 
 ### Step 6.3 — Set Environment Variables

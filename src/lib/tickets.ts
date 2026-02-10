@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Ticket Data Access (PostgREST via Supabase Client)
+// Work Orders — Ticket Data Access (PostgREST via Supabase Client)
 // =============================================================================
 // All reads use the user JWT → RLS scopes results per role.
 //

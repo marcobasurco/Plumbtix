@@ -1,5 +1,5 @@
 -- =============================================================================
--- PlumbTix — First Admin Bootstrap (run ONCE)
+-- Work Orders — First Admin Bootstrap (run ONCE)
 -- =============================================================================
 --
 -- 1. Create auth.users record via Supabase Dashboard > Authentication > Add User

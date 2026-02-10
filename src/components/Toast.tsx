@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Toast (sonner shim)
+// Work Orders — Toast (sonner shim)
 // =============================================================================
 // Backward-compatible wrapper: existing code uses useToast().toast(msg, variant)
 // while new code can import { toast } from 'sonner' directly.

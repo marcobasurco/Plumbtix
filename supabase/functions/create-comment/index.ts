@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: create-comment
+// Work Orders — Edge Function: create-comment
 // =============================================================================
 // Route:  POST /functions/v1/create-comment
 // Auth:   JWT required

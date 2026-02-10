@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Database Row Types
+// Work Orders — Database Row Types
 // =============================================================================
 // TypeScript interfaces for all 11 tables from Section 4 (LOCKED).
 // Column names, types, and nullability match the Postgres schema exactly.

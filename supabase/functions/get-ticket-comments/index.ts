@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: get-ticket-comments
+// Work Orders — Edge Function: get-ticket-comments
 // =============================================================================
 // Route:  GET /functions/v1/get-ticket-comments?ticket_id=UUID
 // Auth:   JWT required

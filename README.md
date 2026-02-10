@@ -1,4 +1,4 @@
-# PlumbTix — Pro Roto Work Orders Portal
+# Work Orders — Pro Roto Inc. Service Portal
 
 Multi-tenant ticket system for plumbing/leak repair. Property management companies, HOAs, and commercial buildings submit work orders exclusively to Pro Roto, Inc.
 
@@ -17,7 +17,7 @@ Multi-tenant ticket system for plumbing/leak repair. Property management compani
 ## Quick Start
 
 ```bash
-git clone <repo-url> plumbtix && cd plumbtix
+git clone <repo-url> work-orders && cd work-orders
 npm install
 
 # Start local Supabase
@@ -92,7 +92,7 @@ One-time setup after initial deployment:
 ## Project Structure
 
 ```
-plumbtix/
+work-orders/
 ├── supabase/
 │   ├── config.toml
 │   ├── migrations/

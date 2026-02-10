@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Attachments List + Upload with Video Compression (v0.4.0)
+// Work Orders — Attachments List + Upload with Video Compression (v0.4.0)
 // =============================================================================
 // • Image thumbnails + video thumbnails with play overlay
 // • Lightbox: images fullscreen, videos with native controls

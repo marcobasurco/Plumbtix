@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function Shared: Auth Helpers
+// Work Orders — Edge Function Shared: Auth Helpers
 // =============================================================================
 // Role lookup strategy:
 //   PREFERRED: getCallerRole() / getCallerCompanyId() — call Section 5

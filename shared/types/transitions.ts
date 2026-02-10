@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Ticket Status Transition Matrix
+// Work Orders — Ticket Status Transition Matrix
 // =============================================================================
 //
 // CRITICAL: This matrix MUST match the Postgres trigger in migration 00005

@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Dashboard Overview
+// Work Orders — Dashboard Overview
 // =============================================================================
 // Rich overview page with metric cards, charts, and recent activity.
 // Uses Recharts for data visualization and Lucide icons.

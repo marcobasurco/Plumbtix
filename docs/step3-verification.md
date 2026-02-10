@@ -1,4 +1,4 @@
-# PlumbTix — Step 3 Verification: React Auth Layer + Routing
+# Work Orders — Step 3 Verification: React Auth Layer + Routing
 
 ## Delivered Files (17 files)
 
@@ -43,7 +43,7 @@
 
 ### How to verify
 ```bash
-cd plumbtix
+cd work-orders
 cp .env.example .env.local
 # Fill in values from `supabase start`
 npm install

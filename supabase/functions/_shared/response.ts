@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function Shared: Response Helpers
+// Work Orders — Edge Function Shared: Response Helpers
 // =============================================================================
 // All responses follow the ApiResponse<T> shape from shared/types/api.ts:
 //   Success: { ok: true,  data: T }

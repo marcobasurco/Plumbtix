@@ -41,9 +41,9 @@ export function LoginPage() {
               <path d="M12 2v6l3-3"/><path d="M12 8l-3-3"/><path d="M20 12a8 8 0 1 1-16 0"/><path d="M12 12v8"/>
             </svg>
           </div>
-          <span className="login-logo-text">PlumbTix</span>
+          <span className="login-logo-text">Work Orders</span>
         </div>
-        <p className="login-subtitle">Pro Roto Work Orders Portal</p>
+        <p className="login-subtitle">Pro Roto Inc. — Service Portal</p>
 
         <ErrorBanner message={formError ?? authError} onDismiss={() => setFormError(null)} />
 

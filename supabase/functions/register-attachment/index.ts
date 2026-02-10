@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: register-attachment
+// Work Orders — Edge Function: register-attachment
 // =============================================================================
 // Route:  POST /functions/v1/register-attachment
 // Auth:   JWT required

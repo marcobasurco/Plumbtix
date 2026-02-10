@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: claim-resident
+// Work Orders — Edge Function: claim-resident
 // =============================================================================
 // Route:  POST /functions/v1/claim-resident
 // Auth:   NONE (public — invite_token is the credential)

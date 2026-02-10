@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Dashboard Metrics (PostgREST via User JWT + RLS)
+// Work Orders — Dashboard Metrics (PostgREST via User JWT + RLS)
 // =============================================================================
 // Fetches aggregate data for the dashboard overview page.
 // RLS ensures each role only sees data they're entitled to.

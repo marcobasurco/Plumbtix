@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Realtime Subscription Hooks
+// Work Orders — Realtime Subscription Hooks
 // =============================================================================
 // Generic hook for subscribing to Postgres changes on any table.
 // Uses Supabase Realtime (broadcast + postgres_changes).

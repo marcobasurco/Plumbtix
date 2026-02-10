@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Global Error Boundary
+// Work Orders — Global Error Boundary
 // =============================================================================
 // Catches render-phase errors anywhere in the component tree.
 // Prevents full white-screen crashes by showing a recovery UI.

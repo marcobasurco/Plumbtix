@@ -1,4 +1,4 @@
-# PlumbTix — Netlify Deployment Notes
+# Work Orders — Netlify Deployment Notes
 
 ## 1. Build Configuration
 
@@ -57,7 +57,7 @@ This is critical for React Router. Without it, direct navigation to `/admin/disp
 
 1. **Netlify > Domain management > Add custom domain** → enter `workorders.proroto.com`
 2. Netlify will provide either:
-   - A CNAME target (e.g., `plumbtix.netlify.app`) for subdomain, or
+   - A CNAME target (e.g., `work-orders.netlify.app`) for subdomain, or
    - DNS nameservers if using Netlify DNS
 
 ### DNS Configuration (at your registrar or DNS provider)
@@ -114,7 +114,7 @@ This ensures password reset emails, OAuth callbacks, and magic links redirect to
 
 ## 6. Edge Functions (Not on Netlify)
 
-PlumbTix Edge Functions are deployed to **Supabase**, not Netlify. They are called from the frontend via `VITE_EDGE_BASE_URL`:
+Work Orders Edge Functions are deployed to **Supabase**, not Netlify. They are called from the frontend via `VITE_EDGE_BASE_URL`:
 
 ```
 POST https://<ref>.supabase.co/functions/v1/create-ticket

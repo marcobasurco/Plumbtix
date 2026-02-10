@@ -1,4 +1,4 @@
-# PlumbTix — Step 7 Final Verification (Section 7)
+# Work Orders — Step 7 Final Verification (Section 7)
 
 **Version:** Step 7 Final (UI Parity Pass)
 **Date:** 2026-02-08

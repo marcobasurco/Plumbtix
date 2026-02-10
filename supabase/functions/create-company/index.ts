@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: create-company
+// Work Orders — Edge Function: create-company
 // =============================================================================
 // Route:  POST /functions/v1/create-company
 // Auth:   JWT required (proroto_admin only — RLS enforces)

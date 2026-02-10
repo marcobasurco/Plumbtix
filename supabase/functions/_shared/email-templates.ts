@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function Shared: Email Templates
+// Work Orders — Edge Function Shared: Email Templates
 // =============================================================================
 // Pure HTML email templates — no external dependencies.
 // All templates are mobile-responsive and client-safe (inline styles only).
@@ -34,7 +34,7 @@ function layout(opts: {
 }): string {
   const cta = opts.ctaUrl
     ? `<tr><td style="padding:24px 0 0">
-        <a href="${opts.ctaUrl}" style="display:inline-block;background:${BRAND_COLOR};color:#fff;font-size:16px;font-weight:600;padding:14px 28px;border-radius:8px;text-decoration:none;min-width:200px;text-align:center">${opts.ctaLabel || 'View in PlumbTix'}</a>
+        <a href="${opts.ctaUrl}" style="display:inline-block;background:${BRAND_COLOR};color:#fff;font-size:16px;font-weight:600;padding:14px 28px;border-radius:8px;text-decoration:none;min-width:200px;text-align:center">${opts.ctaLabel || 'View in Work Orders'}</a>
        </td></tr>`
     : '';
 
@@ -62,7 +62,7 @@ function layout(opts: {
 <tr><td style="background:${BRAND_COLOR};padding:20px 28px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
-      <td style="color:#fff;font-size:18px;font-weight:700;letter-spacing:-0.3px">🔧 PlumbTix</td>
+      <td style="color:#fff;font-size:18px;font-weight:700;letter-spacing:-0.3px">🔧 Work Orders</td>
       <td align="right" style="color:rgba(255,255,255,0.7);font-size:12px">Pro Roto Inc.</td>
     </tr>
   </table>
@@ -83,7 +83,7 @@ function layout(opts: {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
       <td style="font-size:12px;color:${MUTED_COLOR};line-height:1.5">
-        Sent by <a href="https://proroto.com" style="color:${BRAND_COLOR};text-decoration:none;font-weight:600">Pro Roto Inc.</a> via PlumbTix<br>
+        Sent by <a href="https://proroto.com" style="color:${BRAND_COLOR};text-decoration:none;font-weight:600">Pro Roto Inc.</a> via Work Orders<br>
         CA License #947961 · Redwood City, CA
       </td>
     </tr>
@@ -144,14 +144,14 @@ export interface InvitationEmailData {
 export function invitationEmail(data: InvitationEmailData): { subject: string; html: string } {
   const acceptUrl = `${getAppUrl()}/accept-invite?token=${data.token}`;
   return {
-    subject: `You're invited to join ${data.companyName} on PlumbTix`,
+    subject: `You're invited to join ${data.companyName} on Pro Roto Work Orders`,
     html: layout({
-      preheader: `${data.invitedByName} invited you to manage work orders on PlumbTix`,
+      preheader: `${data.invitedByName} invited you to manage maintenance requests with Pro Roto`,
       title: 'You\'re Invited!',
       body: `
         <p style="margin:0 0 12px">Hi ${data.recipientName},</p>
-        <p style="margin:0 0 16px">${data.invitedByName} has invited you to join <strong>${data.companyName}</strong> on PlumbTix as a <strong>${data.role}</strong>.</p>
-        <p style="margin:0 0 4px">PlumbTix is where ${data.companyName} manages plumbing work orders, tracks maintenance requests, and coordinates with Pro Roto Inc.</p>
+        <p style="margin:0 0 16px">${data.invitedByName} has invited you to join <strong>${data.companyName}</strong> on the Pro Roto Work Orders portal as a <strong>${data.role}</strong>.</p>
+        <p style="margin:0 0 4px">This is where ${data.companyName} manages plumbing work orders, tracks maintenance requests, and coordinates with Pro Roto Inc.</p>
       `,
       ctaUrl: acceptUrl,
       ctaLabel: 'Accept Invitation',
@@ -175,10 +175,10 @@ export interface ResidentClaimEmailData {
 export function residentClaimEmail(data: ResidentClaimEmailData): { subject: string; html: string } {
   const claimUrl = `${getAppUrl()}/claim?token=${data.inviteToken}`;
   return {
-    subject: `Set up your PlumbTix account for ${data.buildingName}`,
+    subject: `Set up your Work Orders account for ${data.buildingName}`,
     html: layout({
       preheader: `Submit maintenance requests online for ${data.buildingName} Unit ${data.unitNumber}`,
-      title: 'Welcome to PlumbTix!',
+      title: 'Welcome to Work Orders!',
       body: `
         <p style="margin:0 0 12px">Hi ${data.occupantName},</p>
         <p style="margin:0 0 16px">Your property manager has set up online maintenance requests for <strong>${data.buildingName}</strong>.</p>
@@ -388,9 +388,9 @@ export interface PasswordResetEmailData {
 
 export function passwordResetEmail(data: PasswordResetEmailData): { subject: string; html: string } {
   return {
-    subject: 'Reset your PlumbTix password',
+    subject: 'Reset your Work Orders password',
     html: layout({
-      preheader: 'Click the link to reset your PlumbTix password',
+      preheader: 'Click the link to reset your Work Orders password',
       title: 'Password Reset',
       body: `
         <p style="margin:0 0 12px">Hi ${data.recipientName},</p>

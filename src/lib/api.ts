@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function API Client (Frontend)
+// Work Orders — Edge Function API Client (Frontend)
 // =============================================================================
 // Typed wrapper for all Edge Function calls.
 // - Attaches Authorization: Bearer <access_token> from current session

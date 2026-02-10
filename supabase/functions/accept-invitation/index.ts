@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: accept-invitation
+// Work Orders — Edge Function: accept-invitation
 // =============================================================================
 // Route:  POST /functions/v1/accept-invitation
 // Auth:   NONE (public — token is the credential)

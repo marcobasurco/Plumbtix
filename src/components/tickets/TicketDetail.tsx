@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Ticket Detail Page (v0.3.0 Polish)
+// Work Orders — Ticket Detail Page (v0.3.0 Polish)
 // =============================================================================
 // Full ticket view with info cards, status timeline, comments, attachments,
 // and action panel. Uses shadcn/ui components + Tailwind for consistency.

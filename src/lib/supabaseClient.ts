@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Supabase Client (Frontend)
+// Work Orders — Supabase Client (Frontend)
 // =============================================================================
 // Single shared client instance. Uses the anon key only.
 // The service role key is NEVER exposed to the frontend.

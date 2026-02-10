@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Building & Space Data Access
+// Work Orders — Building & Space Data Access
 // =============================================================================
 // READS:  PostgREST via User JWT + RLS (unchanged)
 // WRITES: Edge functions for server-side validation + consistent pattern

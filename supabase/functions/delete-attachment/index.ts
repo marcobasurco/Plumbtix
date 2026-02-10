@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: delete-attachment
+// Work Orders — Edge Function: delete-attachment
 // =============================================================================
 // Deletes an attachment's storage file and metadata row.
 // RLS enforces:

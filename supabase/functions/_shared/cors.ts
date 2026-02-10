@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function Shared: CORS
+// Work Orders — Edge Function Shared: CORS
 // =============================================================================
 
 export const corsHeaders: Record<string, string> = {

@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: update-space
+// Work Orders — Edge Function: update-space
 // =============================================================================
 // Route:  POST /functions/v1/update-space
 // Auth:   JWT required

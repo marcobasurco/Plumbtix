@@ -1,5 +1,5 @@
 -- =============================================================================
--- PlumbTix — Migration 00013: Email Notification Infrastructure
+-- Work Orders — Migration 00013: Email Notification Infrastructure
 -- =============================================================================
 -- Tables:
 --   1. notification_preferences — per-user email opt-in/out

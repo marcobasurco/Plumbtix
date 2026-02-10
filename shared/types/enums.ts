@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — TypeScript Enums
+// Work Orders — TypeScript Enums
 // =============================================================================
 // Mirrors all 8 Postgres enums from Section 4 (LOCKED).
 // String literal unions for JSON compatibility. Values are EXACT matches.

@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: delete-entitlement
+// Work Orders — Edge Function: delete-entitlement
 // =============================================================================
 
 import { handleCors } from '../_shared/cors.ts';

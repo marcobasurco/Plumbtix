@@ -1,5 +1,5 @@
 -- =============================================================================
--- PlumbTix — Migration 00010: Company Subscriptions + Billing Prep
+-- Work Orders — Migration 00010: Company Subscriptions + Billing Prep
 -- =============================================================================
 -- SaaS billing foundation:
 --   1. subscription_tier enum (free, starter, professional, enterprise)

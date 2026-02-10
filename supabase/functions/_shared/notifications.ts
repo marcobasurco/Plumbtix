@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function Shared: Notification Dispatcher
+// Work Orders — Edge Function Shared: Notification Dispatcher
 // =============================================================================
 // High-level functions that resolve recipients, check preferences,
 // build emails from templates, and fire them via Resend.

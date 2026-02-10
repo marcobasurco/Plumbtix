@@ -1,7 +1,7 @@
-# PlumbTix Codebase Audit Report
+# Work Orders Codebase Audit Report
 
 **Date:** February 9, 2026  
-**Repo:** Plumbtix (v0.2.0)  
+**Repo:** Work Orders (v0.2.0)  
 **Live URL:** workorders.proroto.com  
 **Hosting:** Netlify (SPA) + Supabase (DB, Auth, Edge Functions, Storage)
 
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-PlumbTix is a **well-architected, functional work-order portal** with solid foundations. The codebase is clean, well-commented, and follows consistent patterns. However, it is currently a **"v1 MVP"** — the core ticket lifecycle works, but several admin CRUD flows are incomplete, the frontend uses a hybrid CSS approach (custom CSS + partial Tailwind), and there are meaningful gaps in edge function coverage for building/space/company mutations. The app is production-deployed and functional for ticket creation/management, but not yet feature-complete for full property management operations.
+Work Orders is a **well-architected, functional work-order portal** with solid foundations. The codebase is clean, well-commented, and follows consistent patterns. However, it is currently a **"v1 MVP"** — the core ticket lifecycle works, but several admin CRUD flows are incomplete, the frontend uses a hybrid CSS approach (custom CSS + partial Tailwind), and there are meaningful gaps in edge function coverage for building/space/company mutations. The app is production-deployed and functional for ticket creation/management, but not yet feature-complete for full property management operations.
 
 ---
 

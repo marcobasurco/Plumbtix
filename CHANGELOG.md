@@ -1,4 +1,4 @@
-# PlumbTix Changelog
+# Work Orders Changelog
 
 ## [0.4.0] — SaaS MVP Polish (February 10, 2026)
 
@@ -35,7 +35,7 @@
 
 ---
 
-# PlumbTix v0.3.0 — Changelog
+# Work Orders v0.3.0 — Changelog
 
 **Date:** February 9, 2026
 

@@ -1,5 +1,5 @@
 -- =============================================================================
--- PlumbTix — Post-Migration Verification
+-- Work Orders — Post-Migration Verification
 -- =============================================================================
 -- Run after `supabase db reset` to verify all 6 migrations applied correctly.
 -- Usage: psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f scripts/verify-migrations.sql

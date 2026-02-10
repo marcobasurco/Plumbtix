@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Dispatch Board (Mobile-First Rebuild)
+// Work Orders — Dispatch Board (Mobile-First Rebuild)
 // =============================================================================
 // Mobile: Vertical collapsible status sections with ticket cards
 // Desktop: Horizontal Kanban board (unchanged visual)

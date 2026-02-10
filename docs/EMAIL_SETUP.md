@@ -1,8 +1,8 @@
-# PlumbTix — Email Notification Setup (Resend)
+# Work Orders — Email Notification Setup (Resend)
 
 ## Overview
 
-PlumbTix uses [Resend](https://resend.com) for transactional email delivery. Emails are sent from Supabase Edge Functions — no separate email server needed.
+Work Orders uses [Resend](https://resend.com) for transactional email delivery. Emails are sent from Supabase Edge Functions — no separate email server needed.
 
 ## Quick Start
 
@@ -22,7 +22,7 @@ In the Resend dashboard:
 
 In the Resend dashboard:
 - Go to **API Keys** → **Create API Key**
-- Name: `plumbtix-production`
+- Name: `work-orders-production`
 - Permission: **Sending access**
 - Copy the key (starts with `re_`)
 
@@ -33,7 +33,7 @@ In the Resend dashboard:
 supabase secrets set RESEND_API_KEY=re_your_api_key_here
 
 # Sender address (must match your verified domain)
-supabase secrets set RESEND_FROM="PlumbTix <notifications@proroto.com>"
+supabase secrets set RESEND_FROM="Work Orders <notifications@proroto.com>"
 
 # App URL (for CTA buttons in emails)
 supabase secrets set APP_URL=https://app.proroto.com

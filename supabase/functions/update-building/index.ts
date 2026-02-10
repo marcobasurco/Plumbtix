@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: update-building
+// Work Orders — Edge Function: update-building
 // =============================================================================
 // Route:  POST /functions/v1/update-building
 // Auth:   JWT required

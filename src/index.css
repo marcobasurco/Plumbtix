@@ -1,5 +1,5 @@
 /* ==========================================================================
-   PlumbTix — Design System v2: "Precision SaaS"
+   Work Orders — Design System v2: "Precision SaaS"
    Google Fonts loaded at runtime (DM Sans + JetBrains Mono)
    ========================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -9,7 +9,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── shadcn/ui CSS Variables (mapped from PlumbTix design tokens) ── */
+/* ── shadcn/ui CSS Variables (mapped from Work Orders design tokens) ── */
 @layer base {
   :root {
     --background: 0 0% 100%;

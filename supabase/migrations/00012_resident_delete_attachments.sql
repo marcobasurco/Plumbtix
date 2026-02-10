@@ -1,5 +1,5 @@
 -- =============================================================================
--- PlumbTix — Migration 00012: Allow Residents to Delete Own Attachments
+-- Work Orders — Migration 00012: Allow Residents to Delete Own Attachments
 -- =============================================================================
 -- Residents need to delete incorrectly uploaded images.
 -- They can only delete attachments they uploaded themselves.

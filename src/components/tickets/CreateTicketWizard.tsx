@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Create Ticket Wizard
+// Work Orders — Create Ticket Wizard
 // =============================================================================
 // 6-step flow:
 //   1. Select Building  (PostgREST, RLS-scoped)

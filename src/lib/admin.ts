@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Admin Data Access (PostgREST via User JWT + RLS)
+// Work Orders — Admin Data Access (PostgREST via User JWT + RLS)
 // =============================================================================
 // proroto_admin has FOR ALL policies on companies, users, invitations.
 // All queries use the anon client with the admin's JWT.

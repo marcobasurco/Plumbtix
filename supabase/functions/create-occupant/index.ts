@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: create-occupant
+// Work Orders — Edge Function: create-occupant
 // =============================================================================
 // Adds an occupant (tenant/homeowner) to a space.
 // Generates invite_token server-side for the claim-resident flow.

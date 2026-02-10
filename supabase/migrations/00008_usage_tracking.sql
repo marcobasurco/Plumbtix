@@ -1,5 +1,5 @@
 -- =============================================================================
--- PlumbTix — Migration 00008: Usage Tracking + Company Analytics
+-- Work Orders — Migration 00008: Usage Tracking + Company Analytics
 -- =============================================================================
 -- Adds per-company usage metrics for SaaS billing/analytics:
 --   1. company_usage_monthly — monthly aggregated metrics per company

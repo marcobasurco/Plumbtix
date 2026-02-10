@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: send-invitation
+// Work Orders — Edge Function: send-invitation
 // =============================================================================
 // Route:  POST /functions/v1/send-invitation
 // Auth:   JWT required (proroto_admin or pm_admin only)

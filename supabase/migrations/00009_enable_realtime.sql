@@ -1,5 +1,5 @@
 -- =============================================================================
--- PlumbTix — Migration 00009: Enable Realtime Publications
+-- Work Orders — Migration 00009: Enable Realtime Publications
 -- =============================================================================
 -- Supabase Realtime requires tables to be added to the supabase_realtime
 -- publication. Without this, postgres_changes subscriptions return nothing.

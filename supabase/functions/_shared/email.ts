@@ -1,11 +1,11 @@
 // =============================================================================
-// PlumbTix — Edge Function Shared: Resend Email Client
+// Work Orders — Edge Function Shared: Resend Email Client
 // =============================================================================
 // Wraps the Resend REST API (https://api.resend.com/emails).
 //
 // Config:
 //   RESEND_API_KEY  — Supabase secret (set via `supabase secrets set`)
-//   RESEND_FROM     — Sender address, e.g. "PlumbTix <notifications@proroto.com>"
+//   RESEND_FROM     — Sender address, e.g. "Work Orders <notifications@proroto.com>"
 //
 // Usage:
 //   import { sendEmail, sendEmailBatch } from '../_shared/email.ts';
@@ -51,7 +51,7 @@ function getApiKey(): string {
 }
 
 function getFromAddress(): string {
-  return Deno.env.get('RESEND_FROM') || 'PlumbTix <notifications@proroto.com>';
+  return Deno.env.get('RESEND_FROM') || 'Work Orders <notifications@proroto.com>';
 }
 
 /**

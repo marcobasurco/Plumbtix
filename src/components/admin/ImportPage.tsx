@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Excel Sync Import (Pro Roto Admin Only)
+// Work Orders — Excel Sync Import (Pro Roto Admin Only)
 // =============================================================================
 // Upload an Excel file to bulk-import OR sync data.
 // SYNC: matches existing records by natural keys,
@@ -149,7 +149,7 @@ function generateTemplate(type: ImportType) {
   const ws = XLSX.utils.json_to_sheet(examples[type], { header: headers });
   ws['!cols'] = headers.map((h) => ({ wch: Math.max(h.length + 4, 18) }));
   XLSX.utils.book_append_sheet(wb, ws, type.charAt(0).toUpperCase() + type.slice(1));
-  XLSX.writeFile(wb, `plumbtix-${type}-template.xlsx`);
+  XLSX.writeFile(wb, `work-orders-${type}-template.xlsx`);
 }
 
 // ---------------------------------------------------------------------------

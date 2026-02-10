@@ -1,4 +1,4 @@
-# PlumbTix Frontend v3 — Upgrade Instructions
+# Work Orders Frontend v3 — Upgrade Instructions
 
 ## What's Changed
 
@@ -52,17 +52,17 @@ Copy all files from this package into your project, overwriting existing files:
 
 ```bash
 # From your project root:
-cp plumbtix-v3/package.json ./package.json
-cp plumbtix-v3/src/lib/utils.ts ./src/lib/utils.ts
-cp plumbtix-v3/src/components/ui/*.tsx ./src/components/ui/
-cp plumbtix-v3/src/components/PageTransition.tsx ./src/components/PageTransition.tsx
-cp plumbtix-v3/src/hooks/useFormValidation.ts ./src/hooks/useFormValidation.ts
-cp plumbtix-v3/src/components/buildings/* ./src/components/buildings/
-cp plumbtix-v3/src/components/admin/CompanyList.tsx ./src/components/admin/CompanyList.tsx
-cp plumbtix-v3/src/components/admin/CompanyDetail.tsx ./src/components/admin/CompanyDetail.tsx
-cp plumbtix-v3/src/components/DashboardLayout.tsx ./src/components/DashboardLayout.tsx
-cp plumbtix-v3/src/components/tickets/TicketList.tsx ./src/components/tickets/TicketList.tsx
-cp plumbtix-v3/src/routes/dashboard-admin.tsx ./src/routes/dashboard-admin.tsx
+cp work-orders-v3/package.json ./package.json
+cp work-orders-v3/src/lib/utils.ts ./src/lib/utils.ts
+cp work-orders-v3/src/components/ui/*.tsx ./src/components/ui/
+cp work-orders-v3/src/components/PageTransition.tsx ./src/components/PageTransition.tsx
+cp work-orders-v3/src/hooks/useFormValidation.ts ./src/hooks/useFormValidation.ts
+cp work-orders-v3/src/components/buildings/* ./src/components/buildings/
+cp work-orders-v3/src/components/admin/CompanyList.tsx ./src/components/admin/CompanyList.tsx
+cp work-orders-v3/src/components/admin/CompanyDetail.tsx ./src/components/admin/CompanyDetail.tsx
+cp work-orders-v3/src/components/DashboardLayout.tsx ./src/components/DashboardLayout.tsx
+cp work-orders-v3/src/components/tickets/TicketList.tsx ./src/components/tickets/TicketList.tsx
+cp work-orders-v3/src/routes/dashboard-admin.tsx ./src/routes/dashboard-admin.tsx
 ```
 
 ### 2. Install dependencies

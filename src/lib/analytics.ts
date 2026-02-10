@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Analytics Data Access
+// Work Orders — Analytics Data Access
 // =============================================================================
 // Role-aware: proroto_admin sees all, PM sees only their company (RLS).
 // Supports platform summary, company-level, and building-level analytics.

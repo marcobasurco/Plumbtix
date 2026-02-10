@@ -2,7 +2,7 @@
 -- MIGRATION 00005 — ADDITIVE — STATUS TRANSITION ENFORCEMENT TRIGGER
 -- ============================================================================
 --
--- PlumbTix — Pro Roto Work Orders Portal
+-- Work Orders — Pro Roto Work Orders Portal
 --
 -- Purpose:
 --   Enforce the ticket status transition matrix at the database level.

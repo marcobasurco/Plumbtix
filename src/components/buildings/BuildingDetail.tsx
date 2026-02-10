@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Building Detail Page
+// Work Orders — Building Detail Page
 // =============================================================================
 // Shows building address, site-access details, spaces (units + common areas),
 // occupant lists, and PM-user entitlements.

@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: delete-occupant
+// Work Orders — Edge Function: delete-occupant
 // =============================================================================
 
 import { handleCors } from '../_shared/cors.ts';

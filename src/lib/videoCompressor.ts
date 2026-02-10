@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Browser Video Compressor (FFmpeg.wasm)
+// Work Orders — Browser Video Compressor (FFmpeg.wasm)
 // =============================================================================
 // Lazy-loads FFmpeg WASM (single-threaded, no SharedArrayBuffer needed).
 // Compresses any video to H.264 MP4 at 720p — universally playable in all browsers.

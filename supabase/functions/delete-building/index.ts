@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: delete-building
+// Work Orders — Edge Function: delete-building
 // =============================================================================
 // Route:  POST /functions/v1/delete-building
 // Auth:   JWT required

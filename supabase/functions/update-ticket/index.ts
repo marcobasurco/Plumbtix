@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: update-ticket
+// Work Orders — Edge Function: update-ticket
 // =============================================================================
 // Route:  PATCH /functions/v1/update-ticket
 // Auth:   JWT required
