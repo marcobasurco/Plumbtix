@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { COMPLETE_TEMPLATE_B64 } from '@/lib/complete-template';
 import {
   Upload, FileSpreadsheet, Download, ChevronLeft, Loader2,
   CheckCircle2, XCircle, AlertTriangle, Building2, Users2,
@@ -153,63 +154,17 @@ function generateTemplate(type: ImportType) {
 }
 
 function generateCompleteTemplate() {
-  const wb = XLSX.utils.book_new();
-
-  const allExamples: Record<ImportType, { headers: string[]; rows: Record<string, string>[] }> = {
-    companies: {
-      headers: ['name', 'slug'],
-      rows: [
-        { name: 'Acme Property Management', slug: 'acme-property' },
-        { name: 'Bay Area Realty', slug: 'bay-area-realty' },
-      ],
-    },
-    buildings: {
-      headers: ['company_name', 'address', 'city', 'state', 'zip', 'building_name', 'address_line2', 'gate_code', 'onsite_contact_name', 'onsite_contact_phone', 'water_shutoff', 'gas_shutoff', 'access_notes'],
-      rows: [
-        { company_name: 'Acme Property Management', address: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', building_name: 'Main Tower', address_line2: 'Suite 100', gate_code: '1234', onsite_contact_name: 'John Doe', onsite_contact_phone: '(415) 555-0100', water_shutoff: 'Basement left wall', gas_shutoff: 'Utility room', access_notes: 'Key under mat' },
-        { company_name: 'Acme Property Management', address: '456 Oak Ave', city: 'Oakland', state: 'CA', zip: '94612', building_name: 'Oak Residences', address_line2: '', gate_code: '', onsite_contact_name: '', onsite_contact_phone: '', water_shutoff: '', gas_shutoff: '', access_notes: '' },
-      ],
-    },
-    units: {
-      headers: ['building_address', 'unit_number', 'floor', 'bedrooms', 'bathrooms'],
-      rows: [
-        { building_address: '123 Main St', unit_number: '101', floor: '1', bedrooms: '2', bathrooms: '1' },
-        { building_address: '123 Main St', unit_number: '102', floor: '1', bedrooms: '1', bathrooms: '1' },
-        { building_address: '123 Main St', unit_number: '201', floor: '2', bedrooms: '3', bathrooms: '2' },
-      ],
-    },
-    occupants: {
-      headers: ['building_address', 'unit_number', 'name', 'email', 'phone', 'type'],
-      rows: [
-        { building_address: '123 Main St', unit_number: '101', name: 'Alice Johnson', email: 'alice@email.com', phone: '(415) 555-1010', type: 'tenant' },
-        { building_address: '123 Main St', unit_number: '102', name: 'Bob Williams', email: 'bob@email.com', phone: '(415) 555-1020', type: 'homeowner' },
-      ],
-    },
-    users: {
-      headers: ['company_name', 'name', 'email', 'role', 'phone'],
-      rows: [
-        { company_name: 'Acme Property Management', name: 'Jane Smith', email: 'jane@acme.com', role: 'pm_admin', phone: '(415) 555-2000' },
-        { company_name: 'Acme Property Management', name: 'Bob Jones', email: 'bob@acme.com', role: 'pm_user', phone: '' },
-      ],
-    },
-  };
-
-  const sheetNames: Record<ImportType, string> = {
-    companies: 'Companies',
-    buildings: 'Buildings',
-    units: 'Units',
-    occupants: 'Occupants',
-    users: 'Users',
-  };
-
-  for (const key of ['companies', 'buildings', 'units', 'occupants', 'users'] as ImportType[]) {
-    const { headers, rows } = allExamples[key];
-    const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
-    ws['!cols'] = headers.map((h) => ({ wch: Math.max(h.length + 4, 18) }));
-    XLSX.utils.book_append_sheet(wb, ws, sheetNames[key]);
-  }
-
-  XLSX.writeFile(wb, 'work-orders-complete-template.xlsx');
+  // Serve the pre-built, formatted XLSX (openpyxl-generated with color-coded headers, instructions sheet)
+  const byteChars = atob(COMPLETE_TEMPLATE_B64);
+  const byteArray = new Uint8Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+  const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'work-orders-complete-template.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ---------------------------------------------------------------------------
