@@ -128,14 +128,10 @@ export function CompanyList() {
                 onClick={() => navigate(c.id)}
               >
                 <CardContent className="p-4">
-                  <div className="font-semibold text-foreground mb-0.5">{c.name}</div>
-                  <div className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground font-mono mb-3">
-                    {c.slug}
-                  </div>
+                  <div className="font-semibold text-foreground mb-2">{c.name}</div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" /> {c.building_count}</span>
                     <span className="flex items-center gap-1"><Users2 className="h-3.5 w-3.5" /> {c.user_count}</span>
-                    <span className="ml-auto text-muted-foreground/60">{formatDate(c.created_at)}</span>
                   </div>
                 </CardContent>
               </Card>

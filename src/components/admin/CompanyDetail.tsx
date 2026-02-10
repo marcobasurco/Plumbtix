@@ -328,13 +328,6 @@ export function CompanyDetail() {
       <div className="flex justify-between items-start flex-wrap gap-3 mb-5">
         <div className="min-w-0">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">{company.name}</h2>
-          <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground font-mono">
-              {company.slug}
-            </span>
-            <span className="text-border">·</span>
-            Created {formatDate(company.created_at)}
-          </p>
         </div>
         <Button variant="outline" size="sm" onClick={openEdit}>
           <Pencil className="h-3.5 w-3.5" /> Edit
