@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
   ImageIcon, FileIcon, Download, X, ChevronLeft, ChevronRight,
-  Plus, Loader2, Trash2,
+  Plus, Loader2, Trash2, Play,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,6 +39,15 @@ function formatFileSize(bytes: number | null): string {
 function isImageType(fileType: string | null): boolean {
   if (!fileType) return false;
   return fileType.startsWith('image/');
+}
+
+function isVideoType(fileType: string | null): boolean {
+  if (!fileType) return false;
+  return fileType.startsWith('video/');
+}
+
+function isMediaType(fileType: string | null): boolean {
+  return isImageType(fileType) || isVideoType(fileType);
 }
 
 // ---------------------------------------------------------------------------
@@ -196,20 +205,20 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     setItems((prev) => prev.filter((a) => a.id !== att.id));
   }, []);
 
-  // ─── Lightbox helpers ───
-  const imageItems = items.filter((a) => isImageType(a.file_type) && a.signedUrl);
+  // ─── Lightbox helpers — images + videos with valid URLs ───
+  const mediaItems = items.filter((a) => isMediaType(a.file_type) && a.signedUrl);
   const openLightbox = (attId: string) => {
-    const idx = imageItems.findIndex((img) => img.id === attId);
+    const idx = mediaItems.findIndex((m) => m.id === attId);
     if (idx >= 0) setLightboxIndex(idx);
   };
   const closeLightbox = () => setLightboxIndex(null);
   const prevImage = () => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i));
-  const nextImage = () => setLightboxIndex((i) => (i !== null && i < imageItems.length - 1 ? i + 1 : i));
+  const nextImage = () => setLightboxIndex((i) => (i !== null && i < mediaItems.length - 1 ? i + 1 : i));
 
   const isUploading = uploading.some((u) => u.status === 'uploading' || u.status === 'registering');
 
-  const images = items.filter((a) => isImageType(a.file_type));
-  const files = items.filter((a) => !isImageType(a.file_type));
+  const media = items.filter((a) => isMediaType(a.file_type));
+  const files = items.filter((a) => !isMediaType(a.file_type));
 
   // =========================================================================
   // RENDER — Header + Upload button ALWAYS visible regardless of state
@@ -296,10 +305,10 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         </p>
       )}
 
-      {/* ─── Image thumbnails grid ─── */}
-      {!loading && !error && images.length > 0 && (
+      {/* ─── Media thumbnails grid (images + videos) ─── */}
+      {!loading && !error && media.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
-          {images.map((att) => {
+          {media.map((att) => {
             if (!att.signedUrl) {
               return (
                 <div
@@ -313,6 +322,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                 </div>
               );
             }
+
             return (
               <div key={att.id} className="relative aspect-square rounded-lg overflow-hidden border border-border group">
                 <button
@@ -320,12 +330,29 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                   onClick={() => openLightbox(att.id)}
                   className="w-full h-full cursor-pointer"
                 >
-                  <img
-                    src={att.signedUrl}
-                    alt={att.file_name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                  {isVideoType(att.file_type) ? (
+                    <>
+                      <video
+                        src={att.signedUrl}
+                        className="w-full h-full object-cover"
+                        muted
+                        preload="metadata"
+                      />
+                      {/* Play icon overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-black/60 rounded-full p-3">
+                          <Play className="h-6 w-6 text-white fill-white" />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <img
+                      src={att.signedUrl}
+                      alt={att.file_name}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
                     <p className="text-[10px] text-white truncate">{att.file_name}</p>
@@ -394,8 +421,8 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         </div>
       ))}
 
-      {/* ─── Lightbox overlay ─── */}
-      {lightboxIndex !== null && imageItems[lightboxIndex] && (
+      {/* ─── Lightbox overlay (images + videos) ─── */}
+      {lightboxIndex !== null && mediaItems[lightboxIndex] && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={closeLightbox}
@@ -418,14 +445,26 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             </button>
           )}
 
-          <img
-            src={imageItems[lightboxIndex].signedUrl!}
-            alt={imageItems[lightboxIndex].file_name}
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {/* Render video or image */}
+          {isVideoType(mediaItems[lightboxIndex].file_type) ? (
+            <video
+              key={mediaItems[lightboxIndex].id}
+              src={mediaItems[lightboxIndex].signedUrl!}
+              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
+              controls
+              autoPlay
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={mediaItems[lightboxIndex].signedUrl!}
+              alt={mediaItems[lightboxIndex].file_name}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
 
-          {lightboxIndex < imageItems.length - 1 && (
+          {lightboxIndex < mediaItems.length - 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); nextImage(); }}
@@ -436,10 +475,10 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
           )}
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1.5 rounded-full">
-            {imageItems[lightboxIndex].file_name}
-            {imageItems.length > 1 && (
+            {mediaItems[lightboxIndex].file_name}
+            {mediaItems.length > 1 && (
               <span className="text-white/60 ml-2">
-                {lightboxIndex + 1} / {imageItems.length}
+                {lightboxIndex + 1} / {mediaItems.length}
               </span>
             )}
           </div>
