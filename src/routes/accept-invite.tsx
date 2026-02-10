@@ -24,7 +24,6 @@ export function AcceptInvitePage() {
     setError(null);
     setSubmitting(true);
 
-    // Call Edge Function (no auth required — token is credential)
     const result = await acceptInvitation({
       token,
       email: email.trim(),
@@ -39,7 +38,6 @@ export function AcceptInvitePage() {
       return;
     }
 
-    // If the Edge Function returned session tokens, set them in Supabase client
     if (result.data.session) {
       await supabase.auth.setSession({
         access_token: result.data.session.access_token,
@@ -50,7 +48,6 @@ export function AcceptInvitePage() {
     setSuccess(true);
     setSubmitting(false);
 
-    // Brief delay to show success, then redirect to dashboard
     setTimeout(() => {
       navigate('/', { replace: true });
     }, 1500);
@@ -58,98 +55,133 @@ export function AcceptInvitePage() {
 
   if (!token) {
     return (
-      <div className="page">
-        <h1>Invalid Invitation</h1>
-        <p className="subtitle">No invitation token found in the URL.</p>
-        <p style={{ fontSize: '0.9rem', color: '#666' }}>
-          Check your invitation email for the correct link, or{' '}
-          <Link to="/login">sign in</Link> if you already have an account.
-        </p>
+      <div className="login-page">
+        <div className="login-card">
+          <div className="login-logo">
+            <div className="login-logo-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v6l3-3"/><path d="M12 8l-3-3"/><path d="M20 12a8 8 0 1 1-16 0"/><path d="M12 12v8"/>
+              </svg>
+            </div>
+            <span className="login-logo-text">Work Orders</span>
+          </div>
+          <p className="login-subtitle">Invalid Invitation</p>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '8px' }}>
+            No invitation token found in the URL. Check your invitation email for the correct link, or{' '}
+            <Link to="/login">sign in</Link> if you already have an account.
+          </p>
+        </div>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div className="page">
-        <div className="success-box">
-          <strong>Account created!</strong> Redirecting to your dashboard…
+      <div className="login-page">
+        <div className="login-card">
+          <div className="login-logo">
+            <div className="login-logo-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v6l3-3"/><path d="M12 8l-3-3"/><path d="M20 12a8 8 0 1 1-16 0"/><path d="M12 12v8"/>
+              </svg>
+            </div>
+            <span className="login-logo-text">Work Orders</span>
+          </div>
+          <div className="success-box" style={{ marginTop: '16px' }}>
+            <strong>Account created!</strong> Redirecting to your dashboard…
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page">
-      <h1>Accept Invitation</h1>
-      <p className="subtitle">Create your Property Manager account</p>
-
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
-
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="fullName">Full Name</label>
-          <input
-            id="fullName"
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-            autoFocus
-          />
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="login-logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v6l3-3"/><path d="M12 8l-3-3"/><path d="M20 12a8 8 0 1 1-16 0"/><path d="M12 12v8"/>
+            </svg>
+          </div>
+          <span className="login-logo-text">Work Orders</span>
         </div>
+        <p className="login-subtitle">Accept Invitation</p>
 
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            placeholder="Must match the invitation email"
-          />
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="fullName">Full Name</label>
+            <input
+              id="fullName"
+              type="text"
+              className="form-input"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              autoFocus
+              placeholder="Your full name"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              className="form-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              placeholder="Must match the invitation email"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="phone">Phone (optional)</label>
+            <input
+              id="phone"
+              type="tel"
+              className="form-input"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              minLength={8}
+              placeholder="Minimum 8 characters"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={submitting || !email || !password || !fullName}
+          >
+            {submitting ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</>
+            ) : 'Create Account'}
+          </Button>
+        </form>
+
+        <div className="login-links">
+          Already have an account? <Link to="/login">Sign in</Link>
         </div>
-
-        <div className="form-group">
-          <label htmlFor="phone">Phone (optional)</label>
-          <input
-            id="phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            minLength={8}
-            placeholder="Minimum 8 characters"
-          />
-        </div>
-
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={submitting || !email || !password || !fullName}
-        >
-          {submitting ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</>
-          ) : 'Create Account'}
-        </Button>
-      </form>
-
-      <p style={{ marginTop: '24px', fontSize: '0.85rem', color: '#666', textAlign: 'center' }}>
-        Already have an account? <Link to="/login">Sign in</Link>
-      </p>
+      </div>
     </div>
   );
 }

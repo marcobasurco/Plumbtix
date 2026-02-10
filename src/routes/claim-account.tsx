@@ -34,7 +34,6 @@ export function ClaimAccountPage() {
       return;
     }
 
-    // Set session tokens if returned
     if (result.data.session) {
       await supabase.auth.setSession({
         access_token: result.data.session.access_token,
@@ -52,77 +51,108 @@ export function ClaimAccountPage() {
 
   if (!token) {
     return (
-      <div className="page">
-        <h1>Invalid Link</h1>
-        <p className="subtitle">No claim token found in the URL.</p>
-        <p style={{ fontSize: '0.9rem', color: '#666' }}>
-          Check the link from your property manager, or{' '}
-          <Link to="/login">sign in</Link> if you already have an account.
-        </p>
+      <div className="login-page">
+        <div className="login-card">
+          <div className="login-logo">
+            <div className="login-logo-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v6l3-3"/><path d="M12 8l-3-3"/><path d="M20 12a8 8 0 1 1-16 0"/><path d="M12 12v8"/>
+              </svg>
+            </div>
+            <span className="login-logo-text">Work Orders</span>
+          </div>
+          <p className="login-subtitle">Invalid Link</p>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '8px' }}>
+            No claim token found in the URL. Check the link from your property manager, or{' '}
+            <Link to="/login">sign in</Link> if you already have an account.
+          </p>
+        </div>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div className="page">
-        <div className="success-box">
-          <strong>Account claimed!</strong> Redirecting to your dashboard…
+      <div className="login-page">
+        <div className="login-card">
+          <div className="login-logo">
+            <div className="login-logo-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v6l3-3"/><path d="M12 8l-3-3"/><path d="M20 12a8 8 0 1 1-16 0"/><path d="M12 12v8"/>
+              </svg>
+            </div>
+            <span className="login-logo-text">Work Orders</span>
+          </div>
+          <div className="success-box" style={{ marginTop: '16px' }}>
+            <strong>Account claimed!</strong> Redirecting to your dashboard…
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page">
-      <h1>Claim Your Account</h1>
-      <p className="subtitle">Set up your resident account to submit work orders</p>
-
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
-
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            autoFocus
-            placeholder="Must match the email on file"
-          />
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="login-logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v6l3-3"/><path d="M12 8l-3-3"/><path d="M20 12a8 8 0 1 1-16 0"/><path d="M12 12v8"/>
+            </svg>
+          </div>
+          <span className="login-logo-text">Work Orders</span>
         </div>
+        <p className="login-subtitle">Claim Your Account</p>
 
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            minLength={8}
-            placeholder="Minimum 8 characters"
-          />
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              className="form-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              autoFocus
+              placeholder="Must match the email on file"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              minLength={8}
+              placeholder="Minimum 8 characters"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={submitting || !email || !password}
+          >
+            {submitting ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Claiming account…</>
+            ) : 'Claim Account'}
+          </Button>
+        </form>
+
+        <div className="login-links">
+          Already have an account? <Link to="/login">Sign in</Link>
         </div>
-
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={submitting || !email || !password}
-        >
-          {submitting ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Claiming account…</>
-          ) : 'Claim Account'}
-        </Button>
-      </form>
-
-      <p style={{ marginTop: '24px', fontSize: '0.85rem', color: '#666', textAlign: 'center' }}>
-        Already have an account? <Link to="/login">Sign in</Link>
-      </p>
+      </div>
     </div>
   );
 }
