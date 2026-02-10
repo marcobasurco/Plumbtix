@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { fetchTicketList, type TicketListRow, type TicketListFilters } from '@/lib/tickets';
 import { ISSUE_TYPE_LABELS } from '@shared/types/enums';
 import { StatusBadge } from './StatusBadge';
@@ -40,10 +40,31 @@ function TableSkeleton() {
 
 export function TicketList() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tickets, setTickets] = useState<TicketListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<TicketListFilters>({});
+
+  // Initialize filters from URL params (e.g. ?status=open&severity=emergency)
+  const [filters, setFilters] = useState<TicketListFilters>(() => {
+    const initial: TicketListFilters = {};
+    const status = searchParams.get('status');
+    const severity = searchParams.get('severity');
+    const building_id = searchParams.get('building_id');
+    if (status) initial.status = status as TicketListFilters['status'];
+    if (severity) initial.severity = severity as TicketListFilters['severity'];
+    if (building_id) initial.building_id = building_id;
+    return initial;
+  });
+
+  // Sync filters back to URL (keeps browser back/forward working)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+    if (filters.severity && filters.severity !== 'all') params.set('severity', filters.severity);
+    if (filters.building_id) params.set('building_id', filters.building_id);
+    setSearchParams(params, { replace: true });
+  }, [filters, setSearchParams]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);

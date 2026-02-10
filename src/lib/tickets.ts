@@ -15,7 +15,7 @@ import type { TicketStatus, TicketSeverity } from '@shared/types/enums';
 // ---------------------------------------------------------------------------
 
 export interface TicketListFilters {
-  status?: TicketStatus | 'all';
+  status?: TicketStatus | 'all' | 'open';
   severity?: TicketSeverity | 'all';
   building_id?: string;
   search?: string;
@@ -67,7 +67,11 @@ export async function fetchTicketList(filters: TicketListFilters = {}) {
     .order('created_at', { ascending: false });
 
   if (filters.status && filters.status !== 'all') {
-    query = query.eq('status', filters.status);
+    if (filters.status === 'open') {
+      query = query.not('status', 'in', '("completed","invoiced","cancelled")');
+    } else {
+      query = query.eq('status', filters.status);
+    }
   }
   if (filters.severity && filters.severity !== 'all') {
     query = query.eq('severity', filters.severity);

@@ -22,6 +22,7 @@ export function TicketFilters({ filters, onChange }: TicketFiltersProps) {
         value={filters.status ?? 'all'}
         onChange={(e) => update({ status: e.target.value as TicketListFilters['status'] })}>
         <option value="all">All Statuses</option>
+        <option value="open">Open (Active)</option>
         {TICKET_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
       </select>
 

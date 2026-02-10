@@ -192,7 +192,7 @@ export function DashboardOverview() {
           icon={<TicketCheck size={22} />}
           accent="#3b82f6"
           subtitle={`${metrics.totalTickets} total`}
-          onClick={() => navigate(`${basePath}/tickets`)}
+          onClick={() => navigate(`${basePath}/tickets?status=open`)}
         />
         <MetricCard
           label="Emergencies"
@@ -200,12 +200,14 @@ export function DashboardOverview() {
           icon={<AlertTriangle size={22} />}
           accent={metrics.emergencyTickets > 0 ? '#ef4444' : '#22c55e'}
           subtitle={metrics.emergencyTickets > 0 ? 'Needs attention' : 'All clear'}
+          onClick={() => navigate(`${basePath}/tickets?severity=emergency`)}
         />
         <MetricCard
           label="Completed This Month"
           value={metrics.completedThisMonth}
           icon={<TrendingUp size={22} />}
           accent="#22c55e"
+          onClick={() => navigate(`${basePath}/tickets?status=completed`)}
         />
         <MetricCard
           label="Buildings"
@@ -371,7 +373,12 @@ export function DashboardOverview() {
             const pct = Math.round((count / total) * 100);
             const color = SEVERITY_COLORS[sev];
             return (
-              <div key={sev} className="severity-card">
+              <div
+                key={sev}
+                className="severity-card"
+                onClick={() => navigate(`${basePath}/tickets?severity=${sev}`)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--slate-700)' }}>
                     {SEVERITY_LABELS[sev]}
