@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 const ALLOWED_TYPES = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif',
   'application/pdf',
@@ -107,7 +107,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     const valid: File[] = [];
     for (const f of fileArray) {
       if (f.size > MAX_FILE_SIZE) {
-        toast.error(`${f.name} exceeds 10 MB limit`);
+        toast.error(`${f.name} exceeds 100 MB limit`);
         continue;
       }
       if (!ALLOWED_TYPES.includes(f.type)) {

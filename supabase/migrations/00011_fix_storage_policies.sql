@@ -19,7 +19,9 @@
 -- ─── A) Update bucket: add HEIC/HEIF for iPhones ───────────────────────────
 
 UPDATE storage.buckets
-SET allowed_mime_types = ARRAY[
+SET
+  file_size_limit = 104857600,  -- 100MB
+  allowed_mime_types = ARRAY[
     'image/jpeg',
     'image/png',
     'image/gif',

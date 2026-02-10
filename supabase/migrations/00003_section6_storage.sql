@@ -35,7 +35,7 @@ VALUES (
     'ticket-attachments',
     'ticket-attachments',
     false,  -- Private bucket: NO public/anonymous access
-    10485760,  -- 10MB file size limit
+    104857600,  -- 100MB file size limit
     ARRAY[
         'image/jpeg',
         'image/png', 

@@ -31,7 +31,7 @@ import { createUserClient, getAuthenticatedUserId } from '../_shared/supabase.ts
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (matches Section 6)
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 const FILE_PATH_REGEX = /^tickets\/[0-9a-f-]{36}\/.+$/i;
 
