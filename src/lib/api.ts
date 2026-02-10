@@ -26,6 +26,10 @@ import type {
   DeleteAttachmentResponse,
   SendInvitationRequest,
   SendInvitationResponse,
+  ResendInvitationRequest,
+  ResendInvitationResponse,
+  UpdateOccupantRequest,
+  UpdateOccupantResponse,
   ApiSuccessResponse,
   ApiErrorResponse,
 } from '@shared/types/api';
@@ -213,6 +217,20 @@ export function deleteAttachment(body: DeleteAttachmentRequest) {
 export function sendInvitation(body: SendInvitationRequest) {
   return callEdge<SendInvitationResponse>('send-invitation', {
     method: 'POST',
+    body,
+  });
+}
+
+export function resendInvitation(body: ResendInvitationRequest) {
+  return callEdge<ResendInvitationResponse>('resend-invitation', {
+    method: 'POST',
+    body,
+  });
+}
+
+export function updateOccupant(body: UpdateOccupantRequest) {
+  return callEdge<UpdateOccupantResponse>('update-occupant', {
+    method: 'PUT',
     body,
   });
 }
