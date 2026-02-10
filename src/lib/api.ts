@@ -230,7 +230,7 @@ export function resendInvitation(body: ResendInvitationRequest) {
 
 export function updateOccupant(body: UpdateOccupantRequest) {
   return callEdge<UpdateOccupantResponse>('update-occupant', {
-    method: 'PUT',
+    method: 'POST',
     body,
   });
 }

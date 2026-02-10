@@ -17,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRealtime } from '@/hooks/useRealtime';
 import { toast } from 'sonner';
-import { Loader2, Mail, CheckCircle2, ChevronDown, Pencil, Send, X } from 'lucide-react';
+import { Loader2, Mail, CheckCircle2, ChevronDown, Pencil, Send } from 'lucide-react';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

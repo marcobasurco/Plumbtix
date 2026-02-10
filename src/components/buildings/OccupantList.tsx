@@ -128,7 +128,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
     if (result.ok) {
       const occ = result.data.occupant;
       setOccupants((prev) => prev.map((o) =>
-        o.id === editingId ? { ...o, name: occ.name as string, email: occ.email as string, phone: (occ.phone as string) || null, occupant_type: occ.occupant_type as string, invite_token: (occ.invite_token as string) || o.invite_token } : o
+        o.id === editingId ? { ...o, name: occ.name as string, email: occ.email as string, phone: (occ.phone as string) || null, occupant_type: occ.occupant_type as 'homeowner' | 'tenant', invite_token: (occ.invite_token as string) || o.invite_token } : o
       ));
       cancelEditing();
     } else {
