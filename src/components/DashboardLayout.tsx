@@ -38,6 +38,8 @@ const SHARED_NAV: NavItem[] = [
     icon: <Ticket className="h-[18px] w-[18px]" /> },
   { label: 'Buildings',  path: 'buildings', matchSegment: 'buildings',
     icon: <Building2 className="h-[18px] w-[18px]" /> },
+  { label: 'Analytics', path: 'analytics', matchSegment: 'analytics',
+    icon: <BarChart3 className="h-[18px] w-[18px]" /> },
 ];
 
 const ADMIN_NAV: NavItem[] = [
@@ -48,8 +50,6 @@ const ADMIN_NAV: NavItem[] = [
     icon: <Users2 className="h-[18px] w-[18px]" /> },
   { label: 'Dispatch',  path: 'dispatch',  matchSegment: 'dispatch',
     icon: <Kanban className="h-[18px] w-[18px]" /> },
-  { label: 'Analytics', path: 'analytics', matchSegment: 'analytics',
-    icon: <BarChart3 className="h-[18px] w-[18px]" /> },
   { label: 'Sync',      path: 'import',    matchSegment: 'import',
     icon: <FileSpreadsheet className="h-[18px] w-[18px]" /> },
 ];

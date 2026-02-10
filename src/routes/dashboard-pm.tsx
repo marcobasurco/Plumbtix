@@ -7,6 +7,7 @@ import { CreateTicketWizard } from '@/components/tickets/CreateTicketWizard';
 import { BuildingList } from '@/components/buildings/BuildingList';
 import { BuildingDetail } from '@/components/buildings/BuildingDetail';
 import { BuildingForm } from '@/components/buildings/BuildingForm';
+import { AnalyticsPage } from '@/components/admin/AnalyticsPage';
 
 export function PMDashboard() {
   return (
@@ -20,6 +21,7 @@ export function PMDashboard() {
         <Route path="buildings/new" element={<BuildingForm />} />
         <Route path="buildings/:buildingId" element={<BuildingDetail />} />
         <Route path="buildings/:buildingId/edit" element={<BuildingForm />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
       </Routes>
     </DashboardLayout>
   );
