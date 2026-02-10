@@ -1,16 +1,33 @@
 // =============================================================================
-// PlumbTix — Attachments List (v0.4.0 Polish)
+// PlumbTix — Attachments List + Upload (v0.4.0)
 // =============================================================================
-// Shows image thumbnails inline for photos, file links for non-image types.
-// Lightbox for full-size image viewing with prev/next navigation.
-// Uses signed URLs (5-min expiry) via Supabase Storage.
+// Displays image thumbnails in a grid with lightbox, file rows for non-images.
+// Upload button lets any user with ticket access add more photos/files.
+// Flow: Storage upload → register-attachment edge function → refresh list.
 // =============================================================================
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchAttachments, getAttachmentUrl, type AttachmentRow } from '@/lib/tickets';
+import { registerAttachment } from '@/lib/api';
+import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ImageIcon, FileIcon, Download, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ImageIcon, FileIcon, Download, X, ChevronLeft, ChevronRight,
+  Plus, Loader2,
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_TYPES = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif',
+  'application/pdf',
+  'video/mp4', 'video/quicktime',
+];
 
 function formatFileSize(bytes: number | null): string {
   if (!bytes) return '—';
@@ -24,28 +41,43 @@ function isImageType(fileType: string | null): boolean {
   return fileType.startsWith('image/');
 }
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 interface AttachmentWithUrl extends AttachmentRow {
   signedUrl: string | null;
   urlError: boolean;
+}
+
+interface UploadingFile {
+  name: string;
+  status: 'uploading' | 'registering' | 'done' | 'failed';
+  error?: string;
 }
 
 interface AttachmentsListProps {
   ticketId: string;
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function AttachmentsList({ ticketId }: AttachmentsListProps) {
   const [items, setItems] = useState<AttachmentWithUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [uploading, setUploading] = useState<UploadingFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ─── Load attachments + signed URLs ───
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const rows = await fetchAttachments(ticketId);
-
-      // Fetch signed URLs in parallel
       const withUrls: AttachmentWithUrl[] = await Promise.all(
         rows.map(async (att) => {
           try {
@@ -56,7 +88,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
           }
         }),
       );
-
       setItems(withUrls);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load attachments');
@@ -67,9 +98,93 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Lightbox helpers — only images with valid URLs
-  const imageItems = items.filter((a) => isImageType(a.file_type) && a.signedUrl);
+  // ─── Upload handler ───
+  const handleFiles = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
+    const fileArray = Array.from(files);
+
+    // Validate
+    const valid: File[] = [];
+    for (const f of fileArray) {
+      if (f.size > MAX_FILE_SIZE) {
+        toast.error(`${f.name} exceeds 10 MB limit`);
+        continue;
+      }
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        toast.error(`${f.name}: unsupported file type`);
+        continue;
+      }
+      valid.push(f);
+    }
+    if (valid.length === 0) return;
+
+    // Track progress
+    const progress: UploadingFile[] = valid.map((f) => ({
+      name: f.name,
+      status: 'uploading',
+    }));
+    setUploading([...progress]);
+
+    let successCount = 0;
+
+    for (let i = 0; i < valid.length; i++) {
+      const file = valid[i];
+      // Deduplicate filename: prepend timestamp to avoid collisions
+      const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const filePath = `tickets/${ticketId}/${safeName}`;
+
+      // Step 1: Upload to Storage
+      progress[i] = { ...progress[i], status: 'uploading' };
+      setUploading([...progress]);
+
+      const { error: uploadErr } = await supabase.storage
+        .from('ticket-attachments')
+        .upload(filePath, file, { contentType: file.type, upsert: false });
+
+      if (uploadErr) {
+        progress[i] = { ...progress[i], status: 'failed', error: uploadErr.message };
+        setUploading([...progress]);
+        toast.error(`Upload failed: ${file.name}`);
+        continue;
+      }
+
+      // Step 2: Register metadata via edge function
+      progress[i] = { ...progress[i], status: 'registering' };
+      setUploading([...progress]);
+
+      const result = await registerAttachment({
+        ticket_id: ticketId,
+        file_path: filePath,
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+      });
+
+      if (!result.ok) {
+        progress[i] = { ...progress[i], status: 'failed', error: result.error.message };
+        setUploading([...progress]);
+        toast.error(`Register failed: ${file.name}`);
+      } else {
+        progress[i] = { ...progress[i], status: 'done' };
+        setUploading([...progress]);
+        successCount++;
+      }
+    }
+
+    // Clear progress after a delay, refresh list
+    if (successCount > 0) {
+      toast.success(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`);
+      await load();
+    }
+    setTimeout(() => setUploading([]), 2000);
+
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [ticketId, load]);
+
+  // ─── Lightbox helpers ───
+  const imageItems = items.filter((a) => isImageType(a.file_type) && a.signedUrl);
   const openLightbox = (attId: string) => {
     const idx = imageItems.findIndex((img) => img.id === attId);
     if (idx >= 0) setLightboxIndex(idx);
@@ -78,7 +193,9 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
   const prevImage = () => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i));
   const nextImage = () => setLightboxIndex((i) => (i !== null && i < imageItems.length - 1 ? i + 1 : i));
 
-  // ─── Loading ───
+  const isUploading = uploading.some((u) => u.status === 'uploading' || u.status === 'registering');
+
+  // ─── Loading state ───
   if (loading) {
     return (
       <div className="space-y-3">
@@ -91,7 +208,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     );
   }
 
-  // ─── Error ───
+  // ─── Error state ───
   if (error) {
     return (
       <div className="space-y-2">
@@ -102,24 +219,71 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     );
   }
 
-  // ─── Empty ───
-  if (items.length === 0) {
-    return (
-      <div>
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Attachments</h3>
-        <p className="text-sm text-muted-foreground mt-2">No attachments.</p>
-      </div>
-    );
-  }
-
   const images = items.filter((a) => isImageType(a.file_type));
   const files = items.filter((a) => !isImageType(a.file_type));
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-        Attachments ({items.length})
-      </h3>
+      {/* Header + Upload button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Attachments{items.length > 0 ? ` (${items.length})` : ''}
+        </h3>
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ALLOWED_TYPES.join(',')}
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isUploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="gap-1.5"
+          >
+            {isUploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            {isUploading ? 'Uploading…' : 'Add Files'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Upload progress */}
+      {uploading.length > 0 && (
+        <div className="space-y-1.5">
+          {uploading.map((u, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs">
+              {(u.status === 'uploading' || u.status === 'registering') && (
+                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              )}
+              {u.status === 'done' && <span className="text-green-600">✓</span>}
+              {u.status === 'failed' && <span className="text-destructive">✗</span>}
+              <span className="truncate flex-1">{u.name}</span>
+              {u.status === 'uploading' && (
+                <span className="text-muted-foreground">Uploading…</span>
+              )}
+              {u.status === 'registering' && (
+                <span className="text-muted-foreground">Saving…</span>
+              )}
+              {u.status === 'failed' && u.error && (
+                <span className="text-destructive truncate max-w-[120px]">{u.error}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {items.length === 0 && uploading.length === 0 && (
+        <p className="text-sm text-muted-foreground">No attachments yet. Click "Add Files" to upload photos.</p>
+      )}
 
       {/* ─── Image thumbnails grid ─── */}
       {images.length > 0 && (
@@ -196,7 +360,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={closeLightbox}
         >
-          {/* Close */}
           <button
             type="button"
             onClick={closeLightbox}
@@ -205,7 +368,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             <X className="h-7 w-7" />
           </button>
 
-          {/* Previous */}
           {lightboxIndex > 0 && (
             <button
               type="button"
@@ -216,7 +378,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             </button>
           )}
 
-          {/* Full-size image */}
           <img
             src={imageItems[lightboxIndex].signedUrl!}
             alt={imageItems[lightboxIndex].file_name}
@@ -224,7 +385,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             onClick={(e) => e.stopPropagation()}
           />
 
-          {/* Next */}
           {lightboxIndex < imageItems.length - 1 && (
             <button
               type="button"
@@ -235,7 +395,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             </button>
           )}
 
-          {/* Caption bar */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1.5 rounded-full">
             {imageItems[lightboxIndex].file_name}
             {imageItems.length > 1 && (
