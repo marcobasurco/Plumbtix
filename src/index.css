@@ -1134,6 +1134,263 @@ body {
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════════
+   DISPATCH BOARD
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Filters ── */
+.dispatch-filters-wrap {
+  margin-bottom: 12px;
+}
+.dispatch-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dispatch-filter-select {
+  font-size: 16px !important; /* prevent iOS zoom */
+  padding: 8px 12px;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+}
+.dispatch-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 140px;
+}
+.dispatch-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 14px;
+  width: 14px;
+  color: var(--slate-400);
+  pointer-events: none;
+}
+.dispatch-search-input {
+  font-size: 16px !important;
+  padding: 8px 12px 8px 32px !important;
+  min-height: 44px;
+  width: 100%;
+}
+.dispatch-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--slate-500);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  min-height: 44px;
+  padding: 0 4px;
+}
+
+/* Mobile: filters hidden until toggled */
+@media (max-width: 768px) {
+  .dispatch-filters-wrap {
+    display: none;
+  }
+  .dispatch-filters-wrap.open {
+    display: block;
+    padding: 12px;
+    margin: 0 -12px 12px;
+    background: var(--slate-50);
+    border-bottom: 1px solid var(--slate-200);
+  }
+  .dispatch-filters {
+    flex-direction: column;
+  }
+  .dispatch-filter-select {
+    width: 100%;
+  }
+  .dispatch-search-wrap {
+    min-width: unset;
+  }
+}
+
+/* ── Mobile accordion sections ── */
+.dispatch-section {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.dispatch-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-left: 4px solid var(--section-border);
+  background: var(--section-bg);
+  color: var(--section-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast);
+}
+.dispatch-section-header:active {
+  opacity: 0.85;
+}
+.dispatch-section-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dispatch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--section-dot);
+  flex-shrink: 0;
+}
+.dispatch-section-label {
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+.dispatch-section-count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  opacity: 0.7;
+  background: rgba(0,0,0,0.08);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+.dispatch-section-body {
+  padding: 6px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Mobile ticket card ── */
+.dispatch-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: 12px 38px 12px 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.dispatch-card-tap {
+  cursor: pointer;
+}
+.dispatch-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.dispatch-card-number {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--slate-800);
+}
+.dispatch-card-issue {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  margin-bottom: 4px;
+}
+.dispatch-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--slate-500);
+}
+.dispatch-card-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.dispatch-card-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 16px;
+  width: 16px;
+  color: var(--slate-300);
+}
+.dispatch-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--slate-100);
+}
+.dispatch-action-btn {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--action-border);
+  background: var(--action-bg);
+  color: var(--action-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 30px;
+  transition: opacity var(--duration-fast);
+}
+.dispatch-action-btn:active {
+  opacity: 0.7;
+}
+.dispatch-action-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Desktop kanban ── */
+.kanban-board {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  min-height: 400px;
+}
+.kanban-column {
+  min-width: 220px;
+  max-width: 260px;
+  flex: 1 0 220px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  border-top-width: 3px;
+  display: flex;
+  flex-direction: column;
+}
+.kanban-col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px 6px 0 0;
+}
+.kanban-col-body {
+  flex: 1;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 600px;
+}
+.kanban-card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    IMPORT DROPZONE
    ══════════════════════════════════════════════════════════════════════════ */
 
