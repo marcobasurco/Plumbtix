@@ -23,9 +23,10 @@
 // =============================================================================
 
 import { handleCors } from '../_shared/cors.ts';
-import { createUserClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
+import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { notifyNewTicket } from '../_shared/notifications.ts';
 
 const ISSUE_TYPES = [
   'active_leak', 'sewer_backup', 'drain_clog', 'water_heater',
@@ -157,6 +158,39 @@ Deno.serve(async (req: Request) => {
       '[create-ticket] Created: ticket=%s, number=%d, severity=%s, escalated=%s, user=%s',
       ticket.id, ticket.ticket_number, finalSeverity, severityEscalated, userId,
     );
+
+    // ─── Send notification email to Pro Roto (fire-and-forget) ───
+    try {
+      const svc = createServiceClient();
+
+      // Fetch building + space + creator for the email template
+      const [buildingRes, spaceRes, creatorRes] = await Promise.all([
+        svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
+        svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
+        svc.from('users').select('full_name, email').eq('id', userId).single(),
+      ]);
+
+      if (buildingRes.data && spaceRes.data && creatorRes.data) {
+        notifyNewTicket(svc, {
+          ticket_number: ticket.ticket_number,
+          id: ticket.id,
+          issue_type,
+          severity: finalSeverity,
+          status: 'new',
+          description,
+          assigned_technician: null,
+          scheduled_date: null,
+          scheduled_time_window: null,
+          quote_amount: null,
+          invoice_number: null,
+          building: buildingRes.data,
+          space: spaceRes.data,
+          created_by: creatorRes.data,
+        });
+      }
+    } catch (emailErr) {
+      console.error('[create-ticket] Email notification error (non-blocking):', emailErr);
+    }
 
     return ok({ ticket, severity_escalated: severityEscalated }, 201);
   } catch (e) {

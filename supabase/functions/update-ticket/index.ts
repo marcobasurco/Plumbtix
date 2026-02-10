@@ -32,6 +32,7 @@ import { ok, err, unauthorized, forbidden, notFound, serverError } from '../_sha
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 import { getCallerRole, isProRotoAdmin } from '../_shared/auth.ts';
 import type { UserRole } from '../_shared/auth.ts';
+import { notifyStatusChange } from '../_shared/notifications.ts';
 
 // ─── Transition matrix (MUST match transitions.ts and migration 00005) ───
 
@@ -222,6 +223,39 @@ Deno.serve(async (req: Request) => {
       targetStatus ? ticket.status : '(unchanged)',
       targetStatus ?? '(unchanged)',
     );
+
+    // ─── 10. Send status change notification (fire-and-forget) ───
+    if (targetStatus && targetStatus !== ticket.status) {
+      try {
+        const svc = createServiceClient();
+        const [buildingRes, spaceRes, creatorRes] = await Promise.all([
+          svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', ticket.building_id).single(),
+          svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', ticket.space_id).single(),
+          svc.from('users').select('full_name, email').eq('id', ticket.created_by_user_id).single(),
+        ]);
+
+        if (buildingRes.data && spaceRes.data && creatorRes.data) {
+          notifyStatusChange(svc, {
+            ticket_number: updated.ticket_number ?? ticket.ticket_number,
+            id: ticket_id,
+            issue_type: ticket.issue_type,
+            severity: ticket.severity,
+            status: targetStatus,
+            description: ticket.description,
+            assigned_technician: updated.assigned_technician ?? ticket.assigned_technician,
+            scheduled_date: updated.scheduled_date ?? ticket.scheduled_date,
+            scheduled_time_window: updated.scheduled_time_window ?? ticket.scheduled_time_window,
+            quote_amount: updated.quote_amount ?? ticket.quote_amount,
+            invoice_number: updated.invoice_number ?? ticket.invoice_number,
+            building: buildingRes.data,
+            space: spaceRes.data,
+            created_by: creatorRes.data,
+          }, ticket.status, targetStatus, role);
+        }
+      } catch (emailErr) {
+        console.error('[update-ticket] Email notification error (non-blocking):', emailErr);
+      }
+    }
 
     return ok({ ticket: updated });
   } catch (e) {

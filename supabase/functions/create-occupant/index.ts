@@ -7,9 +7,10 @@
 // =============================================================================
 
 import { handleCors } from '../_shared/cors.ts';
-import { createUserClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
+import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { notifyResidentClaim } from '../_shared/notifications.ts';
 
 const CreateOccupantSchema = z.object({
   space_id: z.string().regex(UUID_REGEX, 'Invalid space_id'),
@@ -76,6 +77,36 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log('[create-occupant] Created: occupant=%s space=%s user=%s', occupant.id, space_id, userId);
+
+    // ─── Send resident claim email (fire-and-forget) ───
+    try {
+      const svc = createServiceClient();
+      const { data: space } = await svc
+        .from('spaces')
+        .select('unit_number, building_id, buildings(name, address_line1)')
+        .eq('id', space_id)
+        .single();
+
+      if (space && occupant.invite_token) {
+        const building = (space as any).buildings;
+        notifyResidentClaim({
+          occupantName: name,
+          occupantEmail: email,
+          buildingName: building?.name || building?.address_line1 || 'Your Building',
+          unitNumber: space.unit_number || 'N/A',
+          inviteToken: occupant.invite_token,
+        });
+
+        // Mark invite as sent
+        await svc
+          .from('occupants')
+          .update({ invite_sent_at: new Date().toISOString() })
+          .eq('id', occupant.id);
+      }
+    } catch (emailErr) {
+      console.error('[create-occupant] Email notification error (non-blocking):', emailErr);
+    }
+
     return ok(occupant, 201);
   } catch (e) {
     console.error('[create-occupant] Unexpected error:', e);

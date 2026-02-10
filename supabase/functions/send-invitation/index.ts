@@ -18,7 +18,7 @@
 //   5. INSERT invitation via user JWT (RLS validates company access)
 //   6. Return invitation record
 //
-// Email delivery: DEFERRED. Token is stored in DB for manual distribution.
+// Email delivery: Sent via Resend (fire-and-forget, non-blocking).
 // Expiry: 7 days from creation.
 // =============================================================================
 
@@ -31,6 +31,7 @@ import {
 import { ok, err, unauthorized, forbidden, conflict, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 import { getCallerRole, getCallerCompanyId } from '../_shared/auth.ts';
+import { notifyInvitation } from '../_shared/notifications.ts';
 
 const INVITATION_ROLES = ['pm_admin', 'pm_user'] as const;
 const EXPIRY_DAYS = 7;
@@ -144,6 +145,35 @@ Deno.serve(async (req: Request) => {
       '[send-invitation] Created: invitation=%s, company=%s, email=%s, role=%s, by=%s',
       invitation.id, company_id, email, inviteRole, userId,
     );
+
+    // ─── 8. Send invitation email via Resend (fire-and-forget) ───
+    // Look up inviter name + company name for the email template
+    const { data: inviter } = await svc
+      .from('users')
+      .select('full_name')
+      .eq('id', userId)
+      .single();
+
+    const { data: company } = await svc
+      .from('companies')
+      .select('name')
+      .eq('id', company_id)
+      .single();
+
+    const ROLE_LABELS: Record<string, string> = {
+      pm_admin: 'Property Manager Admin',
+      pm_user: 'Property Manager User',
+    };
+
+    // Don't await — email failure shouldn't block the response
+    notifyInvitation({
+      recipientName: name,
+      recipientEmail: email,
+      companyName: company?.name || 'your company',
+      role: ROLE_LABELS[inviteRole] || inviteRole,
+      invitedByName: inviter?.full_name || 'Your administrator',
+      token: invitation.token,
+    });
 
     return ok({ invitation }, 201);
   } catch (e) {
