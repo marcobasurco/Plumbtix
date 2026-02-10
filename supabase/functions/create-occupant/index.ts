@@ -10,7 +10,7 @@ import { handleCors } from '../_shared/cors.ts';
 import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
-import { notifyResidentClaim } from '../_shared/notifications.ts';
+
 
 const CreateOccupantSchema = z.object({
   space_id: z.string().regex(UUID_REGEX, 'Invalid space_id'),
@@ -90,6 +90,7 @@ Deno.serve(async (req: Request) => {
 
         if (space && occupant.invite_token) {
           const building = (space as any).buildings;
+          const { notifyResidentClaim } = await import('../_shared/notifications.ts');
           await notifyResidentClaim({
             occupantName: name,
             occupantEmail: email,

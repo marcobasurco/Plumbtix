@@ -1,32 +1,10 @@
 // =============================================================================
 // Work Orders — Edge Function: create-ticket
 // =============================================================================
-// Route:  POST /functions/v1/create-ticket
-// Auth:   JWT required
-// Client: User JWT pass-through (RLS enforces company/entitlement/space scoping)
-//
-// Flow:
-//   1. Authenticate caller via JWT
-//   2. Validate request body
-//   3. Auto-escalate severity if emergency keywords detected
-//   4. INSERT ticket (RLS enforces access)
-//   5. Return created ticket + escalation flag
-//
-// Security:
-//   - RLS (Section 5) enforces:
-//     • proroto_admin: can create for any building/space
-//     • pm_admin: can create for buildings in own company
-//     • pm_user: can create for entitled buildings in own company
-//     • resident: can create for own space only, created_by_user_id = auth.uid()
-//   - Severity auto-escalation: if description contains emergency keywords,
-//     severity is escalated upward (never downward from what user selected)
-// =============================================================================
-
 import { handleCors } from '../_shared/cors.ts';
 import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
-import { notifyNewTicket } from '../_shared/notifications.ts';
 
 const ISSUE_TYPES = [
   'active_leak', 'sewer_backup', 'drain_clog', 'water_heater',
@@ -35,7 +13,6 @@ const ISSUE_TYPES = [
 
 const SEVERITIES = ['emergency', 'urgent', 'standard'] as const;
 
-// Severity rank: lower index = higher priority
 const SEVERITY_RANK: Record<string, number> = {
   emergency: 0,
   urgent: 1,
@@ -73,11 +50,10 @@ const CreateTicketSchema = z.object({
 });
 
 Deno.serve(async (req: Request) => {
-  console.log('[create-ticket] Request received:', req.method);
+  console.log('[create-ticket] Handler invoked:', req.method);
   if (req.method === 'OPTIONS') return handleCors();
   if (req.method !== 'POST') return err('METHOD_NOT_ALLOWED', 'POST required', 405);
 
-  // ─── Authenticate ───
   let userClient;
   let userId: string;
   try {
@@ -87,7 +63,6 @@ Deno.serve(async (req: Request) => {
     return unauthorized();
   }
 
-  // ─── Validate body ───
   const parsed = await parseBody(req, CreateTicketSchema);
   if (!parsed.success) {
     return err('VALIDATION_ERROR', parsed.message);
@@ -103,18 +78,15 @@ Deno.serve(async (req: Request) => {
     scheduling_preference,
   } = parsed.data;
 
-  // ─── Auto-escalate severity ───
   let finalSeverity = requestedSeverity;
   let severityEscalated = false;
 
-  // Check issue type default
   const defaultSev = DEFAULT_SEVERITY[issue_type] ?? 'standard';
   if (SEVERITY_RANK[defaultSev] < SEVERITY_RANK[finalSeverity]) {
     finalSeverity = defaultSev as typeof finalSeverity;
     severityEscalated = true;
   }
 
-  // Check description keywords
   if (description) {
     const lower = description.toLowerCase();
     const hasEmergencyKeyword = EMERGENCY_KEYWORDS.some((kw) => lower.includes(kw));
@@ -124,7 +96,6 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // ─── Insert ticket (RLS enforces access) ───
   try {
     const { data: ticket, error: insertErr } = await userClient
       .from('tickets')
@@ -143,11 +114,9 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (insertErr) {
-      // RLS violation returns a generic "new row violates row-level security"
       if (insertErr.message?.includes('row-level security')) {
         return err('FORBIDDEN', 'You do not have access to create a ticket for this building/space', 403);
       }
-      // FK violation (bad building_id or space_id)
       if (insertErr.message?.includes('foreign key')) {
         return err('INVALID_REFERENCE', 'Invalid building or space', 400);
       }
@@ -155,44 +124,39 @@ Deno.serve(async (req: Request) => {
       return serverError('Failed to create ticket');
     }
 
-    console.log(
-      '[create-ticket] Created: ticket=%s, number=%d, severity=%s, escalated=%s, user=%s',
-      ticket.id, ticket.ticket_number, finalSeverity, severityEscalated, userId,
-    );
+    console.log('[create-ticket] Created: ticket=%s, number=%d', ticket.id, ticket.ticket_number);
 
-    // ─── Send notification email to Pro Roto (fire-and-forget) ───
-    // Wrapped in an async IIFE that never blocks the response
-    (async () => {
-      try {
-        const svc = createServiceClient();
-        const [buildingRes, spaceRes, creatorRes] = await Promise.all([
-          svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
-          svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
-          svc.from('users').select('full_name, email').eq('id', userId).single(),
-        ]);
+    // Email notification — dynamic import so it never crashes the function
+    try {
+      const { notifyNewTicket } = await import('../_shared/notifications.ts');
+      const svc = createServiceClient();
+      const [buildingRes, spaceRes, creatorRes] = await Promise.all([
+        svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
+        svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
+        svc.from('users').select('full_name, email').eq('id', userId).single(),
+      ]);
 
-        if (buildingRes.data && spaceRes.data && creatorRes.data) {
-          await notifyNewTicket(svc, {
-            ticket_number: ticket.ticket_number,
-            id: ticket.id,
-            issue_type,
-            severity: finalSeverity,
-            status: 'new',
-            description,
-            assigned_technician: null,
-            scheduled_date: null,
-            scheduled_time_window: null,
-            quote_amount: null,
-            invoice_number: null,
-            building: buildingRes.data,
-            space: spaceRes.data,
-            created_by: creatorRes.data,
-          });
-        }
-      } catch (emailErr) {
-        console.error('[create-ticket] Email notification error (non-blocking):', emailErr);
+      if (buildingRes.data && spaceRes.data && creatorRes.data) {
+        notifyNewTicket(svc, {
+          ticket_number: ticket.ticket_number,
+          id: ticket.id,
+          issue_type,
+          severity: finalSeverity,
+          status: 'new',
+          description,
+          assigned_technician: null,
+          scheduled_date: null,
+          scheduled_time_window: null,
+          quote_amount: null,
+          invoice_number: null,
+          building: buildingRes.data,
+          space: spaceRes.data,
+          created_by: creatorRes.data,
+        });
       }
-    })();
+    } catch (emailErr) {
+      console.error('[create-ticket] Email error (non-blocking):', emailErr);
+    }
 
     return ok({ ticket, severity_escalated: severityEscalated }, 201);
   } catch (e) {

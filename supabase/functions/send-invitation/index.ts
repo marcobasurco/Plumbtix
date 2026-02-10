@@ -31,7 +31,7 @@ import {
 import { ok, err, unauthorized, forbidden, conflict, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 import { getCallerRole, getCallerCompanyId } from '../_shared/auth.ts';
-import { notifyInvitation } from '../_shared/notifications.ts';
+
 
 const INVITATION_ROLES = ['pm_admin', 'pm_user'] as const;
 const EXPIRY_DAYS = 7;
@@ -166,6 +166,7 @@ Deno.serve(async (req: Request) => {
           pm_user: 'Property Manager User',
         };
 
+        const { notifyInvitation } = await import('../_shared/notifications.ts');
         await notifyInvitation({
           recipientName: name,
           recipientEmail: email,

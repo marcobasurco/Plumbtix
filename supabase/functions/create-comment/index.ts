@@ -29,7 +29,7 @@ import {
 import { ok, err, unauthorized, forbidden, notFound, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 import { getCallerRole, isProRotoAdmin } from '../_shared/auth.ts';
-import { notifyComment } from '../_shared/notifications.ts';
+
 
 const CreateCommentSchema = z.object({
   ticket_id: z.string().regex(UUID_REGEX, 'Invalid ticket_id'),
@@ -121,6 +121,7 @@ Deno.serve(async (req: Request) => {
 
         if (ticketRes.data && authorRes.data) {
           const building = (ticketRes.data as any).buildings;
+          const { notifyComment } = await import('../_shared/notifications.ts');
           await notifyComment(svc, {
             ticketId: ticket_id,
             ticketNumber: ticketRes.data.ticket_number,

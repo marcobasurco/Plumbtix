@@ -32,7 +32,7 @@ import { ok, err, unauthorized, forbidden, notFound, serverError } from '../_sha
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 import { getCallerRole, isProRotoAdmin } from '../_shared/auth.ts';
 import type { UserRole } from '../_shared/auth.ts';
-import { notifyStatusChange } from '../_shared/notifications.ts';
+
 
 // ─── Transition matrix (MUST match transitions.ts and migration 00005) ───
 
@@ -236,7 +236,8 @@ Deno.serve(async (req: Request) => {
           ]);
 
           if (buildingRes.data && spaceRes.data && creatorRes.data) {
-            await notifyStatusChange(svc, {
+            const { notifyStatusChange } = await import('../_shared/notifications.ts');
+          await notifyStatusChange(svc, {
               ticket_number: updated.ticket_number ?? ticket.ticket_number,
               id: ticket_id,
               issue_type: ticket.issue_type,
