@@ -13,9 +13,11 @@ import type { InvitationRole } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useRealtime } from '@/hooks/useRealtime';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, CheckCircle2, ChevronDown } from 'lucide-react';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -25,6 +27,12 @@ function isExpired(expiresAt: string): boolean {
   return new Date(expiresAt) < new Date();
 }
 
+function roleBadgeVariant(role: string): 'default' | 'secondary' | 'info' | 'warning' {
+  if (role === 'proroto_admin') return 'info';
+  if (role === 'pm_admin') return 'default';
+  return 'secondary';
+}
+
 export function UsersPage() {
   const [users, setUsers] = useState<UserListRow[]>([]);
   const [invitations, setInvitations] = useState<InvitationRow[]>([]);
@@ -32,10 +40,8 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
   const [companyFilter, setCompanyFilter] = useState('');
 
-  // Invite form
   const [showInvite, setShowInvite] = useState(false);
   const [invCompany, setInvCompany] = useState('');
   const [invEmail, setInvEmail] = useState('');
@@ -54,48 +60,29 @@ export function UsersPage() {
         fetchInvitations(companyFilter || undefined),
         fetchCompanyOptions(),
       ]);
-      setUsers(u);
-      setInvitations(i);
-      setCompanies(c);
+      setUsers(u); setInvitations(i); setCompanies(c);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, [companyFilter]);
 
   useEffect(() => { load(); }, [load]);
-
-  // Realtime: auto-refresh when users or invitations change
   useRealtime('users', load, { enabled: !loading });
   useRealtime('invitations', load, { enabled: !loading });
 
   const handleInvite = async (e: FormEvent) => {
     e.preventDefault();
-    setInvSubmitting(true);
-    setInvError(null);
-    setInvSuccess(null);
-
+    setInvSubmitting(true); setInvError(null); setInvSuccess(null);
     const result = await sendInvitation({
-      company_id: invCompany,
-      email: invEmail.trim(),
-      name: invName.trim(),
-      role: invRole,
+      company_id: invCompany, email: invEmail.trim(),
+      name: invName.trim(), role: invRole,
     });
-
     if (result.ok) {
       const inv = result.data.invitation;
       toast.success(`Invitation sent to ${inv.email}`);
-      setInvSuccess(
-        `Invitation sent to ${inv.email}. Token: ${inv.token}\n` +
-        `Accept URL: ${window.location.origin}/accept-invite?token=${inv.token}`
-      );
-      setInvEmail('');
-      setInvName('');
-      load(); // Refresh lists
-    } else {
-      setInvError(result.error.message);
-    }
+      setInvSuccess(`Invitation sent to ${inv.email}.\nToken: ${inv.token}\nAccept URL: ${window.location.origin}/accept-invite?token=${inv.token}`);
+      setInvEmail(''); setInvName(''); load();
+    } else { setInvError(result.error.message); }
     setInvSubmitting(false);
   };
 
@@ -105,25 +92,17 @@ export function UsersPage() {
   return (
     <div>
       {/* Header + filter */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-        <h2 style={{ fontSize: '1.15rem', margin: 0 }}>Users & Invitations</h2>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <select
-            value={companyFilter}
-            onChange={(e) => setCompanyFilter(e.target.value)}
-            style={selectStyle}
-          >
+      <div className="flex justify-between items-start flex-wrap gap-3 mb-4">
+        <h2 className="text-lg font-bold tracking-tight">Users & Invitations</h2>
+        <div className="flex gap-2 items-center flex-wrap">
+          <select className="form-select" style={{ minWidth: 140 }}
+            value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)}>
             <option value="">All Companies</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
+            {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <Button
-            size="sm"
-            variant={showInvite ? 'outline' : 'default'}
-            onClick={() => setShowInvite(!showInvite)}
-          >
-            {showInvite ? 'Cancel' : '+ Invite User'}
+          <Button size="sm" variant={showInvite ? 'outline' : 'default'}
+            onClick={() => setShowInvite(!showInvite)}>
+            {showInvite ? 'Cancel' : '+ Invite'}
           </Button>
         </div>
       </div>
@@ -132,168 +111,214 @@ export function UsersPage() {
 
       {/* Invite form */}
       {showInvite && (
-        <div style={formCard}>
-          <h3 style={{ fontSize: '1rem', marginBottom: '12px' }}>Send Invitation</h3>
-          <ErrorBanner message={invError} onDismiss={() => setInvError(null)} />
-          {invSuccess && (
-            <div className="success-box" style={{ marginBottom: '12px', fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
-              {invSuccess}
-            </div>
-          )}
-          <form onSubmit={handleInvite}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
-              <div>
-                <label style={labelStyle}>Company *</label>
-                <select value={invCompany} onChange={(e) => setInvCompany(e.target.value)} required style={inputStyle}>
-                  <option value="">Select…</option>
-                  {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <div className="text-sm font-semibold mb-3">Send Invitation</div>
+            <ErrorBanner message={invError} onDismiss={() => setInvError(null)} />
+            {invSuccess && <div className="success-box mb-3 text-xs whitespace-pre-wrap">{invSuccess}</div>}
+            <form onSubmit={handleInvite}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label">Company *</label>
+                  <select className="form-select" value={invCompany}
+                    onChange={(e) => setInvCompany(e.target.value)} required>
+                    <option value="">Select…</option>
+                    {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Full Name *</label>
+                  <input className="form-input" type="text" value={invName}
+                    onChange={(e) => setInvName(e.target.value)} required />
+                </div>
+                <div>
+                  <label className="form-label">Email *</label>
+                  <input className="form-input" type="email" value={invEmail}
+                    onChange={(e) => setInvEmail(e.target.value)} required />
+                </div>
+                <div>
+                  <label className="form-label">Role *</label>
+                  <select className="form-select" value={invRole}
+                    onChange={(e) => setInvRole(e.target.value as InvitationRole)}>
+                    {INVITATION_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label style={labelStyle}>Full Name *</label>
-                <input type="text" value={invName} onChange={(e) => setInvName(e.target.value)} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Email *</label>
-                <input type="email" value={invEmail} onChange={(e) => setInvEmail(e.target.value)} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Role *</label>
-                <select value={invRole} onChange={(e) => setInvRole(e.target.value as InvitationRole)} style={inputStyle}>
-                  {INVITATION_ROLES.map((r) => (
-                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <Button
-              type="submit"
-              size="sm"
-              className="mt-3"
-              disabled={invSubmitting || !invCompany || !invEmail.trim() || !invName.trim()}
-            >
-              {invSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : 'Send Invitation'}
-            </Button>
-          </form>
-        </div>
+              <Button type="submit" size="sm" className="mt-3"
+                disabled={invSubmitting || !invCompany || !invEmail.trim() || !invName.trim()}>
+                {invSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : 'Send Invitation'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
       {loading ? (
-        <div style={cardStyle}>
-          <Skeleton className="h-5 w-40 mb-4" />
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex gap-4 mb-3">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-          ))}
-        </div>
+        <div className="space-y-3">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16" />)}</div>
       ) : (
         <>
-          {/* Users table */}
-          <section style={cardStyle}>
-            <h3 style={sectionTitle}>Registered Users ({users.length})</h3>
-            {users.length === 0 ? <p style={muted}>No users found.</p> : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={tableStyle}>
-                  <thead>
-                    <tr>
-                      <th style={thStyle}>Name</th>
-                      <th style={thStyle}>Email</th>
-                      <th style={thStyle}>Role</th>
-                      <th style={thStyle}>Company</th>
-                      <th style={thStyle}>Joined</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+          {/* Registered Users */}
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="text-sm font-semibold mb-3 pb-2 border-b border-border">
+                Registered Users ({users.length})
+              </div>
+              {users.length === 0 ? <p className="text-sm text-muted-foreground">No users found.</p> : (
+                <>
+                  {/* Mobile: cards */}
+                  <div className="md:hidden space-y-2">
                     {users.map((u) => (
-                      <tr key={u.id}>
-                        <td style={tdStyle}><strong>{u.full_name}</strong></td>
-                        <td style={tdStyle}>{u.email}</td>
-                        <td style={tdStyle}>
-                          <span style={{ ...roleBadge, background: u.role === 'proroto_admin' ? '#dbeafe' : '#f3f4f6' }}>
-                            {ROLE_LABELS[u.role]}
-                          </span>
-                        </td>
-                        <td style={tdStyle}>{u.company?.name ?? '—'}</td>
-                        <td style={tdStyle}><span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{formatDate(u.created_at)}</span></td>
-                      </tr>
+                      <div key={u.id} className="p-3 rounded-lg border border-border">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="font-semibold text-sm truncate">{u.full_name}</span>
+                          <Badge variant={roleBadgeVariant(u.role)} className="text-[10px] shrink-0">{ROLE_LABELS[u.role]}</Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                        <div className="flex justify-between items-center mt-1.5">
+                          <span className="text-xs text-muted-foreground">{u.company?.name ?? '—'}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(u.created_at)}</span>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+                  </div>
+                  {/* Desktop: table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-sm no-min-width">
+                      <thead>
+                        <tr className="border-b-2 border-border">
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase">Name</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase">Email</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Role</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Company</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Joined</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((u) => (
+                          <tr key={u.id} className="border-b border-border">
+                            <td className="py-2.5 px-3 font-semibold">{u.full_name}</td>
+                            <td className="py-2.5 px-3">{u.email}</td>
+                            <td className="py-2.5 px-2"><Badge variant={roleBadgeVariant(u.role)} className="text-[11px]">{ROLE_LABELS[u.role]}</Badge></td>
+                            <td className="py-2.5 px-2 text-muted-foreground">{u.company?.name ?? '—'}</td>
+                            <td className="py-2.5 px-2 text-xs text-muted-foreground">{formatDate(u.created_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Pending invitations */}
-          <section style={{ ...cardStyle, marginTop: '16px' }}>
-            <h3 style={sectionTitle}>Pending Invitations ({pendingInvitations.length})</h3>
-            {pendingInvitations.length === 0 ? <p style={muted}>No pending invitations.</p> : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={tableStyle}>
-                  <thead>
-                    <tr>
-                      <th style={thStyle}>Name</th>
-                      <th style={thStyle}>Email</th>
-                      <th style={thStyle}>Role</th>
-                      <th style={thStyle}>Company</th>
-                      <th style={thStyle}>Status</th>
-                      <th style={thStyle}>Sent</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+          {/* Pending Invitations */}
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="text-sm font-semibold mb-3 pb-2 border-b border-border flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                Pending Invitations ({pendingInvitations.length})
+              </div>
+              {pendingInvitations.length === 0 ? <p className="text-sm text-muted-foreground">No pending invitations.</p> : (
+                <>
+                  <div className="md:hidden space-y-2">
                     {pendingInvitations.map((inv) => (
-                      <tr key={inv.id}>
-                        <td style={tdStyle}>{inv.name}</td>
-                        <td style={tdStyle}>{inv.email}</td>
-                        <td style={tdStyle}><span style={roleBadge}>{ROLE_LABELS[inv.role as keyof typeof ROLE_LABELS] ?? inv.role}</span></td>
-                        <td style={tdStyle}>{inv.company?.name ?? '—'}</td>
-                        <td style={tdStyle}>
-                          {isExpired(inv.expires_at)
-                            ? <span style={{ color: '#991b1b', fontSize: '0.8rem' }}>Expired</span>
-                            : <span style={{ color: '#065f46', fontSize: '0.8rem' }}>Active</span>
-                          }
-                        </td>
-                        <td style={tdStyle}><span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{formatDate(inv.created_at)}</span></td>
-                      </tr>
+                      <div key={inv.id} className="p-3 rounded-lg border border-border">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="font-semibold text-sm truncate">{inv.name}</span>
+                          <Badge variant={isExpired(inv.expires_at) ? 'destructive' : 'success'} className="text-[10px] shrink-0">
+                            {isExpired(inv.expires_at) ? 'Expired' : 'Active'}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">{inv.email}</div>
+                        <div className="flex justify-between items-center mt-1.5">
+                          <Badge variant="secondary" className="text-[10px]">{ROLE_LABELS[inv.role as keyof typeof ROLE_LABELS] ?? inv.role}</Badge>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(inv.created_at)}</span>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+                  </div>
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-sm no-min-width">
+                      <thead>
+                        <tr className="border-b-2 border-border">
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase">Name</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase">Email</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Role</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Company</th>
+                          <th className="text-center py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Status</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Sent</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingInvitations.map((inv) => (
+                          <tr key={inv.id} className="border-b border-border">
+                            <td className="py-2.5 px-3">{inv.name}</td>
+                            <td className="py-2.5 px-3">{inv.email}</td>
+                            <td className="py-2.5 px-2"><Badge variant="secondary" className="text-[11px]">{ROLE_LABELS[inv.role as keyof typeof ROLE_LABELS] ?? inv.role}</Badge></td>
+                            <td className="py-2.5 px-2 text-muted-foreground">{inv.company?.name ?? '—'}</td>
+                            <td className="py-2.5 px-2 text-center">
+                              <Badge variant={isExpired(inv.expires_at) ? 'destructive' : 'success'} className="text-[11px]">
+                                {isExpired(inv.expires_at) ? 'Expired' : 'Active'}
+                              </Badge>
+                            </td>
+                            <td className="py-2.5 px-2 text-xs text-muted-foreground">{formatDate(inv.created_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Accepted invitations (collapsed) */}
+          {/* Accepted (collapsed) */}
           {acceptedInvitations.length > 0 && (
-            <details style={{ marginTop: '16px' }}>
-              <summary style={{ cursor: 'pointer', fontSize: '0.85rem', color: '#6b7280' }}>
-                Accepted invitations ({acceptedInvitations.length})
+            <details>
+              <summary className="text-sm text-muted-foreground cursor-pointer flex items-center gap-1 mb-2">
+                <ChevronDown className="h-3.5 w-3.5" /> Accepted invitations ({acceptedInvitations.length})
               </summary>
-              <div style={{ ...cardStyle, marginTop: '8px' }}>
-                <table style={tableStyle}>
-                  <thead>
-                    <tr>
-                      <th style={thStyle}>Name</th>
-                      <th style={thStyle}>Email</th>
-                      <th style={thStyle}>Company</th>
-                      <th style={thStyle}>Accepted</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="md:hidden space-y-2">
                     {acceptedInvitations.map((inv) => (
-                      <tr key={inv.id}>
-                        <td style={tdStyle}>{inv.name}</td>
-                        <td style={tdStyle}>{inv.email}</td>
-                        <td style={tdStyle}>{inv.company?.name ?? '—'}</td>
-                        <td style={tdStyle}><span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{formatDate(inv.accepted_at!)}</span></td>
-                      </tr>
+                      <div key={inv.id} className="p-3 rounded-lg border border-border">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-sm truncate">{inv.name}</span>
+                          <Badge variant="success" className="text-[10px] shrink-0"><CheckCircle2 className="h-3 w-3" /> Accepted</Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">{inv.email}</div>
+                        <div className="flex justify-between items-center mt-1.5">
+                          <span className="text-xs text-muted-foreground">{inv.company?.name ?? '—'}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(inv.accepted_at!)}</span>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </div>
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-sm no-min-width">
+                      <thead>
+                        <tr className="border-b-2 border-border">
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase">Name</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase">Email</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Company</th>
+                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase">Accepted</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {acceptedInvitations.map((inv) => (
+                          <tr key={inv.id} className="border-b border-border">
+                            <td className="py-2.5 px-3">{inv.name}</td>
+                            <td className="py-2.5 px-3">{inv.email}</td>
+                            <td className="py-2.5 px-2 text-muted-foreground">{inv.company?.name ?? '—'}</td>
+                            <td className="py-2.5 px-2 text-xs text-muted-foreground">{formatDate(inv.accepted_at!)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
             </details>
           )}
         </>
@@ -301,16 +326,3 @@ export function UsersPage() {
     </div>
   );
 }
-
-// Styles
-const selectStyle: React.CSSProperties = { padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.85rem', background: '#fff' };
-const formCard: React.CSSProperties = { padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '16px' };
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '4px' };
-const inputStyle: React.CSSProperties = { width: '100%', padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.85rem' };
-const cardStyle: React.CSSProperties = { padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' };
-const sectionTitle: React.CSSProperties = { fontSize: '1rem', fontWeight: 600, marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' };
-const muted: React.CSSProperties = { color: '#9ca3af', fontSize: '0.85rem' };
-const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' };
-const thStyle: React.CSSProperties = { textAlign: 'left', padding: '6px 12px', borderBottom: '2px solid #e5e7eb', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' };
-const tdStyle: React.CSSProperties = { padding: '8px 12px', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' };
-const roleBadge: React.CSSProperties = { fontSize: '0.8rem', padding: '2px 8px', borderRadius: '10px', background: '#f3f4f6' };

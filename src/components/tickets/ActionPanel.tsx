@@ -229,9 +229,10 @@ const sectionTitle: React.CSSProperties = {
 };
 const mutedStyle: React.CSSProperties = { color: '#9ca3af', fontSize: '0.85rem' };
 const transitionBtn: React.CSSProperties = {
-  padding: '6px 14px', fontSize: '0.85rem', fontWeight: 600,
+  padding: '10px 16px', fontSize: '0.875rem', fontWeight: 600,
   background: '#2563eb', color: '#fff', border: 'none',
-  borderRadius: '6px', cursor: 'pointer',
+  borderRadius: '8px', cursor: 'pointer', minHeight: '44px',
+  WebkitTapHighlightColor: 'transparent',
 };
 const cancelledBtn: React.CSSProperties = {
   background: '#dc2626',
@@ -241,11 +242,11 @@ const labelStyle: React.CSSProperties = {
   color: '#374151', marginBottom: '4px',
 };
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '6px 10px',
-  border: '1px solid #d1d5db', borderRadius: '6px',
-  fontSize: '0.85rem',
+  width: '100%', padding: '10px 12px',
+  border: '1px solid #d1d5db', borderRadius: '8px',
+  fontSize: '1rem', minHeight: '44px',
 };
 const fieldGrid: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
   gap: '12px',
 };

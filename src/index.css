@@ -1866,9 +1866,18 @@ body {
   }
 
   /* Touch-friendly form controls */
-  .form-input, .form-select, .form-textarea {
+  .form-input, .form-select, .form-textarea,
+  select, textarea,
+  input[type="text"], input[type="email"], input[type="tel"],
+  input[type="password"], input[type="number"], input[type="date"],
+  input[type="search"] {
     min-height: 44px;
     padding: 10px 12px;
+  }
+  /* Keep checkboxes/radios natural size but tappable */
+  input[type="checkbox"], input[type="radio"] {
+    width: 20px; height: 20px;
+    min-height: auto;
   }
   .form-select {
     padding-right: 32px;
@@ -1885,7 +1894,7 @@ body {
 
   /* Hide desktop table on mobile (use cards) */
   /* Tables that do show should scroll properly */
-  table { min-width: 500px; }
+  table:not(.no-min-width) { min-width: 500px; }
 
   /* Dialog: touch-friendly padding */
   [data-radix-dialog-content] { padding: 20px 16px; }
@@ -1921,15 +1930,15 @@ body {
   }
 
   /* Tighter spacing on smallest screens */
-  table { min-width: 400px; font-size: 0.8rem; }
+  table:not(.no-min-width) { min-width: 400px; font-size: 0.8rem; }
   table th, table td { padding: 6px 8px; }
 
   /* Ticket card: tighter padding */
   .ticket-card { padding: 12px 36px 12px 12px; }
 
-  /* Filter selects: smaller text */
-  .ticket-filter-select { font-size: 14px !important; }
-  .ticket-filter-search { font-size: 14px !important; }
+  /* Keep 16px on selects to prevent iOS zoom */
+  .ticket-filter-select { font-size: 16px !important; }
+  .ticket-filter-search { font-size: 16px !important; }
 
   /* Dashboard greeting */
   .page-title { font-size: 1.25rem !important; }

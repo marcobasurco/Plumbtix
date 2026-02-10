@@ -187,7 +187,7 @@ const internalBadge: React.CSSProperties = {
 };
 const textareaStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px',
-  border: '1px solid #d1d5db', borderRadius: '6px',
-  fontSize: '0.9rem', fontFamily: 'inherit',
-  resize: 'vertical',
+  border: '1px solid #d1d5db', borderRadius: '8px',
+  fontSize: '1rem', fontFamily: 'inherit',
+  resize: 'vertical', minHeight: '80px',
 };

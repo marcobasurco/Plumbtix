@@ -651,14 +651,15 @@ const progressBar: React.CSSProperties = {
   display: 'flex', gap: '4px', marginBottom: '24px',
 };
 const optionGrid: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
   gap: '10px',
 };
 const optionCard: React.CSSProperties = {
   padding: '14px 16px', textAlign: 'left',
   background: '#fff', border: '2px solid #e5e7eb', borderRadius: '8px',
   cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
-  fontSize: '0.9rem',
+  fontSize: '0.9rem', minHeight: '44px',
+  WebkitTapHighlightColor: 'transparent',
 };
 const selectedCard: React.CSSProperties = {
   borderColor: '#2563eb', background: '#eff6ff',
@@ -667,16 +668,19 @@ const optionSub: React.CSSProperties = {
   fontSize: '0.8rem', color: '#6b7280', marginTop: '2px',
 };
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px',
-  border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.9rem',
+  width: '100%', padding: '10px 12px',
+  border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '1rem',
+  minHeight: '44px',
 };
 const radioLabel: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '4px',
-  fontSize: '0.9rem', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', gap: '6px',
+  fontSize: '0.9rem', cursor: 'pointer', minHeight: '44px',
 };
 const removeBtn: React.CSSProperties = {
   background: 'none', border: 'none', color: '#9ca3af',
-  cursor: 'pointer', fontSize: '0.9rem', padding: '0 2px',
+  cursor: 'pointer', fontSize: '0.9rem', padding: '4px',
+  minWidth: '44px', minHeight: '44px', display: 'flex',
+  alignItems: 'center', justifyContent: 'center',
 };
 const summaryBox: React.CSSProperties = {
   background: '#f9fafb', border: '1px solid #e5e7eb',
@@ -684,7 +688,8 @@ const summaryBox: React.CSSProperties = {
 };
 const dlStyle: React.CSSProperties = {
   display: 'grid', gridTemplateColumns: 'auto 1fr',
-  gap: '6px 16px', fontSize: '0.9rem', margin: 0,
+  gap: '6px 12px', fontSize: '0.9rem', margin: 0,
+  wordBreak: 'break-word',
 };
 const navRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: '12px',

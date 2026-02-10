@@ -224,7 +224,7 @@ export function BuildingDetail() {
         </CardHeader>
         <CardContent>
           {siteDetails.length > 0 ? (
-            <dl className="grid gap-x-4 gap-y-3 text-sm" style={{ gridTemplateColumns: 'auto 1fr' }}>
+            <dl className="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-[auto_1fr] grid-cols-1">
               {siteDetails.map((d) => (
                 <React.Fragment key={d.label}>
                   <dt className="font-medium text-muted-foreground flex items-center gap-2">
@@ -275,8 +275,47 @@ export function BuildingDetail() {
             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Units ({units.length})
             </div>
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-sm">
+
+            {/* Mobile: cards */}
+            <div className="md:hidden space-y-2">
+              {units.map((s) => (
+                <React.Fragment key={s.id}>
+                  <div className="rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Button variant="link" size="sm" className="p-0 h-auto font-semibold gap-1.5"
+                        onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}>
+                        <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${expandedSpace === s.id ? 'rotate-90' : ''}`} />
+                        Unit {s.unit_number}
+                      </Button>
+                      {canWrite && (
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => { setEditingSpace(s); setShowSpaceForm(true); }}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteSpaceTarget(s)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                      <span>Floor: {s.floor ?? '—'}</span>
+                      <span>Beds: {s.bedrooms ?? '—'}</span>
+                      <span>Baths: {s.bathrooms ?? '—'}</span>
+                    </div>
+                    {expandedSpace === s.id && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <OccupantList spaceId={s.id} spaceLabel={`Unit ${s.unit_number}`} canWrite={canWrite} />
+                      </div>
+                    )}
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm no-min-width">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unit #</th>
@@ -336,8 +375,48 @@ export function BuildingDetail() {
             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Common Areas ({commonAreas.length})
             </div>
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-sm">
+
+            {/* Mobile: cards */}
+            <div className="md:hidden space-y-2">
+              {commonAreas.map((s) => {
+                const areaLabel = COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type;
+                return (
+                  <React.Fragment key={s.id}>
+                    <div className="rounded-lg border border-border p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <Button variant="link" size="sm" className="p-0 h-auto font-semibold gap-1.5"
+                          onClick={() => setExpandedSpace(expandedSpace === s.id ? null : s.id)}>
+                          <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${expandedSpace === s.id ? 'rotate-90' : ''}`} />
+                          {areaLabel}
+                        </Button>
+                        {canWrite && (
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => { setEditingSpace(s); setShowSpaceForm(true); }}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteSpaceTarget(s)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Floor: {s.floor ?? '—'}
+                      </div>
+                      {expandedSpace === s.id && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <OccupantList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} canWrite={canWrite} />
+                        </div>
+                      )}
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm no-min-width">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
