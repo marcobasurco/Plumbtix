@@ -18,7 +18,7 @@ import {
 } from '@/lib/analytics';
 import { fetchCompanyOptions, type CompanyOption } from '@/lib/admin';
 import { ISSUE_TYPE_LABELS, STATUS_LABELS, SEVERITY_LABELS } from '@shared/types/enums';
-import type { TicketStatus, TicketSeverity, IssueType } from '@shared/types/enums';
+import type { TicketSeverity, IssueType } from '@shared/types/enums';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
