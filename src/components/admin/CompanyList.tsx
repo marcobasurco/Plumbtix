@@ -15,9 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { Building2, Users2, Plus, Loader2, Briefcase } from 'lucide-react';
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 function toSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
