@@ -86,11 +86,14 @@ export async function compressVideo(
   const ff = await ensureLoaded();
 
   // Wire up progress reporting
-  if (onProgress) {
-    ff.on('progress', ({ progress }) => {
-      // FFmpeg reports 0-1, we want 0-100
-      onProgress(Math.min(100, Math.round(progress * 100)));
-    });
+  const progressHandler = onProgress
+    ? ({ progress }: { progress: number }) => {
+        onProgress(Math.min(100, Math.round(progress * 100)));
+      }
+    : null;
+
+  if (progressHandler) {
+    ff.on('progress', progressHandler);
   }
 
   const inputName = 'input' + getExtension(input.name);
@@ -125,7 +128,7 @@ export async function compressVideo(
 
   // Read compressed output
   const data = await ff.readFile(outputName);
-  const blob = new Blob([data], { type: 'video/mp4' });
+  const blob = new Blob([data as Uint8Array], { type: 'video/mp4' });
 
   // Clean up virtual filesystem
   try {
@@ -136,8 +139,8 @@ export async function compressVideo(
   }
 
   // Remove progress listener
-  if (onProgress) {
-    ff.off('progress');
+  if (progressHandler) {
+    ff.off('progress', progressHandler);
   }
 
   // Build result File with .mp4 extension
