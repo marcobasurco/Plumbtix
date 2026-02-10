@@ -14,7 +14,7 @@ import {
   type CompanyAnalyticsRow,
 } from '@/lib/analytics';
 import { ISSUE_TYPE_LABELS, STATUS_LABELS, SEVERITY_LABELS } from '@shared/types/enums';
-import type { TicketStatus, TicketSeverity, IssueType } from '@shared/types/enums';
+import type { TicketSeverity, IssueType } from '@shared/types/enums';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area,
@@ -27,7 +27,6 @@ import { useRealtime } from '@/hooks/useRealtime';
 import { PageTransition } from '@/components/PageTransition';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorBanner } from '@/components/ErrorBanner';
 
@@ -35,14 +34,8 @@ import { ErrorBanner } from '@/components/ErrorBanner';
 // Color palette
 // ---------------------------------------------------------------------------
 
-const TIER_COLORS: Record<string, string> = {
-  free: '#94a3b8', starter: '#3b82f6', professional: '#8b5cf6', enterprise: '#f59e0b',
-};
 const TIER_LABELS: Record<string, string> = {
   free: 'Free', starter: 'Starter', professional: 'Professional', enterprise: 'Enterprise',
-};
-const SUB_STATUS_COLORS: Record<string, string> = {
-  active: '#22c55e', trialing: '#3b82f6', past_due: '#f59e0b', cancelled: '#94a3b8',
 };
 const SEVERITY_COLORS: Record<TicketSeverity, string> = {
   emergency: '#ef4444', urgent: '#f59e0b', standard: '#3b82f6',
