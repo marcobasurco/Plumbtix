@@ -420,7 +420,7 @@ export function DispatchBoard() {
                       ) : col.map((ticket) => (
                         <MobileTicketCard key={ticket.id} ticket={ticket}
                           isUpdating={updating === ticket.id}
-                          onNavigate={() => navigate(`tickets/${ticket.id}`)}
+                          onNavigate={() => navigate(`/admin/tickets/${ticket.id}`)}
                           onTransition={(s) => handleTransition(ticket, s)} />
                       ))}
                     </div>
@@ -451,7 +451,7 @@ export function DispatchBoard() {
                     ) : col.map((ticket) => (
                       <KanbanCard key={ticket.id} ticket={ticket}
                         isUpdating={updating === ticket.id}
-                        onNavigate={() => navigate(`tickets/${ticket.id}`)}
+                        onNavigate={() => navigate(`/admin/tickets/${ticket.id}`)}
                         onTransition={(s) => handleTransition(ticket, s)} />
                     ))}
                   </div>
