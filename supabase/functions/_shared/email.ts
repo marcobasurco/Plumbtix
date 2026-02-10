@@ -5,7 +5,7 @@
 //
 // Config:
 //   RESEND_API_KEY  — Supabase secret (set via `supabase secrets set`)
-//   RESEND_FROM     — Sender address, e.g. "PlumbTix <notifications@plumbtix.com>"
+//   RESEND_FROM     — Sender address, e.g. "PlumbTix <notifications@proroto.com>"
 //
 // Usage:
 //   import { sendEmail, sendEmailBatch } from '../_shared/email.ts';
@@ -51,7 +51,7 @@ function getApiKey(): string {
 }
 
 function getFromAddress(): string {
-  return Deno.env.get('RESEND_FROM') || 'PlumbTix <notifications@plumbtix.com>';
+  return Deno.env.get('RESEND_FROM') || 'PlumbTix <notifications@proroto.com>';
 }
 
 /**

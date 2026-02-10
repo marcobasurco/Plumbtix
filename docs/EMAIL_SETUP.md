@@ -14,7 +14,7 @@ Sign up at [resend.com](https://resend.com) (free tier: 3,000 emails/month).
 
 In the Resend dashboard:
 - Go to **Domains** → **Add Domain**
-- Add `plumbtix.com` (or your sending domain)
+- Add `proroto.com` (or your sending domain)
 - Add the DNS records (SPF, DKIM, DMARC) to your domain's DNS
 - Click **Verify DNS Records**
 
@@ -33,10 +33,10 @@ In the Resend dashboard:
 supabase secrets set RESEND_API_KEY=re_your_api_key_here
 
 # Sender address (must match your verified domain)
-supabase secrets set RESEND_FROM="PlumbTix <notifications@plumbtix.com>"
+supabase secrets set RESEND_FROM="PlumbTix <notifications@proroto.com>"
 
 # App URL (for CTA buttons in emails)
-supabase secrets set APP_URL=https://app.plumbtix.com
+supabase secrets set APP_URL=https://app.proroto.com
 
 # Pro Roto notification recipients (comma-separated)
 supabase secrets set PROROTO_NOTIFY_EMAILS="marco@proroto.com,dispatch@proroto.com"

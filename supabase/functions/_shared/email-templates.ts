@@ -19,7 +19,7 @@ const BORDER_COLOR = '#e5e7eb';
 const BG_COLOR = '#f9fafb';
 
 function getAppUrl(): string {
-  return Deno.env.get('APP_URL') || 'https://app.plumbtix.com';
+  return Deno.env.get('APP_URL') || 'https://workorders.proroto.com';
 }
 
 // ─── Base layout ─────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ function layout(opts: {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
       <td style="font-size:12px;color:${MUTED_COLOR};line-height:1.5">
-        Sent by <a href="https://www.proroto.com" style="color:${BRAND_COLOR};text-decoration:none;font-weight:600">Pro Roto Inc.</a> via PlumbTix<br>
+        Sent by <a href="https://proroto.com" style="color:${BRAND_COLOR};text-decoration:none;font-weight:600">Pro Roto Inc.</a> via PlumbTix<br>
         CA License #947961 · Redwood City, CA
       </td>
     </tr>
