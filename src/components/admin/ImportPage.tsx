@@ -239,6 +239,7 @@ type UserFull = {
 export function ImportPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
+  const wbRef = useRef<ReturnType<typeof XLSX.read> | null>(null);
 
   const [activeTab, setActiveTab] = useState<ImportType>('companies');
   const [fileName, setFileName] = useState<string | null>(null);
@@ -251,6 +252,30 @@ export function ImportPage() {
 
   const tab = TABS.find((t) => t.key === activeTab)!;
 
+  // Parse a specific sheet from the stored workbook
+  const parseSheet = useCallback((tabKey: ImportType, wb: ReturnType<typeof XLSX.read>) => {
+    const tabLabel = TABS.find((t) => t.key === tabKey)?.label ?? '';
+    const matchedSheet = wb.SheetNames.find((s) => s.toLowerCase() === tabLabel.toLowerCase())
+      ?? wb.SheetNames.find((s) => s.toLowerCase() !== 'instructions')
+      ?? wb.SheetNames[0];
+    const ws = wb.Sheets[matchedSheet];
+    const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
+    if (json.length === 0) { setError(`Sheet "${matchedSheet}" is empty`); setRawRows([]); setHeaderMap({}); return; }
+
+    const rawHeaders = Object.keys(json[0]);
+    const hMap: Record<string, string> = {};
+    for (const h of rawHeaders) hMap[normalizeHeader(h)] = h;
+    setHeaderMap(hMap);
+    setError(null);
+
+    setRawRows(json.map((row) => {
+      const clean: Record<string, string> = {};
+      for (const [key, val] of Object.entries(row))
+        clean[normalizeHeader(key)] = String(val ?? '').trim();
+      return clean;
+    }));
+  }, []);
+
   // ── File parsing ──
   const handleFile = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -262,25 +287,12 @@ export function ImportPage() {
       try {
         const data = new Uint8Array(ev.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
-        if (json.length === 0) { setError('Spreadsheet is empty'); return; }
-
-        const rawHeaders = Object.keys(json[0]);
-        const hMap: Record<string, string> = {};
-        for (const h of rawHeaders) hMap[normalizeHeader(h)] = h;
-        setHeaderMap(hMap);
-
-        setRawRows(json.map((row) => {
-          const clean: Record<string, string> = {};
-          for (const [key, val] of Object.entries(row))
-            clean[normalizeHeader(key)] = String(val ?? '').trim();
-          return clean;
-        }));
+        wbRef.current = wb;
+        parseSheet(activeTab, wb);
       } catch { setError('Failed to parse file. Upload a valid .xlsx or .csv.'); }
     };
     reader.readAsArrayBuffer(file);
-  }, []);
+  }, [activeTab, parseSheet]);
 
   const normalizedHeaders = Object.keys(headerMap);
   const missingRequired = tab.requiredColumns.filter((c) => !normalizedHeaders.includes(c));
@@ -568,7 +580,21 @@ export function ImportPage() {
   const handleReset = () => {
     setFileName(null); setRawRows([]); setHeaderMap({});
     setResults(null); setError(null); setProgress(0);
+    wbRef.current = null;
     if (fileRef.current) fileRef.current.value = '';
+  };
+
+  // ── Tab switch: re-parse the correct sheet if a multi-sheet file is loaded ──
+  const handleTabSwitch = (key: ImportType) => {
+    setActiveTab(key);
+    setResults(null); setError(null); setProgress(0);
+    if (wbRef.current) {
+      parseSheet(key, wbRef.current);
+    } else {
+      // No stored workbook — full reset
+      setFileName(null); setRawRows([]); setHeaderMap({});
+      if (fileRef.current) fileRef.current.value = '';
+    }
   };
 
   const counts = {
@@ -636,7 +662,7 @@ export function ImportPage() {
       <div className="company-tabs mb-5">
         {TABS.map((t) => (
           <button key={t.key} className={`company-tab ${activeTab === t.key ? 'active' : ''}`}
-            onClick={() => { setActiveTab(t.key); handleReset(); }}>
+            onClick={() => handleTabSwitch(t.key)}>
             {t.icon}
             <span className="hidden sm:inline">{t.label}</span>
             <span className="sm:hidden">{t.label.slice(0, 5)}</span>
