@@ -1,8 +1,8 @@
 // =============================================================================
 // PlumbTix — Attachments List + Upload (v0.4.0)
 // =============================================================================
-// Displays image thumbnails in a grid with lightbox, file rows for non-images.
-// Upload button lets any user with ticket access add more photos/files.
+// Image thumbnails in a grid with lightbox. "Add Files" button always visible.
+// No dependency on the users JOIN (safe for all roles including resident).
 // Flow: Storage upload → register-attachment edge function → refresh list.
 // =============================================================================
 
@@ -103,8 +103,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     if (!files || files.length === 0) return;
 
     const fileArray = Array.from(files);
-
-    // Validate
     const valid: File[] = [];
     for (const f of fileArray) {
       if (f.size > MAX_FILE_SIZE) {
@@ -119,7 +117,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     }
     if (valid.length === 0) return;
 
-    // Track progress
     const progress: UploadingFile[] = valid.map((f) => ({
       name: f.name,
       status: 'uploading',
@@ -130,7 +127,6 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
 
     for (let i = 0; i < valid.length; i++) {
       const file = valid[i];
-      // Deduplicate filename: prepend timestamp to avoid collisions
       const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
       const filePath = `tickets/${ticketId}/${safeName}`;
 
@@ -149,7 +145,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         continue;
       }
 
-      // Step 2: Register metadata via edge function
+      // Step 2: Register metadata
       progress[i] = { ...progress[i], status: 'registering' };
       setUploading([...progress]);
 
@@ -172,14 +168,11 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
       }
     }
 
-    // Clear progress after a delay, refresh list
     if (successCount > 0) {
       toast.success(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`);
       await load();
     }
     setTimeout(() => setUploading([]), 2000);
-
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [ticketId, load]);
 
@@ -195,36 +188,16 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
 
   const isUploading = uploading.some((u) => u.status === 'uploading' || u.status === 'registering');
 
-  // ─── Loading state ───
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Attachments</h3>
-        <div className="grid grid-cols-2 gap-2">
-          <Skeleton className="h-24 rounded-lg" />
-          <Skeleton className="h-24 rounded-lg" />
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Error state ───
-  if (error) {
-    return (
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Attachments</h3>
-        <p className="text-sm text-destructive">Error: {error}</p>
-        <Button variant="outline" size="sm" onClick={load}>Retry</Button>
-      </div>
-    );
-  }
-
   const images = items.filter((a) => isImageType(a.file_type));
   const files = items.filter((a) => !isImageType(a.file_type));
 
+  // =========================================================================
+  // RENDER — Header + Upload button ALWAYS visible regardless of state
+  // =========================================================================
+
   return (
     <div className="space-y-3">
-      {/* Header + Upload button */}
+      {/* ─── Header + Upload (always visible) ─── */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Attachments{items.length > 0 ? ` (${items.length})` : ''}
@@ -255,7 +228,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         </div>
       </div>
 
-      {/* Upload progress */}
+      {/* ─── Upload progress (always visible when uploading) ─── */}
       {uploading.length > 0 && (
         <div className="space-y-1.5">
           {uploading.map((u, i) => (
@@ -280,13 +253,31 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         </div>
       )}
 
-      {/* Empty state */}
-      {items.length === 0 && uploading.length === 0 && (
-        <p className="text-sm text-muted-foreground">No attachments yet. Click "Add Files" to upload photos.</p>
+      {/* ─── Loading state ─── */}
+      {loading && (
+        <div className="grid grid-cols-2 gap-2">
+          <Skeleton className="h-24 rounded-lg" />
+          <Skeleton className="h-24 rounded-lg" />
+        </div>
+      )}
+
+      {/* ─── Error state (with retry) ─── */}
+      {!loading && error && (
+        <div className="space-y-2">
+          <p className="text-sm text-destructive">Error loading attachments: {error}</p>
+          <Button variant="outline" size="sm" onClick={load}>Retry</Button>
+        </div>
+      )}
+
+      {/* ─── Empty state ─── */}
+      {!loading && !error && items.length === 0 && uploading.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          No attachments yet. Tap "Add Files" to upload photos.
+        </p>
       )}
 
       {/* ─── Image thumbnails grid ─── */}
-      {images.length > 0 && (
+      {!loading && !error && images.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
           {images.map((att) => {
             if (!att.signedUrl) {
@@ -327,7 +318,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
       )}
 
       {/* ─── Non-image files ─── */}
-      {files.map((att) => (
+      {!loading && !error && files.map((att) => (
         <div
           key={att.id}
           className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-muted/30"

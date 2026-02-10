@@ -216,10 +216,15 @@ export interface AttachmentRow {
   uploaded_by: {
     id: string;
     full_name: string;
-  };
+  } | null;
 }
 
 export async function fetchAttachments(ticketId: string) {
+  // NOTE: We intentionally omit the uploaded_by JOIN here.
+  // Residents can only SELECT their own row from `users`, so a JOIN to
+  // users!ticket_attachments_uploaded_by_user_id_fkey will fail or return
+  // null for attachments uploaded by other roles. Fetching uploader info
+  // separately (if needed) avoids breaking the entire query.
   const { data, error } = await supabase
     .from('ticket_attachments')
     .select(`
@@ -228,8 +233,7 @@ export async function fetchAttachments(ticketId: string) {
       file_name,
       file_type,
       file_size,
-      created_at,
-      uploaded_by:users!ticket_attachments_uploaded_by_user_id_fkey(id, full_name)
+      created_at
     `)
     .eq('ticket_id', ticketId)
     .order('created_at', { ascending: true });
@@ -239,7 +243,10 @@ export async function fetchAttachments(ticketId: string) {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as unknown as AttachmentRow[];
+  return (data ?? []).map((row) => ({
+    ...row,
+    uploaded_by: null,
+  })) as AttachmentRow[];
 }
 
 /**
