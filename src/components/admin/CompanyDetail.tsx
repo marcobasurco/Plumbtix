@@ -68,13 +68,13 @@ const INVITE_ROLE_LABELS: Record<string, string> = {
 function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <Card>
-      <CardContent className="px-4 py-3 flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+      <CardContent className="px-3 py-3 flex flex-col items-center text-center gap-1.5">
+        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
           {icon}
         </div>
         <div>
-          <div className="text-2xl font-bold tabular-nums leading-tight">{value}</div>
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
+          <div className="text-xl font-bold tabular-nums leading-tight">{value}</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</div>
         </div>
       </CardContent>
     </Card>
@@ -344,7 +344,7 @@ export function CompanyDetail() {
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 overflow-hidden">
         <StatCard label="Buildings" value={buildings.length} icon={<Building2 className="h-4 w-4" />} />
         <StatCard label="Users" value={users.length} icon={<Users2 className="h-4 w-4" />} />
         <StatCard label="Pending" value={pendingInvitations.length} icon={<Send className="h-4 w-4" />} />
