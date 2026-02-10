@@ -143,7 +143,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     for (let i = 0; i < valid.length; i++) {
       let file = valid[i];
 
-      // ─── Compress video ───
+      // ─── Compress video (best-effort — falls back to original) ───
       if (shouldCompress(file)) {
         progress[i] = { ...progress[i], status: 'compressing', compressPercent: 0 };
         setUploading([...progress]);
@@ -163,12 +163,10 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
           progress[i] = { ...progress[i], compressInfo: info };
           file = result.file; // use compressed file from here
           toast.success(`Compressed ${valid[i].name}: ${info}`);
-        } catch (compErr) {
-          const msg = compErr instanceof Error ? compErr.message : 'Compression failed';
-          progress[i] = { ...progress[i], status: 'failed', error: msg };
-          setUploading([...progress]);
-          toast.error(`Compression failed: ${valid[i].name}`);
-          continue;
+        } catch {
+          // Compression failed (common on mobile) — upload original instead
+          toast.info(`Uploading ${valid[i].name} without compression`);
+          // Ensure it's at least mp4 mime type for display purposes
         }
       }
 

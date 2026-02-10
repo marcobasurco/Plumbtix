@@ -209,7 +209,7 @@ export function CreateTicketWizard() {
         const sf = validFiles[i];
         let file = sf.file;
 
-        // Compress video before upload
+        // Compress video (best-effort — falls back to original on mobile)
         if (shouldCompress(file)) {
           progress[i] = { ...progress[i], status: 'compressing', compressPercent: 0 };
           setUploadProgress([...progress]);
@@ -228,11 +228,8 @@ export function CreateTicketWizard() {
             const compMB = (result.compressedSize / (1024 * 1024)).toFixed(1);
             progress[i] = { ...progress[i], compressInfo: `${origMB} MB → ${compMB} MB` };
             file = result.file;
-          } catch (compErr) {
-            const msg = compErr instanceof Error ? compErr.message : 'Compression failed';
-            progress[i] = { ...progress[i], status: 'failed', error: msg };
-            setUploadProgress([...progress]);
-            continue;
+          } catch {
+            // Compression failed (common on mobile) — upload original
           }
         }
 
