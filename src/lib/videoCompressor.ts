@@ -128,7 +128,9 @@ export async function compressVideo(
 
   // Read compressed output
   const data = await ff.readFile(outputName);
-  const blob = new Blob([data as Uint8Array], { type: 'video/mp4' });
+  // FFmpeg returns Uint8Array<ArrayBufferLike>; copy to plain ArrayBuffer for Blob compat
+  const bytes = new Uint8Array(data as Uint8Array);
+  const blob = new Blob([bytes.buffer], { type: 'video/mp4' });
 
   // Clean up virtual filesystem
   try {
