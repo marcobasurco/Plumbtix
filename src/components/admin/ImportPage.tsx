@@ -462,7 +462,7 @@ export function ImportPage() {
                   // Update cache
                   existing.name = row.name;
                   existing.phone = row.phone || null;
-                  (existing as Record<string, unknown>).occupant_type = row.type === 'homeowner' ? 'homeowner' : 'tenant';
+                  (existing as unknown as Record<string, unknown>).occupant_type = row.type === 'homeowner' ? 'homeowner' : 'tenant';
                   rowResults.push({ row: rowNum, status: 'updated', message: `${row.name}: updated ${diff.join(', ')}` });
                 }
               } else {
