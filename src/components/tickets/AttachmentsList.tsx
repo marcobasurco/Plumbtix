@@ -408,6 +408,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
                     <p className="text-[10px] text-white truncate">{att.file_name}</p>
+                    <p className="text-[9px] text-white/70">{formatFileSize(att.file_size)}</p>
                   </div>
                 </button>
                 <button
@@ -526,6 +527,9 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1.5 rounded-full">
             {mediaItems[lightboxIndex].file_name}
+            <span className="text-white/60 ml-2">
+              {formatFileSize(mediaItems[lightboxIndex].file_size)}
+            </span>
             {mediaItems.length > 1 && (
               <span className="text-white/60 ml-2">
                 {lightboxIndex + 1} / {mediaItems.length}
