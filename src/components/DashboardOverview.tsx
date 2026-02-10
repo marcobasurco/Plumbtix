@@ -170,7 +170,7 @@ export function DashboardOverview() {
   if (!metrics) return null;
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there';
-  const basePath = role === 'proroto_admin' ? '/admin' : '/dashboard';
+  const basePath = role === 'proroto_admin' ? '/admin' : role === 'resident' ? '/my' : '/dashboard';
 
   return (
     <div className="animate-in">
