@@ -10,6 +10,7 @@ import { PageTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Ticket } from 'lucide-react';
+import { useRealtimeTickets } from '@/hooks/useRealtime';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -52,6 +53,9 @@ export function TicketList() {
   }, [filters]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Realtime: auto-refresh when tickets/comments/attachments change
+  useRealtimeTickets(load, !loading);
 
   return (
     <PageTransition>

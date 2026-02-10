@@ -24,7 +24,7 @@ import { OccupantList } from './OccupantList';
 import { EntitlementManager } from './EntitlementManager';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition, FadeIn } from '@/components/PageTransition';
-import { useToast } from '@/components/Toast';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog } from '@/components/ui/alert-dialog';
@@ -33,12 +33,12 @@ import {
   Pencil, Trash2, Plus, ChevronRight, ChevronLeft,
   Home, KeyRound, Droplets, Flame, User, FileText,
 } from 'lucide-react';
+import { useRealtime } from '@/hooks/useRealtime';
 
 export function BuildingDetail() {
   const { buildingId } = useParams<{ buildingId: string }>();
   const navigate = useNavigate();
   const { role } = useAuth();
-  const { toast } = useToast();
   const canWrite = role === 'proroto_admin' || role === 'pm_admin';
 
   const [building, setBuilding] = useState<BuildingDetailRow | null>(null);
@@ -82,6 +82,10 @@ export function BuildingDetail() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Realtime: auto-refresh when spaces/occupants in this building change
+  useRealtime('spaces', load, { filter: `building_id=eq.${buildingId}`, enabled: !!buildingId && !loading });
+  useRealtime('occupants', load, { enabled: !!buildingId && !loading });
+
   const handleDeleteBuilding = async () => {
     if (!building) return;
     if (spaces.length > 0) {
@@ -92,7 +96,7 @@ export function BuildingDetail() {
     setDeleting(true);
     try {
       await deleteBuilding(building.id);
-      toast('Building deleted');
+      toast.success('Building deleted');
       navigate('..', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete');
@@ -108,7 +112,7 @@ export function BuildingDetail() {
     try {
       await deleteSpace(deleteSpaceTarget.id);
       setSpaces((prev) => prev.filter((s) => s.id !== deleteSpaceTarget.id));
-      toast('Space deleted');
+      toast.success('Space deleted');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete space');
     } finally {
@@ -120,7 +124,7 @@ export function BuildingDetail() {
   const handleSpaceSaved = () => {
     setShowSpaceForm(false);
     setEditingSpace(null);
-    toast(editingSpace ? 'Space updated' : 'Space created');
+    toast.success(editingSpace ? 'Space updated' : 'Space created');
     load();
   };
 

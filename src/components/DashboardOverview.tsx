@@ -25,6 +25,7 @@ import {
   TicketCheck, AlertTriangle, Building2, LayoutGrid,
   TrendingUp, Clock, ArrowRight, Zap, CircleDot,
 } from 'lucide-react';
+import { useRealtimeTickets } from '@/hooks/useRealtime';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
@@ -160,6 +161,9 @@ export function DashboardOverview() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Realtime: auto-refresh metrics when tickets change
+  useRealtimeTickets(load, !loading);
 
   if (loading) return <Loading message="Loading dashboard…" />;
   if (error) return <ErrorBanner message={error} />;
@@ -386,6 +390,41 @@ export function DashboardOverview() {
               </div>
             );
           })}
+
+          {/* Company Analytics (proroto_admin only) */}
+          {role === 'proroto_admin' && metrics.companyBreakdown.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <LayoutGrid size={14} /> Company Breakdown
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--slate-200)' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Company</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Bldgs</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Spaces</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Users</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Open</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.companyBreakdown.map((c) => (
+                      <tr key={c.company_id} style={{ borderBottom: '1px solid var(--slate-100)' }}>
+                        <td style={{ padding: '6px 8px', fontWeight: 500, color: 'var(--slate-800)' }}>{c.company_name}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--slate-600)' }}>{c.building_count}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--slate-600)' }}>{c.space_count}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--slate-600)' }}>{c.user_count}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: c.open_tickets > 0 ? '#f59e0b' : 'var(--slate-600)' }}>{c.open_tickets}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--slate-600)' }}>{c.total_tickets}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Quick actions */}
           {(role === 'proroto_admin' || role === 'pm_admin') && (

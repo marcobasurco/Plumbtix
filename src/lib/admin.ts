@@ -9,6 +9,45 @@ import { supabase } from './supabaseClient';
 import type { UserRole } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
+// Edge function caller (same pattern as buildings.ts)
+// ---------------------------------------------------------------------------
+
+const EDGE_BASE = import.meta.env.VITE_EDGE_BASE_URL;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+async function invokeFunction<T>(
+  name: string,
+  body: Record<string, unknown>,
+): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Not logged in');
+
+  const res = await fetch(`${EDGE_BASE}/${name}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': ANON_KEY,
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Edge function "${name}" returned ${res.status}: ${res.statusText}`);
+  }
+
+  const json = await res.json();
+  if (!res.ok) console.error(`[invokeFunction] ${name} returned ${res.status}:`, json);
+
+  if (json.ok === true) return json.data as T;
+  if (json.ok === false && json.error?.message) throw new Error(json.error.message);
+  if (json.msg) throw new Error(json.msg);
+  if (json.message) throw new Error(json.message);
+  throw new Error(`Edge function "${name}" failed (HTTP ${res.status})`);
+}
+
+// ---------------------------------------------------------------------------
 // Companies
 // ---------------------------------------------------------------------------
 
@@ -67,26 +106,12 @@ export interface CompanyDetailRow {
 }
 
 export async function createCompany(name: string, slug: string): Promise<CompanyListRow> {
-  const { data, error } = await supabase
-    .from('companies')
-    .insert({ name, slug })
-    .select('id, name, slug, created_at')
-    .single();
-
-  if (error) throw new Error(error.message);
-  return { ...data, building_count: 0, user_count: 0 } as CompanyListRow;
+  const data = await invokeFunction<CompanyListRow>('create-company', { name, slug });
+  return { ...data, building_count: 0, user_count: 0 };
 }
 
 export async function updateCompany(id: string, fields: { name?: string; slug?: string }): Promise<CompanyDetailRow> {
-  const { data, error } = await supabase
-    .from('companies')
-    .update(fields)
-    .eq('id', id)
-    .select('*')
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as CompanyDetailRow;
+  return invokeFunction<CompanyDetailRow>('update-company', { id, ...fields });
 }
 
 export async function fetchCompanyDetail(id: string): Promise<CompanyDetailRow> {

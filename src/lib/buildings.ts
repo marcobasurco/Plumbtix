@@ -380,32 +380,17 @@ export async function fetchBuildingOccupants(buildingId: string): Promise<Occupa
 }
 
 export async function createOccupant(spaceId: string, form: OccupantFormData): Promise<OccupantRow> {
-  const inviteToken = crypto.randomUUID();
-
-  const { data, error } = await supabase
-    .from('occupants')
-    .insert({
-      space_id: spaceId,
-      occupant_type: form.occupant_type,
-      name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
-      phone: form.phone.trim() || null,
-      invite_token: inviteToken,
-    })
-    .select()
-    .single();
-
-  if (error) throw parseRLSError(error);
-  return data as OccupantRow;
+  return invokeFunction<OccupantRow>('create-occupant', {
+    space_id: spaceId,
+    occupant_type: form.occupant_type,
+    name: form.name.trim(),
+    email: form.email.trim().toLowerCase(),
+    phone: form.phone.trim() || null,
+  });
 }
 
 export async function deleteOccupant(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('occupants')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw parseRLSError(error);
+  await invokeFunction<{ deleted: true; id: string }>('delete-occupant', { id });
 }
 
 // ---------------------------------------------------------------------------
@@ -431,41 +416,13 @@ export async function fetchEntitlements(buildingId: string): Promise<Entitlement
 }
 
 export async function createEntitlement(buildingId: string, userId: string): Promise<EntitlementRow> {
-  const { data, error } = await supabase
-    .from('building_entitlements')
-    .insert({ building_id: buildingId, user_id: userId })
-    .select()
-    .single();
-
-  if (error) throw parseRLSError(error);
-  return data as EntitlementRow;
+  return invokeFunction<EntitlementRow>('create-entitlement', {
+    building_id: buildingId,
+    user_id: userId,
+  });
 }
 
 export async function deleteEntitlement(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('building_entitlements')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw parseRLSError(error);
+  await invokeFunction<{ deleted: true; id: string }>('delete-entitlement', { id });
 }
 
-// ---------------------------------------------------------------------------
-// Error helper (unchanged)
-// ---------------------------------------------------------------------------
-
-function parseRLSError(error: { message: string; code?: string }): Error {
-  if (error.code === '42501' || error.message.includes('policy')) {
-    return new Error("You don't have permission to perform this action.");
-  }
-  if (error.code === '23503') {
-    return new Error('Cannot delete: this record has dependent data (spaces, tickets, etc.).');
-  }
-  if (error.code === '23505') {
-    return new Error('A record with this value already exists (duplicate).');
-  }
-  if (error.code === '23514') {
-    return new Error('Invalid data: check constraint violated. Unit requires unit_number; common area requires type.');
-  }
-  return new Error(error.message);
-}

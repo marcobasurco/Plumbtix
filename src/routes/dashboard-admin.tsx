@@ -11,6 +11,7 @@ import { CompanyList } from '@/components/admin/CompanyList';
 import { CompanyDetail } from '@/components/admin/CompanyDetail';
 import { UsersPage } from '@/components/admin/UsersPage';
 import { DispatchBoard } from '@/components/admin/DispatchBoard';
+import { AnalyticsPage } from '@/components/admin/AnalyticsPage';
 
 export function AdminDashboard() {
   return (
@@ -30,6 +31,7 @@ export function AdminDashboard() {
         <Route path="companies/:companyId/buildings/new" element={<BuildingForm />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="dispatch" element={<DispatchBoard />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
       </Routes>
     </DashboardLayout>
   );

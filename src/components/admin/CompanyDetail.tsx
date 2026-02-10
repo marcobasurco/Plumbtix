@@ -10,14 +10,15 @@ import {
   type UserListRow,
 } from '@/lib/admin';
 import { ROLE_LABELS } from '@shared/types/enums';
-import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition } from '@/components/PageTransition';
-import { useToast } from '@/components/Toast';
+import { toast } from 'sonner';
+import { useRealtime } from '@/hooks/useRealtime';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -39,7 +40,6 @@ const ROLE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | '
 export function CompanyDetail() {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const [company, setCompany] = useState<CompanyDetailRow | null>(null);
   const [buildings, setBuildings] = useState<CompanyBuildingRow[]>([]);
@@ -71,6 +71,10 @@ export function CompanyDetail() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Realtime: auto-refresh when buildings/users change for this company
+  useRealtime('buildings', load, { filter: `company_id=eq.${companyId}`, enabled: !!companyId && !loading });
+  useRealtime('users', load, { filter: `company_id=eq.${companyId}`, enabled: !!companyId && !loading });
+
   const openEdit = () => {
     if (!company) return;
     setEditName(company.name); setEditSlug(company.slug); setEditError(null); setEditOpen(true);
@@ -90,13 +94,28 @@ export function CompanyDetail() {
     try {
       const updated = await updateCompany(company.id, { name: trimName, slug: trimSlug });
       setCompany(updated); setEditOpen(false);
-      toast('Company updated');
+      toast.success('Company updated');
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save');
     } finally { setSaving(false); }
   };
 
-  if (loading) return <Loading message="Loading company…" />;
+  if (loading) return (
+    <PageTransition>
+      <Skeleton className="h-5 w-24 mb-6" />
+      <Skeleton className="h-7 w-48 mb-2" />
+      <Skeleton className="h-4 w-32 mb-6" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        {[1, 2].map((i) => (
+          <Card key={i}><CardContent className="px-4 py-3">
+            <Skeleton className="h-3 w-16 mb-2" /><Skeleton className="h-8 w-12" />
+          </CardContent></Card>
+        ))}
+      </div>
+      <Skeleton className="h-5 w-32 mb-3" />
+      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full mb-2" />)}
+    </PageTransition>
+  );
   if (error && !company) return <ErrorBanner message={error} />;
   if (!company) return <ErrorBanner message="Company not found" />;
 

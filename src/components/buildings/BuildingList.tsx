@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Building2, MapPin, Layers, Ticket, Search, Plus, Calendar,
 } from 'lucide-react';
+import { useRealtimeBuildings } from '@/hooks/useRealtime';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -69,6 +70,9 @@ export function BuildingList() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Realtime: auto-refresh when buildings/spaces/occupants change
+  useRealtimeBuildings(load, !loading);
 
   const filtered = buildings.filter((b) => {
     if (!search.trim()) return true;

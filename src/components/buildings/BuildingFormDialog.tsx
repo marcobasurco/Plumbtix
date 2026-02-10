@@ -22,7 +22,7 @@ import {
 } from '@/lib/buildings';
 import { fetchCompanyOptions, type CompanyOption } from '@/lib/admin';
 import { useAuth } from '@/lib/auth';
-import { useToast } from '@/components/Toast';
+import { toast } from 'sonner';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,7 +101,6 @@ export function BuildingFormDialog({
 }: BuildingFormDialogProps) {
   const isEdit = !!buildingId;
   const { role, companyId: authCompanyId } = useAuth();
-  const { toast } = useToast();
   const isProrotoAdmin = role === 'proroto_admin';
 
   // Resolve companyId: prop > auth context
@@ -214,7 +213,7 @@ export function BuildingFormDialog({
     try {
       if (isEdit) {
         await updateBuilding(buildingId!, data);
-        toast('Building updated successfully');
+        toast.success('Building updated');
       } else {
         const targetCompany = resolvedCompanyId || selectedCompanyId;
         if (!targetCompany) {
@@ -222,14 +221,14 @@ export function BuildingFormDialog({
           return;
         }
         await createBuilding(targetCompany, data);
-        toast('Building created successfully');
+        toast.success('Building created');
       }
       onOpenChange(false);
       onSaved();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to save building';
       setError(msg);
-      toast(msg, 'error');
+      toast.error(msg);
     }
   };
 

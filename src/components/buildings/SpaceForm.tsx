@@ -18,7 +18,7 @@ import {
   type SpaceFormData,
   type SpaceRow,
 } from '@/lib/buildings';
-import { useToast } from '@/components/Toast';
+import { toast } from 'sonner';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,6 @@ interface SpaceFormProps {
 
 export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFormProps) {
   const isEdit = !!editSpace;
-  const { toast } = useToast();
 
   const [error, setError] = useState<string | null>(null);
   const [existingUnits, setExistingUnits] = useState<string[]>([]);
@@ -146,16 +145,16 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
       try {
         if (isEdit) {
           await updateSpace(editSpace!.id, formData);
-          toast('Space updated');
+          toast.success('Space updated');
         } else {
           await createSpace(buildingId, formData);
-          toast('Space created');
+          toast.success('Space created');
         }
         onSaved();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to save space';
         setError(msg);
-        toast(msg, 'error');
+        toast.error(msg);
       }
     },
     [isEdit, editSpace, buildingId, duplicateWarning, onSaved, toast],

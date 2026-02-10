@@ -24,6 +24,19 @@ export interface DashboardMetrics {
   severityBreakdown: { severity: TicketSeverity; count: number }[];
   recentTickets: RecentTicketRow[];
   ticketsByMonth: { month: string; count: number }[];
+  /** Per-company breakdown (proroto_admin only — empty for other roles) */
+  companyBreakdown: CompanyAnalyticsRow[];
+}
+
+export interface CompanyAnalyticsRow {
+  company_id: string;
+  company_name: string;
+  building_count: number;
+  space_count: number;
+  user_count: number;
+  total_tickets: number;
+  open_tickets: number;
+  tickets_this_month: number;
 }
 
 export interface RecentTicketRow {
@@ -119,6 +132,19 @@ export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
   }
   const ticketsByMonth = Array.from(monthMap.entries()).map(([month, count]) => ({ month, count }));
 
+  // Per-company breakdown (works for proroto_admin via v_company_analytics view)
+  let companyBreakdown: CompanyAnalyticsRow[] = [];
+  try {
+    const { data: analytics } = await supabase
+      .from('v_company_analytics')
+      .select('*')
+      .order('total_tickets', { ascending: false });
+
+    companyBreakdown = (analytics ?? []) as unknown as CompanyAnalyticsRow[];
+  } catch {
+    // View may not exist yet (pre-migration) — gracefully degrade
+  }
+
   return {
     totalTickets,
     openTickets,
@@ -131,5 +157,6 @@ export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
     severityBreakdown,
     recentTickets,
     ticketsByMonth,
+    companyBreakdown,
   };
 }

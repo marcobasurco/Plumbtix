@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { fetchCompanyList, createCompany, type CompanyListRow } from '@/lib/admin';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition, StaggerChildren, StaggerItem } from '@/components/PageTransition';
-import { useToast } from '@/components/Toast';
+import { toast } from 'sonner';
+import { useRealtime } from '@/hooks/useRealtime';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +25,6 @@ const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function CompanyList() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [companies, setCompanies] = useState<CompanyListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +45,9 @@ export function CompanyList() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Realtime: auto-refresh when companies change
+  useRealtime('companies', load, { enabled: !loading });
 
   const handleNameChange = (val: string) => {
     setName(val);
@@ -71,7 +74,7 @@ export function CompanyList() {
       setCompanies((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
       resetForm();
       setDialogOpen(false);
-      toast('Company created');
+      toast.success('Company created');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create');
     } finally {

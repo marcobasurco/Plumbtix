@@ -1150,10 +1150,26 @@ body {
   .dashboard-bottom { grid-template-columns: 1fr; }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .recent-ticket-row { flex-wrap: wrap; gap: 8px; }
+
+  /* Dispatch board: stack columns vertically on mobile */
+  .dispatch-filters select,
+  .dispatch-filters input { width: 100%; }
+
+  /* Tables: horizontal scroll with min-width on mobile */
+  table { min-width: 500px; }
+
+  /* Dialog: more padding on mobile for touch targets */
+  [data-radix-dialog-content] { padding: 20px 16px; }
 }
 
 @media (max-width: 480px) {
   .metric-grid { grid-template-columns: 1fr; }
+  .content-main { padding: 12px; }
+  .content-header { padding: 0 12px; }
+
+  /* Tighter spacing on smallest screens */
+  table { min-width: 400px; font-size: 0.8rem; }
+  table th, table td { padding: 6px 8px; }
 }
 
 /* ── Legacy compat (gradual migration) ── */

@@ -10,9 +10,11 @@ import {
 import { sendInvitation } from '@/lib/api';
 import { ROLE_LABELS, INVITATION_ROLES } from '@shared/types/enums';
 import type { InvitationRole } from '@shared/types/enums';
-import { Loading } from '@/components/Loading';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useRealtime } from '@/hooks/useRealtime';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 function formatDate(iso: string): string {
@@ -64,6 +66,10 @@ export function UsersPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Realtime: auto-refresh when users or invitations change
+  useRealtime('users', load, { enabled: !loading });
+  useRealtime('invitations', load, { enabled: !loading });
+
   const handleInvite = async (e: FormEvent) => {
     e.preventDefault();
     setInvSubmitting(true);
@@ -79,6 +85,7 @@ export function UsersPage() {
 
     if (result.ok) {
       const inv = result.data.invitation;
+      toast.success(`Invitation sent to ${inv.email}`);
       setInvSuccess(
         `Invitation sent to ${inv.email}. Token: ${inv.token}\n` +
         `Accept URL: ${window.location.origin}/accept-invite?token=${inv.token}`
@@ -171,7 +178,20 @@ export function UsersPage() {
         </div>
       )}
 
-      {loading ? <Loading message="Loading…" /> : (
+      {loading ? (
+        <div style={cardStyle}>
+          <Skeleton className="h-5 w-40 mb-4" />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex gap-4 mb-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      ) : (
         <>
           {/* Users table */}
           <section style={cardStyle}>

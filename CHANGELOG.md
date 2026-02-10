@@ -1,6 +1,152 @@
-# PlumbTix v0.2.2 — Changelog
+# PlumbTix Changelog
+
+## [0.4.0] — SaaS MVP Polish (February 10, 2026)
+
+### Added — Subscription & Billing Foundation
+- **Migration 00010**: `company_subscriptions` table with tier enum (free/starter/professional/enterprise)
+- Subscription status tracking (active/past_due/cancelled/trialing)
+- Per-tier limits: max_buildings, max_users, max_tickets_mo, max_storage_mb
+- Stripe integration prep columns (stripe_customer_id, stripe_subscription_id)
+- Auto-create subscription trigger on new company creation
+- RLS: proroto_admin full access, pm_admin reads own company
+- Realtime enabled for company_subscriptions table
+
+### Added — Analytics Dashboard
+- **`/admin/analytics` route** — full platform analytics page (proroto_admin only)
+- KPI cards: MRR, companies, users, open tickets, monthly volume
+- Ticket volume area chart (6-month trend)
+- Issue type horizontal bar chart, severity donut, status breakdown bars
+- Per-company subscription & utilization table with tier badges
+- Utilization progress bars (buildings/users/tickets vs tier limits)
+- Navigation: "Analytics" added to admin sidebar
+
+### Polished — Ticket Detail Page
+- Converted from raw CSS objects to Tailwind + shadcn/ui Cards
+- Mobile-responsive: single-column stack on small screens
+- Skeleton loading state with proper hierarchy
+- Info rows with icons, dividers, and consistent spacing
+- Clickable phone/email links for contacts
+
+### Security Posture (unchanged)
+- ✅ Zero direct PostgREST mutations (20 edge functions)
+- ✅ 41+ RLS policies including new subscription policies
+- ✅ JWT validation in every edge function
+- ✅ Realtime subscriptions on 12 components
+
+---
+
+# PlumbTix v0.3.0 — Changelog
 
 **Date:** February 9, 2026
+
+## v0.3.0 — SaaS MVP: Zero PostgREST Mutations + Realtime + Analytics
+
+### Highlight: Zero Direct PostgREST Mutations
+
+Every write operation in the entire app now goes through a validated edge function. There are **zero** direct `.insert()`, `.update()`, or `.delete()` calls in the frontend data layer. Reads still use PostgREST + RLS for performance.
+
+### New Edge Functions (6 new, 20 total)
+
+| Function | Purpose |
+|----------|---------|
+| `create-company` | Validated company creation, slug uniqueness check |
+| `update-company` | Validated company update, duplicate slug protection |
+| `create-occupant` | Add tenant/homeowner to space, server-side invite token |
+| `delete-occupant` | Remove occupant with open-ticket safety check |
+| `create-entitlement` | Grant pm_user building access, duplicate protection |
+| `delete-entitlement` | Revoke pm_user building access |
+
+### Realtime Subscriptions
+
+Live updates across the entire app — no manual refresh needed:
+
+| Component | Tables Subscribed | Effect |
+|-----------|-------------------|--------|
+| `TicketList` | tickets, comments, attachments | Auto-refreshes when any ticket changes |
+| `TicketDetail` | tickets (filtered), comments (filtered) | Live status changes and new comments |
+| `BuildingList` | buildings, spaces, occupants | Auto-refreshes on any building CRUD |
+| `BuildingDetail` | spaces (filtered), occupants | Live space/occupant updates |
+| `DashboardOverview` | tickets, comments, attachments | Live metric updates |
+
+Implementation: Generic `useRealtime` hook with 100ms debounce, per-table filters, enable/disable control. Convenience wrappers `useRealtimeTickets` and `useRealtimeBuildings`.
+
+### Per-Company Analytics (proroto_admin)
+
+New "Company Breakdown" table on the dashboard showing per-company:
+buildings, spaces, users, open tickets, total tickets.
+
+Powered by `v_company_analytics` database view (migration 00008).
+
+### Usage Tracking (Billing Prep)
+
+New `company_usage_monthly` table with auto-incrementing ticket counts via trigger. Includes `fn_snapshot_company_usage()` for periodic snapshots of building/space/user/storage counts. RLS ensures pm_admins see only their own company's usage.
+
+### Database Migrations (2 new)
+
+| Migration | Purpose |
+|-----------|---------|
+| `00008_usage_tracking.sql` | `company_usage_monthly` table, ticket tracking trigger, snapshot function, `v_company_analytics` view |
+| `00009_enable_realtime.sql` | Enables Supabase Realtime publication for 8 key tables |
+
+### Files Changed
+
+**New Edge Functions:** `create-company`, `update-company`, `create-occupant`, `delete-occupant`, `create-entitlement`, `delete-entitlement`
+
+**New Frontend:**
+- `src/hooks/useRealtime.ts` — Generic realtime subscription hook + convenience wrappers
+
+**Modified Frontend:**
+- `src/lib/admin.ts` — Company CRUD now uses edge functions
+- `src/lib/buildings.ts` — Occupant + entitlement CRUD now uses edge functions; removed `parseRLSError`
+- `src/lib/dashboard.ts` — Added `CompanyAnalyticsRow` type + `companyBreakdown` in metrics
+- `src/components/DashboardOverview.tsx` — Company breakdown table + realtime
+- `src/components/tickets/TicketList.tsx` — Realtime subscription
+- `src/components/tickets/TicketDetail.tsx` — Realtime subscription (filtered)
+- `src/components/buildings/BuildingList.tsx` — Realtime subscription
+- `src/components/buildings/BuildingDetail.tsx` — Realtime subscription (filtered)
+
+### Deployment
+
+```bash
+# 1. Deploy new edge functions
+supabase functions deploy create-company --no-verify-jwt
+supabase functions deploy update-company --no-verify-jwt
+supabase functions deploy create-occupant --no-verify-jwt
+supabase functions deploy delete-occupant --no-verify-jwt
+supabase functions deploy create-entitlement --no-verify-jwt
+supabase functions deploy delete-entitlement --no-verify-jwt
+
+# 2. Run new migrations
+supabase db push
+
+# 3. Build and deploy frontend
+npm install && npm run build
+```
+
+### Architecture After v0.3.0
+
+```
+Frontend (React + Vite + shadcn/ui)
+  ├── READS:  PostgREST + User JWT + RLS (fast, cacheable)
+  ├── WRITES: Edge Functions + Zod validation + RLS (secure, validated)
+  └── LIVE:   Supabase Realtime subscriptions (debounced, filtered)
+
+Edge Functions (20 total)
+  ├── All use User JWT pass-through (no service_role on mutations)
+  ├── Zod server-side validation on every write
+  ├── Consistent { ok, data } / { ok, error } response envelope
+  └── CORS headers on all responses
+
+Database (Postgres 15)
+  ├── 12 tables (11 + company_usage_monthly)
+  ├── 43 RLS policies (41 + 2 new for usage table)
+  ├── Ticket status enforcement trigger
+  ├── Usage tracking trigger (fn_track_ticket_usage)
+  ├── v_company_analytics view
+  └── Realtime publication on 8 tables
+```
+
+---
 
 ## v0.2.2 — Critical Frontend Fix: CSS Foundation + UI Modernization
 
