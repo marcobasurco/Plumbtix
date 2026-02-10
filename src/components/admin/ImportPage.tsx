@@ -66,7 +66,7 @@ const TABS: ImportTab[] = [
     description: 'Sync buildings with addresses',
     matchKey: 'Matched by company + address',
     requiredColumns: ['company_name', 'address', 'city', 'state', 'zip'],
-    optionalColumns: ['building_name', 'gate_code', 'onsite_contact_name', 'onsite_contact_phone', 'water_shutoff', 'gas_shutoff', 'access_notes'],
+    optionalColumns: ['building_name', 'address_line2', 'gate_code', 'onsite_contact_name', 'onsite_contact_phone', 'water_shutoff', 'gas_shutoff', 'access_notes'],
   },
   {
     key: 'units',
@@ -128,8 +128,8 @@ function generateTemplate(type: ImportType) {
       { name: 'Bay Area Realty', slug: 'bay-area-realty' },
     ],
     buildings: [
-      { company_name: 'Acme Property Management', address: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', building_name: 'Main Tower', gate_code: '1234', onsite_contact_name: 'John Doe', onsite_contact_phone: '415-555-0100', water_shutoff: 'Basement left wall', gas_shutoff: 'Utility room', access_notes: 'Key under mat' },
-      { company_name: 'Acme Property Management', address: '456 Oak Ave', city: 'Oakland', state: 'CA', zip: '94612', building_name: 'Oak Residences' },
+      { company_name: 'Acme Property Management', address: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', building_name: 'Main Tower', address_line2: 'Suite 100', gate_code: '1234', onsite_contact_name: 'John Doe', onsite_contact_phone: '415-555-0100', water_shutoff: 'Basement left wall', gas_shutoff: 'Utility room', access_notes: 'Key under mat' },
+      { company_name: 'Acme Property Management', address: '456 Oak Ave', city: 'Oakland', state: 'CA', zip: '94612', building_name: 'Oak Residences', address_line2: '', gate_code: '', onsite_contact_name: '', onsite_contact_phone: '', water_shutoff: '', gas_shutoff: '', access_notes: '' },
     ],
     units: [
       { building_address: '123 Main St', unit_number: '101', floor: '1', bedrooms: '2', bathrooms: '1' },
@@ -150,6 +150,66 @@ function generateTemplate(type: ImportType) {
   ws['!cols'] = headers.map((h) => ({ wch: Math.max(h.length + 4, 18) }));
   XLSX.utils.book_append_sheet(wb, ws, type.charAt(0).toUpperCase() + type.slice(1));
   XLSX.writeFile(wb, `work-orders-${type}-template.xlsx`);
+}
+
+function generateCompleteTemplate() {
+  const wb = XLSX.utils.book_new();
+
+  const allExamples: Record<ImportType, { headers: string[]; rows: Record<string, string>[] }> = {
+    companies: {
+      headers: ['name', 'slug'],
+      rows: [
+        { name: 'Acme Property Management', slug: 'acme-property' },
+        { name: 'Bay Area Realty', slug: 'bay-area-realty' },
+      ],
+    },
+    buildings: {
+      headers: ['company_name', 'address', 'city', 'state', 'zip', 'building_name', 'address_line2', 'gate_code', 'onsite_contact_name', 'onsite_contact_phone', 'water_shutoff', 'gas_shutoff', 'access_notes'],
+      rows: [
+        { company_name: 'Acme Property Management', address: '123 Main St', city: 'San Francisco', state: 'CA', zip: '94102', building_name: 'Main Tower', address_line2: 'Suite 100', gate_code: '1234', onsite_contact_name: 'John Doe', onsite_contact_phone: '415-555-0100', water_shutoff: 'Basement left wall', gas_shutoff: 'Utility room', access_notes: 'Key under mat' },
+        { company_name: 'Acme Property Management', address: '456 Oak Ave', city: 'Oakland', state: 'CA', zip: '94612', building_name: 'Oak Residences', address_line2: '', gate_code: '', onsite_contact_name: '', onsite_contact_phone: '', water_shutoff: '', gas_shutoff: '', access_notes: '' },
+      ],
+    },
+    units: {
+      headers: ['building_address', 'unit_number', 'floor', 'bedrooms', 'bathrooms'],
+      rows: [
+        { building_address: '123 Main St', unit_number: '101', floor: '1', bedrooms: '2', bathrooms: '1' },
+        { building_address: '123 Main St', unit_number: '102', floor: '1', bedrooms: '1', bathrooms: '1' },
+        { building_address: '123 Main St', unit_number: '201', floor: '2', bedrooms: '3', bathrooms: '2' },
+      ],
+    },
+    occupants: {
+      headers: ['building_address', 'unit_number', 'name', 'email', 'phone', 'type'],
+      rows: [
+        { building_address: '123 Main St', unit_number: '101', name: 'Alice Johnson', email: 'alice@email.com', phone: '415-555-1010', type: 'tenant' },
+        { building_address: '123 Main St', unit_number: '102', name: 'Bob Williams', email: 'bob@email.com', phone: '415-555-1020', type: 'homeowner' },
+      ],
+    },
+    users: {
+      headers: ['company_name', 'name', 'email', 'role', 'phone'],
+      rows: [
+        { company_name: 'Acme Property Management', name: 'Jane Smith', email: 'jane@acme.com', role: 'pm_admin', phone: '415-555-2000' },
+        { company_name: 'Acme Property Management', name: 'Bob Jones', email: 'bob@acme.com', role: 'pm_user', phone: '' },
+      ],
+    },
+  };
+
+  const sheetNames: Record<ImportType, string> = {
+    companies: 'Companies',
+    buildings: 'Buildings',
+    units: 'Units',
+    occupants: 'Occupants',
+    users: 'Users',
+  };
+
+  for (const key of ['companies', 'buildings', 'units', 'occupants', 'users'] as ImportType[]) {
+    const { headers, rows } = allExamples[key];
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+    ws['!cols'] = headers.map((h) => ({ wch: Math.max(h.length + 4, 18) }));
+    XLSX.utils.book_append_sheet(wb, ws, sheetNames[key]);
+  }
+
+  XLSX.writeFile(wb, 'work-orders-complete-template.xlsx');
 }
 
 // ---------------------------------------------------------------------------
@@ -345,7 +405,7 @@ export function ImportPage() {
               const form: BuildingFormData = {
                 name: row.building_name || '',
                 address_line1: row.address,
-                address_line2: '',
+                address_line2: row.address_line2 || '',
                 city: row.city,
                 state: row.state,
                 zip: row.zip,
@@ -360,6 +420,7 @@ export function ImportPage() {
               if (existing) {
                 const diff = changedFields(existing as unknown as Record<string, unknown>, {
                   name: form.name || null,
+                  address_line2: form.address_line2 || null,
                   city: form.city, state: form.state.toUpperCase(), zip: form.zip,
                   gate_code: form.gate_code || null,
                   onsite_contact_name: form.onsite_contact_name || null,
@@ -367,7 +428,7 @@ export function ImportPage() {
                   water_shutoff_location: form.water_shutoff_location || null,
                   gas_shutoff_location: form.gas_shutoff_location || null,
                   access_notes: form.access_notes || null,
-                }, ['name', 'city', 'state', 'zip', 'gate_code', 'onsite_contact_name', 'onsite_contact_phone', 'water_shutoff_location', 'gas_shutoff_location', 'access_notes']);
+                }, ['name', 'address_line2', 'city', 'state', 'zip', 'gate_code', 'onsite_contact_name', 'onsite_contact_phone', 'water_shutoff_location', 'gas_shutoff_location', 'access_notes']);
 
                 if (diff.length === 0) {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `${row.address} — no changes` });
@@ -603,9 +664,14 @@ export function ImportPage() {
                 </div>
               )}
             </div>
-            <Button variant="outline" size="sm" onClick={() => generateTemplate(activeTab)} className="shrink-0">
-              <Download className="h-3.5 w-3.5" /> Template
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={() => generateTemplate(activeTab)}>
+                <Download className="h-3.5 w-3.5" /> Template
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => generateCompleteTemplate()}>
+                <Download className="h-3.5 w-3.5" /> All Sheets
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
