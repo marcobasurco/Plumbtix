@@ -139,9 +139,10 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
         .upload(filePath, file, { contentType: file.type, upsert: false });
 
       if (uploadErr) {
-        progress[i] = { ...progress[i], status: 'failed', error: uploadErr.message };
+        const msg = uploadErr.message || 'Unknown storage error';
+        progress[i] = { ...progress[i], status: 'failed', error: msg };
         setUploading([...progress]);
-        toast.error(`Upload failed: ${file.name}`);
+        toast.error(`Upload failed: ${file.name} — ${msg}`);
         continue;
       }
 
