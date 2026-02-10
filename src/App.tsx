@@ -13,6 +13,8 @@ import { ProtectedRoute } from '@/routes/protected';
 import { LoginPage } from '@/routes/login';
 import { AcceptInvitePage } from '@/routes/accept-invite';
 import { ClaimAccountPage } from '@/routes/claim-account';
+import { ForgotPasswordPage } from '@/routes/forgot-password';
+import { ResetPasswordPage } from '@/routes/reset-password';
 import { AdminDashboard } from '@/routes/dashboard-admin';
 import { PMDashboard } from '@/routes/dashboard-pm';
 import { ResidentDashboard } from '@/routes/dashboard-resident';
@@ -34,6 +36,8 @@ export function App() {
             <Routes>
               {/* Public */}
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/accept-invite" element={<AcceptInvitePage />} />
               <Route path="/claim-account" element={<ClaimAccountPage />} />
 

@@ -75,6 +75,10 @@ export function LoginPage() {
           </Button>
         </form>
 
+        <div style={{ textAlign: 'right', marginTop: '8px' }}>
+          <Link to="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>Forgot password?</Link>
+        </div>
+
         <div className="login-links">
           Have an invitation? <Link to="/accept-invite">Accept PM Invite</Link>
           {' · '}
