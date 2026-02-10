@@ -112,29 +112,31 @@ Deno.serve(async (req: Request) => {
     );
 
     // ─── 7. Send comment notification (fire-and-forget) ───
-    try {
-      const [ticketRes, authorRes] = await Promise.all([
-        svc.from('tickets').select('ticket_number, building_id, buildings(name, address_line1, company_id)').eq('id', ticket_id).single(),
-        svc.from('users').select('full_name, email').eq('id', userId).single(),
-      ]);
+    (async () => {
+      try {
+        const [ticketRes, authorRes] = await Promise.all([
+          svc.from('tickets').select('ticket_number, building_id, buildings(name, address_line1, company_id)').eq('id', ticket_id).single(),
+          svc.from('users').select('full_name, email').eq('id', userId).single(),
+        ]);
 
-      if (ticketRes.data && authorRes.data) {
-        const building = (ticketRes.data as any).buildings;
-        notifyComment(svc, {
-          ticketId: ticket_id,
-          ticketNumber: ticketRes.data.ticket_number,
-          buildingName: building?.name || building?.address_line1 || 'Unknown',
-          companyId: building?.company_id || '',
-          authorName: authorRes.data.full_name,
-          authorRole: role,
-          authorEmail: authorRes.data.email,
-          commentText: comment_text,
-          isInternal: is_internal,
-        });
+        if (ticketRes.data && authorRes.data) {
+          const building = (ticketRes.data as any).buildings;
+          await notifyComment(svc, {
+            ticketId: ticket_id,
+            ticketNumber: ticketRes.data.ticket_number,
+            buildingName: building?.name || building?.address_line1 || 'Unknown',
+            companyId: building?.company_id || '',
+            authorName: authorRes.data.full_name,
+            authorRole: role,
+            authorEmail: authorRes.data.email,
+            commentText: comment_text,
+            isInternal: is_internal,
+          });
+        }
+      } catch (emailErr) {
+        console.error('[create-comment] Email notification error (non-blocking):', emailErr);
       }
-    } catch (emailErr) {
-      console.error('[create-comment] Email notification error (non-blocking):', emailErr);
-    }
+    })();
 
     return ok({ comment }, 201);
   } catch (e) {

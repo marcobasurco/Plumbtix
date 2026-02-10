@@ -79,33 +79,35 @@ Deno.serve(async (req: Request) => {
     console.log('[create-occupant] Created: occupant=%s space=%s user=%s', occupant.id, space_id, userId);
 
     // ─── Send resident claim email (fire-and-forget) ───
-    try {
-      const svc = createServiceClient();
-      const { data: space } = await svc
-        .from('spaces')
-        .select('unit_number, building_id, buildings(name, address_line1)')
-        .eq('id', space_id)
-        .single();
+    (async () => {
+      try {
+        const svc = createServiceClient();
+        const { data: space } = await svc
+          .from('spaces')
+          .select('unit_number, building_id, buildings(name, address_line1)')
+          .eq('id', space_id)
+          .single();
 
-      if (space && occupant.invite_token) {
-        const building = (space as any).buildings;
-        notifyResidentClaim({
-          occupantName: name,
-          occupantEmail: email,
-          buildingName: building?.name || building?.address_line1 || 'Your Building',
-          unitNumber: space.unit_number || 'N/A',
-          inviteToken: occupant.invite_token,
-        });
+        if (space && occupant.invite_token) {
+          const building = (space as any).buildings;
+          await notifyResidentClaim({
+            occupantName: name,
+            occupantEmail: email,
+            buildingName: building?.name || building?.address_line1 || 'Your Building',
+            unitNumber: space.unit_number || 'N/A',
+            inviteToken: occupant.invite_token,
+          });
 
-        // Mark invite as sent
-        await svc
-          .from('occupants')
-          .update({ invite_sent_at: new Date().toISOString() })
-          .eq('id', occupant.id);
+          // Mark invite as sent
+          await svc
+            .from('occupants')
+            .update({ invite_sent_at: new Date().toISOString() })
+            .eq('id', occupant.id);
+        }
+      } catch (emailErr) {
+        console.error('[create-occupant] Email notification error (non-blocking):', emailErr);
       }
-    } catch (emailErr) {
-      console.error('[create-occupant] Email notification error (non-blocking):', emailErr);
-    }
+    })();
 
     return ok(occupant, 201);
   } catch (e) {

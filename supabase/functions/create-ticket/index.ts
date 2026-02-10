@@ -73,6 +73,7 @@ const CreateTicketSchema = z.object({
 });
 
 Deno.serve(async (req: Request) => {
+  console.log('[create-ticket] Request received:', req.method);
   if (req.method === 'OPTIONS') return handleCors();
   if (req.method !== 'POST') return err('METHOD_NOT_ALLOWED', 'POST required', 405);
 
@@ -160,37 +161,38 @@ Deno.serve(async (req: Request) => {
     );
 
     // ─── Send notification email to Pro Roto (fire-and-forget) ───
-    try {
-      const svc = createServiceClient();
+    // Wrapped in an async IIFE that never blocks the response
+    (async () => {
+      try {
+        const svc = createServiceClient();
+        const [buildingRes, spaceRes, creatorRes] = await Promise.all([
+          svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
+          svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
+          svc.from('users').select('full_name, email').eq('id', userId).single(),
+        ]);
 
-      // Fetch building + space + creator for the email template
-      const [buildingRes, spaceRes, creatorRes] = await Promise.all([
-        svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
-        svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
-        svc.from('users').select('full_name, email').eq('id', userId).single(),
-      ]);
-
-      if (buildingRes.data && spaceRes.data && creatorRes.data) {
-        notifyNewTicket(svc, {
-          ticket_number: ticket.ticket_number,
-          id: ticket.id,
-          issue_type,
-          severity: finalSeverity,
-          status: 'new',
-          description,
-          assigned_technician: null,
-          scheduled_date: null,
-          scheduled_time_window: null,
-          quote_amount: null,
-          invoice_number: null,
-          building: buildingRes.data,
-          space: spaceRes.data,
-          created_by: creatorRes.data,
-        });
+        if (buildingRes.data && spaceRes.data && creatorRes.data) {
+          await notifyNewTicket(svc, {
+            ticket_number: ticket.ticket_number,
+            id: ticket.id,
+            issue_type,
+            severity: finalSeverity,
+            status: 'new',
+            description,
+            assigned_technician: null,
+            scheduled_date: null,
+            scheduled_time_window: null,
+            quote_amount: null,
+            invoice_number: null,
+            building: buildingRes.data,
+            space: spaceRes.data,
+            created_by: creatorRes.data,
+          });
+        }
+      } catch (emailErr) {
+        console.error('[create-ticket] Email notification error (non-blocking):', emailErr);
       }
-    } catch (emailErr) {
-      console.error('[create-ticket] Email notification error (non-blocking):', emailErr);
-    }
+    })();
 
     return ok({ ticket, severity_escalated: severityEscalated }, 201);
   } catch (e) {

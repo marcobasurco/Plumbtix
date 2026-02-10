@@ -147,33 +147,37 @@ Deno.serve(async (req: Request) => {
     );
 
     // ─── 8. Send invitation email via Resend (fire-and-forget) ───
-    // Look up inviter name + company name for the email template
-    const { data: inviter } = await svc
-      .from('users')
-      .select('full_name')
-      .eq('id', userId)
-      .single();
+    (async () => {
+      try {
+        const { data: inviter } = await svc
+          .from('users')
+          .select('full_name')
+          .eq('id', userId)
+          .single();
 
-    const { data: company } = await svc
-      .from('companies')
-      .select('name')
-      .eq('id', company_id)
-      .single();
+        const { data: company } = await svc
+          .from('companies')
+          .select('name')
+          .eq('id', company_id)
+          .single();
 
-    const ROLE_LABELS: Record<string, string> = {
-      pm_admin: 'Property Manager Admin',
-      pm_user: 'Property Manager User',
-    };
+        const ROLE_LABELS: Record<string, string> = {
+          pm_admin: 'Property Manager Admin',
+          pm_user: 'Property Manager User',
+        };
 
-    // Don't await — email failure shouldn't block the response
-    notifyInvitation({
-      recipientName: name,
-      recipientEmail: email,
-      companyName: company?.name || 'your company',
-      role: ROLE_LABELS[inviteRole] || inviteRole,
-      invitedByName: inviter?.full_name || 'Your administrator',
-      token: invitation.token,
-    });
+        await notifyInvitation({
+          recipientName: name,
+          recipientEmail: email,
+          companyName: company?.name || 'your company',
+          role: ROLE_LABELS[inviteRole] || inviteRole,
+          invitedByName: inviter?.full_name || 'Your administrator',
+          token: invitation.token,
+        });
+      } catch (emailErr) {
+        console.error('[send-invitation] Email notification error (non-blocking):', emailErr);
+      }
+    })();
 
     return ok({ invitation }, 201);
   } catch (e) {
