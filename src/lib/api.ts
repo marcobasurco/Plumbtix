@@ -30,8 +30,6 @@ import type {
   ResendInvitationResponse,
   UpdateOccupantRequest,
   UpdateOccupantResponse,
-  ApiSuccessResponse,
-  ApiErrorResponse,
 } from '@shared/types/api';
 
 const EDGE_BASE = import.meta.env.VITE_EDGE_BASE_URL;
