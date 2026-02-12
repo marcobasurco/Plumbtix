@@ -1,111 +1,140 @@
 // =============================================================================
 // Work Orders — Welcome Tour (Onboarding)
 // =============================================================================
-// Short welcome tour for new users after accepting an invite.
-// Highlights how to create a ticket and view status.
-// Uses react-joyride for step-by-step guided tour.
+// Custom step-by-step tour for new users after accepting an invite.
+// Pure React + Tailwind — no external tour library needed.
 // =============================================================================
 
 import { useState, useEffect } from 'react';
-import Joyride, { type Step, type CallBackProps, STATUS } from 'react-joyride';
 import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { X, ChevronRight, ChevronLeft, Ticket, Building2, Bell, Wrench } from 'lucide-react';
 
 const TOUR_COMPLETED_KEY = 'plumbtix_tour_completed';
 
-const TOUR_STEPS: Step[] = [
+interface TourStep {
+  title: string;
+  content: string;
+  icon: React.ReactNode;
+}
+
+const TOUR_STEPS: TourStep[] = [
   {
-    target: '.sidebar-nav',
-    content: 'Welcome to PlumbTix! Use the sidebar to navigate between different sections of the app.',
-    placement: 'right',
-    disableBeacon: true,
+    title: 'Welcome to PlumbTix!',
+    content: 'Use the sidebar on the left to navigate between sections — Tickets, Buildings, Analytics, and more.',
+    icon: <Wrench className="h-6 w-6 text-primary" />,
   },
   {
-    target: 'a[href*="tickets"]',
-    content: 'View all your work orders here. You can filter by status, severity, building, and more.',
-    placement: 'right',
+    title: 'View & Create Tickets',
+    content: 'Head to Tickets to see all work orders. Click "New Ticket" to submit a new plumbing request — select a building, describe the issue, and set the priority.',
+    icon: <Ticket className="h-6 w-6 text-blue-500" />,
   },
   {
-    target: 'a[href*="tickets/new"], button:has-text("New Ticket")',
-    content: 'Create a new work order by clicking "New Ticket". You\'ll select a building, describe the issue, and set the priority.',
-    placement: 'bottom',
+    title: 'Manage Buildings',
+    content: 'The Buildings section shows all properties. You can view units, occupants, and create tickets directly from any building.',
+    icon: <Building2 className="h-6 w-6 text-green-500" />,
   },
   {
-    target: 'a[href*="buildings"]',
-    content: 'Manage your buildings, units, and occupants here.',
-    placement: 'right',
-  },
-  {
-    target: '.content-header',
-    content: 'You\'re all set! Check the notification bell for updates on your tickets. Need help? Contact dispatch@proroto.com.',
-    placement: 'bottom',
+    title: 'Stay Updated',
+    content: 'Check the bell icon in the header for real-time notifications when ticket statuses change or new comments are added. You\'re all set!',
+    icon: <Bell className="h-6 w-6 text-orange-500" />,
   },
 ];
 
 export function WelcomeTour() {
   const { session } = useAuth();
-  const [run, setRun] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [step, setStep] = useState(0);
 
   useEffect(() => {
     if (!session) return;
 
-    // Check if tour was already completed
     const completed = localStorage.getItem(TOUR_COMPLETED_KEY);
     if (completed) return;
 
-    // Check if this is a new user (accepted invite in last 5 minutes)
     const params = new URLSearchParams(window.location.search);
     const justOnboarded = params.get('onboarded') === 'true';
 
     if (justOnboarded) {
-      // Small delay to let the UI render
-      const timer = setTimeout(() => setRun(true), 1000);
+      const timer = setTimeout(() => setVisible(true), 800);
       return () => clearTimeout(timer);
     }
   }, [session]);
 
-  const handleCallback = (data: CallBackProps) => {
-    const { status } = data;
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
-      setRun(false);
-      localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+  const dismiss = () => {
+    setVisible(false);
+    localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+  };
+
+  const next = () => {
+    if (step < TOUR_STEPS.length - 1) {
+      setStep(step + 1);
+    } else {
+      dismiss();
     }
   };
 
-  if (!run) return null;
+  const prev = () => {
+    if (step > 0) setStep(step - 1);
+  };
+
+  if (!visible) return null;
+
+  const current = TOUR_STEPS[step];
 
   return (
-    <Joyride
-      steps={TOUR_STEPS}
-      run={run}
-      continuous
-      showSkipButton
-      showProgress
-      disableOverlayClose
-      callback={handleCallback}
-      styles={{
-        options: {
-          primaryColor: '#2563eb',
-          zIndex: 10000,
-        },
-        tooltip: {
-          borderRadius: 12,
-          fontSize: 14,
-        },
-        buttonNext: {
-          borderRadius: 8,
-          padding: '8px 16px',
-        },
-        buttonBack: {
-          marginRight: 8,
-        },
-      }}
-      locale={{
-        back: 'Back',
-        close: 'Close',
-        last: 'Done',
-        next: 'Next',
-        skip: 'Skip Tour',
-      }}
-    />
+    <>
+      {/* Overlay */}
+      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={dismiss} />
+
+      {/* Tour Card */}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] w-[90vw] max-w-md">
+        <div className="bg-popover border border-border rounded-xl shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-2">
+            <div className="flex items-center gap-2.5">
+              {current.icon}
+              <span className="text-base font-bold">{current.title}</span>
+            </div>
+            <button onClick={dismiss} className="p-1 rounded-md hover:bg-muted transition-colors">
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="px-5 py-3 text-sm text-muted-foreground leading-relaxed">
+            {current.content}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-muted/30">
+            <div className="flex items-center gap-1.5">
+              {TOUR_STEPS.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === step ? 'w-4 bg-primary' : 'w-1.5 bg-muted-foreground/30'
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              {step > 0 && (
+                <Button variant="ghost" size="sm" onClick={prev}>
+                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Back
+                </Button>
+              )}
+              <Button size="sm" onClick={next}>
+                {step < TOUR_STEPS.length - 1 ? (
+                  <>Next <ChevronRight className="h-3.5 w-3.5 ml-1" /></>
+                ) : (
+                  'Get Started'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
