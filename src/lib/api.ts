@@ -121,21 +121,44 @@ async function callEdge<T>(
       };
     }
 
-    const json = await res.json() as ApiSuccessResponse<T> | ApiErrorResponse;
+    const json = await res.json();
 
     if (!res.ok || !json.ok) {
-      const err = (json as ApiErrorResponse).error;
+      // Our edge functions return: { ok: false, error: { code, message } }
+      // Supabase gateway errors return: { error: "string" } or { msg: "string" }
+      // Handle all shapes:
+      const errObj = json?.error;
+      let code = 'UNKNOWN';
+      let message = `Server error (HTTP ${res.status})`;
+
+      if (errObj && typeof errObj === 'object') {
+        // Our standard format: { error: { code, message } }
+        code = errObj.code ?? 'UNKNOWN';
+        message = errObj.message ?? `Server error (HTTP ${res.status})`;
+      } else if (typeof errObj === 'string') {
+        // Supabase gateway: { error: "Edge Function returned..." }
+        code = 'GATEWAY_ERROR';
+        message = errObj;
+      } else if (typeof json?.msg === 'string') {
+        // Supabase gateway alt format: { msg: "..." }
+        code = 'GATEWAY_ERROR';
+        message = json.msg;
+      } else if (typeof json?.message === 'string') {
+        // Generic format: { message: "..." }
+        code = 'GATEWAY_ERROR';
+        message = json.message;
+      } else {
+        // Completely unknown shape — log for debugging
+        console.warn('[api] Unrecognized error response:', res.status, JSON.stringify(json).slice(0, 200));
+      }
+
       return {
         ok: false,
-        error: {
-          code: err?.code ?? 'UNKNOWN',
-          message: err?.message ?? 'Unknown error',
-          status: res.status,
-        },
+        error: { code, message, status: res.status },
       };
     }
 
-    return { ok: true, data: (json as ApiSuccessResponse<T>).data };
+    return { ok: true, data: json.data };
   } catch (e) {
     return {
       ok: false,

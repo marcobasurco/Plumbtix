@@ -80,10 +80,16 @@ Deno.serve(async (req: Request) => {
       });
 
     if (authErr) {
-      if (authErr.message?.includes('already been registered')) {
-        return conflict('An account with this email already exists');
+      const msg = (authErr.message ?? '').toLowerCase();
+      if (msg.includes('already') || msg.includes('registered') || msg.includes('exists') || msg.includes('duplicate')) {
+        return conflict('An account with this email already exists. Try signing in instead.');
       }
       console.error('[claim-resident] Auth create failed:', authErr.message);
+      return serverError('Failed to create user account');
+    }
+
+    if (!authData?.user?.id) {
+      console.error('[claim-resident] Auth create returned no user');
       return serverError('Failed to create user account');
     }
 
@@ -99,6 +105,7 @@ Deno.serve(async (req: Request) => {
         phone: occupant.phone ?? null,
         role: 'resident',
         company_id: null,           // Residents access via occupant→space chain
+        sms_notifications_enabled: false,
       });
 
     if (userErr) {

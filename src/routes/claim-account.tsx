@@ -22,31 +22,37 @@ export function ClaimAccountPage() {
     setError(null);
     setSubmitting(true);
 
-    const result = await claimResident({
-      invite_token: token,
-      email: email.trim(),
-      password,
-    });
-
-    if (!result.ok) {
-      setError(result.error.message);
-      setSubmitting(false);
-      return;
-    }
-
-    if (result.data.session) {
-      await supabase.auth.setSession({
-        access_token: result.data.session.access_token,
-        refresh_token: result.data.session.refresh_token,
+    try {
+      const result = await claimResident({
+        invite_token: token,
+        email: email.trim(),
+        password,
       });
+
+      if (!result.ok) {
+        setError(result.error.message);
+        setSubmitting(false);
+        return;
+      }
+
+      if (result.data.session) {
+        await supabase.auth.setSession({
+          access_token: result.data.session.access_token,
+          refresh_token: result.data.session.refresh_token,
+        });
+      }
+
+      setSuccess(true);
+      setSubmitting(false);
+
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 1500);
+    } catch (e) {
+      console.error('[claim-account] handleSubmit error:', e);
+      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+      setSubmitting(false);
     }
-
-    setSuccess(true);
-    setSubmitting(false);
-
-    setTimeout(() => {
-      navigate('/', { replace: true });
-    }, 1500);
   };
 
   if (!token) {

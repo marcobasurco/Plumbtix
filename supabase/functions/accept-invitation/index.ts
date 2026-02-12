@@ -90,11 +90,17 @@ Deno.serve(async (req: Request) => {
       });
 
     if (authErr) {
-      // Duplicate email in auth.users
-      if (authErr.message?.includes('already been registered')) {
-        return conflict('An account with this email already exists');
+      // Duplicate email in auth.users — match multiple Supabase error message variants
+      const msg = (authErr.message ?? '').toLowerCase();
+      if (msg.includes('already') || msg.includes('registered') || msg.includes('exists') || msg.includes('duplicate')) {
+        return conflict('An account with this email already exists. Try signing in instead.');
       }
       console.error('[accept-invitation] Auth create failed:', authErr.message);
+      return serverError('Failed to create user account');
+    }
+
+    if (!authData?.user?.id) {
+      console.error('[accept-invitation] Auth create returned no user');
       return serverError('Failed to create user account');
     }
 
@@ -110,6 +116,7 @@ Deno.serve(async (req: Request) => {
         phone: phone ?? null,
         role: invitation.role,           // pm_admin or pm_user
         company_id: invitation.company_id,
+        sms_notifications_enabled: false,
       });
 
     if (userErr) {
