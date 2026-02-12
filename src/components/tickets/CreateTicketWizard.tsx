@@ -395,7 +395,7 @@ export function CreateTicketWizard() {
                   style={{
                     ...optionCard,
                     ...(state.severity === sev ? selectedCard : {}),
-                    ...(sev === 'emergency' ? { borderColor: '#fca5a5' } : {}),
+                    ...(sev === 'emergency' ? { borderColor: 'hsl(var(--destructive))' } : {}),
                   }}
                 >
                   <strong>{SEVERITY_LABELS[sev]}</strong>
@@ -476,19 +476,19 @@ export function CreateTicketWizard() {
               {files.length > 0 && (
                 <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {files.map((sf, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', padding: '4px 8px', background: sf.error ? '#fef2f2' : '#f9fafb', borderRadius: '4px' }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', padding: '4px 8px', background: sf.error ? 'hsl(var(--destructive) / 0.1)' : 'hsl(var(--muted))', borderRadius: '4px', color: 'hsl(var(--foreground))' }}>
                       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {sf.file.name}
-                        <span style={{ color: '#9ca3af', marginLeft: '6px' }}>
+                        <span style={{ color: 'hsl(var(--muted-foreground))', marginLeft: '6px' }}>
                           ({(sf.file.size / 1024).toFixed(0)} KB)
                         </span>
                       </span>
-                      {sf.error && <span style={{ color: '#991b1b', fontSize: '0.8rem', flexShrink: 0 }}>{sf.error}</span>}
+                      {sf.error && <span style={{ color: 'hsl(var(--destructive))', fontSize: '0.8rem', flexShrink: 0 }}>{sf.error}</span>}
                       <button type="button" onClick={() => removeFile(i)} style={removeBtn}>✕</button>
                     </div>
                   ))}
                   {files.some((f) => f.error) && (
-                    <p style={{ color: '#991b1b', fontSize: '0.8rem', marginTop: '4px' }}>
+                    <p style={{ color: 'hsl(var(--destructive))', fontSize: '0.8rem', marginTop: '4px' }}>
                       Files with errors will be skipped during upload.
                     </p>
                   )}
@@ -553,7 +553,7 @@ export function CreateTicketWizard() {
                         {up.status === 'pending' && '○'}
                       </span>
                       <span style={{ flex: 1 }}>{up.fileName}</span>
-                      <span style={{ color: up.status === 'failed' ? '#991b1b' : '#6b7280', fontSize: '0.8rem' }}>
+                      <span style={{ color: up.status === 'failed' ? 'hsl(var(--destructive))' : 'hsl(var(--muted-foreground))', fontSize: '0.8rem' }}>
                         {up.status === 'compressing' && `Compressing${up.compressPercent != null ? ` ${up.compressPercent}%` : '…'}`}
                         {up.status === 'uploading' && 'Uploading…'}
                         {up.status === 'registering' && 'Registering…'}
@@ -563,14 +563,14 @@ export function CreateTicketWizard() {
                       </span>
                     </div>
                     {up.status === 'compressing' && up.compressPercent != null && (
-                      <div style={{ marginTop: '4px', marginLeft: '24px', height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${up.compressPercent}%`, background: '#3b82f6', borderRadius: '2px', transition: 'width 0.3s' }} />
+                      <div style={{ marginTop: '4px', marginLeft: '24px', height: '4px', background: 'hsl(var(--border))', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${up.compressPercent}%`, background: 'hsl(var(--primary))', borderRadius: '2px', transition: 'width 0.3s' }} />
                       </div>
                     )}
                   </div>
                 ))}
                 {uploadProgress.some((u) => u.status === 'failed') && (
-                  <p style={{ color: '#92400e', fontSize: '0.8rem', marginTop: '8px', background: '#fef3c7', padding: '8px', borderRadius: '4px' }}>
+                  <p style={{ color: 'hsl(var(--foreground))', fontSize: '0.8rem', marginTop: '8px', background: 'hsl(var(--muted))', padding: '8px', borderRadius: '4px', border: '1px solid hsl(var(--border))' }}>
                     Some uploads failed. The ticket was created successfully — you can retry from the ticket detail page.
                   </p>
                 )}
@@ -597,7 +597,7 @@ export function CreateTicketWizard() {
             key={s}
             style={{
               flex: 1, height: '4px', borderRadius: '2px',
-              background: s <= step ? '#2563eb' : '#e5e7eb',
+              background: s <= step ? 'hsl(var(--primary))' : 'hsl(var(--border))',
               transition: 'background 0.2s',
             }}
           />
@@ -641,10 +641,10 @@ export function CreateTicketWizard() {
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
-const stepTitle: React.CSSProperties = { fontSize: '1.15rem', marginBottom: '16px' };
-const muted: React.CSSProperties = { color: '#6b7280', fontSize: '0.85rem' };
+const stepTitle: React.CSSProperties = { fontSize: '1.15rem', marginBottom: '16px', color: 'hsl(var(--foreground))' };
+const muted: React.CSSProperties = { color: 'hsl(var(--muted-foreground))', fontSize: '0.85rem' };
 const backLink: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#2563eb',
+  background: 'none', border: 'none', color: 'hsl(var(--primary))',
   cursor: 'pointer', fontSize: '0.85rem', padding: 0, marginBottom: '12px',
 };
 const progressBar: React.CSSProperties = {
@@ -656,42 +656,44 @@ const optionGrid: React.CSSProperties = {
 };
 const optionCard: React.CSSProperties = {
   padding: '14px 16px', textAlign: 'left',
-  background: '#fff', border: '2px solid #e5e7eb', borderRadius: '8px',
+  background: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))',
+  border: '2px solid hsl(var(--border))', borderRadius: '8px',
   cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
   fontSize: '0.9rem', minHeight: '44px',
   WebkitTapHighlightColor: 'transparent',
 };
 const selectedCard: React.CSSProperties = {
-  borderColor: '#2563eb', background: '#eff6ff',
+  borderColor: 'hsl(var(--primary))', background: 'hsl(var(--accent))',
 };
 const optionSub: React.CSSProperties = {
-  fontSize: '0.8rem', color: '#6b7280', marginTop: '2px',
+  fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', marginTop: '2px',
 };
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px',
-  border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '1rem',
-  minHeight: '44px',
+  border: '1px solid hsl(var(--input))', borderRadius: '8px', fontSize: '1rem',
+  minHeight: '44px', background: 'hsl(var(--background))', color: 'hsl(var(--foreground))',
 };
 const radioLabel: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: '6px',
   fontSize: '0.9rem', cursor: 'pointer', minHeight: '44px',
+  color: 'hsl(var(--foreground))',
 };
 const removeBtn: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#9ca3af',
+  background: 'none', border: 'none', color: 'hsl(var(--muted-foreground))',
   cursor: 'pointer', fontSize: '0.9rem', padding: '4px',
   minWidth: '44px', minHeight: '44px', display: 'flex',
   alignItems: 'center', justifyContent: 'center',
 };
 const summaryBox: React.CSSProperties = {
-  background: '#f9fafb', border: '1px solid #e5e7eb',
-  borderRadius: '8px', padding: '16px',
+  background: 'hsl(var(--muted))', border: '1px solid hsl(var(--border))',
+  borderRadius: '8px', padding: '16px', color: 'hsl(var(--foreground))',
 };
 const dlStyle: React.CSSProperties = {
   display: 'grid', gridTemplateColumns: 'auto 1fr',
   gap: '6px 12px', fontSize: '0.9rem', margin: 0,
-  wordBreak: 'break-word',
+  wordBreak: 'break-word', color: 'hsl(var(--foreground))',
 };
 const navRow: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: '12px',
-  marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb',
+  marginTop: '24px', paddingTop: '16px', borderTop: '1px solid hsl(var(--border))',
 };

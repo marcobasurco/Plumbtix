@@ -100,11 +100,24 @@ async function callEdge<T>(
   }
 
   try {
-    const res = await fetch(url.toString(), {
+    let res = await fetch(url.toString(), {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
+
+    // If 401, try refreshing the session and retry once
+    if (res.status === 401 && requireAuth) {
+      const { data: refreshData } = await supabase.auth.refreshSession();
+      if (refreshData?.session?.access_token) {
+        headers['Authorization'] = `Bearer ${refreshData.session.access_token}`;
+        res = await fetch(url.toString(), {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+        });
+      }
+    }
 
     // Handle non-JSON responses (e.g., Kong HTML error pages)
     const contentType = res.headers.get('content-type') ?? '';
