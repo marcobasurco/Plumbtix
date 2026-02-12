@@ -13,7 +13,6 @@ import { useAuth } from '@/lib/auth';
 import { ROLE_LABELS } from '@shared/types/enums';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -27,7 +26,7 @@ import {
 import {
   LayoutDashboard, Ticket, Building2, Users2, Kanban,
   LogOut, Menu, Wrench, Briefcase, Moon, Sun, BarChart3,
-  FileSpreadsheet, ChevronRight, Settings,
+  FileSpreadsheet, ChevronRight,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 
