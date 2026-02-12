@@ -6,7 +6,7 @@
 // Mobile-responsive: stacks to single column on small screens.
 // =============================================================================
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchTicketDetail, type TicketDetailRow } from '@/lib/tickets';
 import { useAuth } from '@/lib/auth';
@@ -22,12 +22,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ISSUE_TYPE_LABELS } from '@shared/types/enums';
-import type { TicketStatus } from '@shared/types/enums';
+import type { TicketStatus, UserRole } from '@shared/types/enums';
 import { useRealtime } from '@/hooks/useRealtime';
+import { toast } from 'sonner';
 import {
   ChevronLeft, FileText, MapPin, Wrench, Calendar,
-  User, Phone, KeyRound, Clock,
+  User, Phone, KeyRound, Clock, Printer, Download,
 } from 'lucide-react';
+import { TicketReport } from './TicketReport';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('en-US', {
@@ -97,13 +99,15 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
 export function TicketDetail() {
   const { ticketId } = useParams<{ ticketId: string }>();
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, profile } = useAuth();
   const isAdmin = role === 'proroto_admin';
 
   const [ticket, setTicket] = useState<TicketDetailRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [printReady, setPrintReady] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!ticketId) return;
@@ -129,6 +133,34 @@ export function TicketDetail() {
     load();
     setRefreshKey((k) => k + 1);
   };
+
+  // ---------------------------------------------------------------------------
+  // Print / PDF logic
+  // ---------------------------------------------------------------------------
+  // Visible to: pm_admin, pm_user, proroto_admin (always),
+  //             resident (only if they submitted the ticket)
+  const canPrint = (() => {
+    if (!role || !ticket) return false;
+    if (role === 'proroto_admin' || role === 'pm_admin' || role === 'pm_user') return true;
+    if (role === 'resident' && profile?.id && ticket.created_by?.id === profile.id) return true;
+    return false;
+  })();
+
+  const handlePrint = useCallback(() => {
+    setPrintReady(true);
+    // TicketReport's onReady callback fires window.print()
+  }, []);
+
+  const handleReportReady = useCallback(() => {
+    window.print();
+    // Reset after print dialog closes
+    const cleanup = () => {
+      setPrintReady(false);
+      toast.success('Work order sent to printer');
+    };
+    // afterprint fires when dialog closes (print or cancel)
+    window.addEventListener('afterprint', cleanup, { once: true });
+  }, []);
 
   if (loading) {
     return (
@@ -167,7 +199,31 @@ export function TicketDetail() {
             Opened {formatDateTime(ticket.created_at)} by {ticket.created_by?.full_name ?? 'Unknown'}
           </p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
+          {canPrint && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handlePrint}
+                disabled={printReady}
+              >
+                <Printer className="h-3.5 w-3.5" />
+                {printReady ? 'Preparing…' : 'Print Work Order'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handlePrint}
+                disabled={printReady}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download PDF
+              </Button>
+            </>
+          )}
           <SeverityBadge severity={ticket.severity} />
           <StatusBadge status={ticket.status} />
         </div>
@@ -366,6 +422,17 @@ export function TicketDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Hidden print report — revealed by @media print CSS */}
+      {printReady && role && (
+        <div ref={reportRef} className="print-report">
+          <TicketReport
+            ticket={ticket}
+            userRole={role as UserRole}
+            onReady={handleReportReady}
+          />
+        </div>
+      )}
     </PageTransition>
   );
 }
