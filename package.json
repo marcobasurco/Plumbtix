@@ -1,8 +1,8 @@
 {
   "name": "work-orders",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
-  "description": "Pro Roto Inc. — Work Orders Portal (PlumbTix)",
+  "description": "PlumbTix \u2014 Work Order Management by Pro Roto Inc.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -24,6 +24,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-alert-dialog": "^1.1.4",
+    "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-label": "^2.1.1",

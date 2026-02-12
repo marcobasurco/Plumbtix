@@ -1,140 +1,69 @@
-// =============================================================================
-// Work Orders — Welcome Tour (Onboarding)
-// =============================================================================
-// Custom step-by-step tour for new users after accepting an invite.
-// Pure React + Tailwind — no external tour library needed.
-// =============================================================================
-
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { X, ChevronRight, ChevronLeft, Ticket, Building2, Bell, Wrench } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Wrench, Ticket, Building2, Bell } from 'lucide-react';
 
-const TOUR_COMPLETED_KEY = 'plumbtix_tour_completed';
-
-interface TourStep {
-  title: string;
-  content: string;
-  icon: React.ReactNode;
-}
-
-const TOUR_STEPS: TourStep[] = [
-  {
-    title: 'Welcome to PlumbTix!',
-    content: 'Use the sidebar on the left to navigate between sections — Tickets, Buildings, Analytics, and more.',
-    icon: <Wrench className="h-6 w-6 text-primary" />,
-  },
-  {
-    title: 'View & Create Tickets',
-    content: 'Head to Tickets to see all work orders. Click "New Ticket" to submit a new plumbing request — select a building, describe the issue, and set the priority.',
-    icon: <Ticket className="h-6 w-6 text-blue-500" />,
-  },
-  {
-    title: 'Manage Buildings',
-    content: 'The Buildings section shows all properties. You can view units, occupants, and create tickets directly from any building.',
-    icon: <Building2 className="h-6 w-6 text-green-500" />,
-  },
-  {
-    title: 'Stay Updated',
-    content: 'Check the bell icon in the header for real-time notifications when ticket statuses change or new comments are added. You\'re all set!',
-    icon: <Bell className="h-6 w-6 text-orange-500" />,
-  },
+const STEPS = [
+  { icon: Wrench, title: 'Welcome to PlumbTix', body: 'Manage work orders, track tickets, and keep your buildings maintained — all in one place.' },
+  { icon: Ticket, title: 'Create Tickets', body: 'Submit work orders quickly with our step-by-step wizard. Add photos, set severity, and track progress.' },
+  { icon: Building2, title: 'Manage Buildings', body: 'View your properties, units, and common areas. Everything is organized by building.' },
+  { icon: Bell, title: 'Stay Notified', body: 'Get real-time notifications when tickets are updated. Never miss an important change.' },
 ];
 
 export function WelcomeTour() {
-  const { session } = useAuth();
-  const [visible, setVisible] = useState(false);
+  const [params] = useSearchParams();
   const [step, setStep] = useState(0);
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    if (!session) return;
-
-    const completed = localStorage.getItem(TOUR_COMPLETED_KEY);
-    if (completed) return;
-
-    const params = new URLSearchParams(window.location.search);
-    const justOnboarded = params.get('onboarded') === 'true';
-
-    if (justOnboarded) {
-      const timer = setTimeout(() => setVisible(true), 800);
-      return () => clearTimeout(timer);
+    if (params.get('onboarded') === 'true' && !localStorage.getItem('plumbtix_tour_completed')) {
+      setShow(true);
     }
-  }, [session]);
+  }, [params]);
+
+  if (!show) return null;
+
+  const current = STEPS[step];
+  const Icon = current.icon;
 
   const dismiss = () => {
-    setVisible(false);
-    localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+    localStorage.setItem('plumbtix_tour_completed', 'true');
+    setShow(false);
   };
-
-  const next = () => {
-    if (step < TOUR_STEPS.length - 1) {
-      setStep(step + 1);
-    } else {
-      dismiss();
-    }
-  };
-
-  const prev = () => {
-    if (step > 0) setStep(step - 1);
-  };
-
-  if (!visible) return null;
-
-  const current = TOUR_STEPS[step];
 
   return (
-    <>
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={dismiss} />
-
-      {/* Tour Card */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] w-[90vw] max-w-md">
-        <div className="bg-popover border border-border rounded-xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-4 pb-2">
-            <div className="flex items-center gap-2.5">
-              {current.icon}
-              <span className="text-base font-bold">{current.title}</span>
-            </div>
-            <button onClick={dismiss} className="p-1 rounded-md hover:bg-muted transition-colors">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 animate-in">
+      <Card className="w-full max-w-sm">
+        <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Icon className="h-7 w-7" />
           </div>
-
-          {/* Body */}
-          <div className="px-5 py-3 text-sm text-muted-foreground leading-relaxed">
-            {current.content}
+          <div>
+            <h3 className="text-lg font-semibold">{current.title}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{current.body}</p>
           </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-muted/30">
-            <div className="flex items-center gap-1.5">
-              {TOUR_STEPS.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === step ? 'w-4 bg-primary' : 'w-1.5 bg-muted-foreground/30'
-                  }`}
-                />
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              {step > 0 && (
-                <Button variant="ghost" size="sm" onClick={prev}>
-                  <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Back
-                </Button>
-              )}
-              <Button size="sm" onClick={next}>
-                {step < TOUR_STEPS.length - 1 ? (
-                  <>Next <ChevronRight className="h-3.5 w-3.5 ml-1" /></>
-                ) : (
-                  'Get Started'
-                )}
-              </Button>
-            </div>
+          {/* Progress dots */}
+          <div className="flex gap-1.5">
+            {STEPS.map((_, i) => (
+              <span key={i} className={`h-1.5 w-1.5 rounded-full transition-colors ${i === step ? 'bg-primary' : 'bg-muted'}`} />
+            ))}
           </div>
-        </div>
-      </div>
-    </>
+          <div className="flex w-full gap-2">
+            {step > 0 && (
+              <Button variant="outline" className="flex-1" onClick={() => setStep(step - 1)}>Back</Button>
+            )}
+            {step < STEPS.length - 1 ? (
+              <Button className="flex-1" onClick={() => setStep(step + 1)}>Next</Button>
+            ) : (
+              <Button className="flex-1" onClick={dismiss}>Get Started</Button>
+            )}
+          </div>
+          {step === 0 && (
+            <button onClick={dismiss} className="text-xs text-muted-foreground hover:text-foreground">Skip tour</button>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

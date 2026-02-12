@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 
 interface ErrorBannerProps {
   message: string | null;
@@ -6,28 +7,41 @@ interface ErrorBannerProps {
   variant?: 'error' | 'success' | 'info';
 }
 
+const VARIANTS = {
+  error: {
+    wrapper: 'bg-destructive/10 text-destructive border-destructive/20',
+    icon: AlertCircle,
+  },
+  success: {
+    wrapper: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
+    icon: CheckCircle2,
+  },
+  info: {
+    wrapper: 'bg-primary/10 text-primary border-primary/20',
+    icon: Info,
+  },
+};
+
 export function ErrorBanner({ message, onDismiss, variant = 'error' }: ErrorBannerProps) {
   const [dismissed, setDismissed] = useState(false);
-
   useEffect(() => { setDismissed(false); }, [message]);
-
   if (!message || dismissed) return null;
 
-  const cls = variant === 'success' ? 'alert-success' : variant === 'info' ? 'alert-info' : 'alert-error';
-  const icons: Record<string, string> = {
-    error: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z',
-    success: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
-    info: 'M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z',
-  };
+  const v = VARIANTS[variant];
+  const Icon = v.icon;
 
   return (
-    <div className={`alert ${cls}`} role="alert">
-      <svg className="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d={icons[variant]} />
-      </svg>
-      <span style={{ flex: 1 }}>{message}</span>
+    <div className={`flex items-center gap-2.5 text-sm border rounded-lg px-4 py-3 mb-4 ${v.wrapper}`} role="alert">
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="flex-1">{message}</span>
       {onDismiss && (
-        <button className="alert-dismiss" onClick={() => { setDismissed(true); onDismiss(); }} aria-label="Dismiss">×</button>
+        <button
+          onClick={() => { setDismissed(true); onDismiss(); }}
+          className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+          aria-label="Dismiss"
+        >
+          <X className="h-4 w-4" />
+        </button>
       )}
     </div>
   );

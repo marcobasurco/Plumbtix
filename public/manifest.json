@@ -1,12 +1,12 @@
 {
   "name": "PlumbTix Work Orders",
   "short_name": "PlumbTix",
-  "description": "Work order management for Pro Roto plumbing services",
+  "description": "Work Order Management for Plumbing Services",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
+  "background_color": "#0f172a",
   "theme_color": "#2563eb",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -17,14 +17,6 @@
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
-  ],
-  "categories": ["business", "productivity"],
-  "scope": "/"
+  ]
 }
