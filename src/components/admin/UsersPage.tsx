@@ -11,6 +11,7 @@ import { sendInvitation, resendInvitation } from '@/lib/api';
 import { ROLE_LABELS, INVITATION_ROLES } from '@shared/types/enums';
 import type { InvitationRole } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
@@ -57,6 +58,12 @@ export function UsersPage() {
   const [editName, setEditName] = useState('');
   const [resending, setResending] = useState<string | null>(null);
 
+  // Confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmDesc, setConfirmDesc] = useState('');
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -78,18 +85,24 @@ export function UsersPage() {
 
   const handleInvite = async (e: FormEvent) => {
     e.preventDefault();
-    setInvSubmitting(true); setInvError(null); setInvSuccess(null);
-    const result = await sendInvitation({
-      company_id: invCompany, email: invEmail.trim(),
-      name: invName.trim(), role: invRole,
+    // Show confirmation dialog before sending
+    setConfirmTitle('Send Invitation');
+    setConfirmDesc(`You are about to send 1 invitation email to:\n\n${invEmail.trim()}\n\nDo you want to proceed?`);
+    setConfirmAction(() => async () => {
+      setInvSubmitting(true); setInvError(null); setInvSuccess(null);
+      const result = await sendInvitation({
+        company_id: invCompany, email: invEmail.trim(),
+        name: invName.trim(), role: invRole,
+      });
+      if (result.ok) {
+        const inv = result.data.invitation;
+        toast.success(`Invitation sent to ${inv.email}`);
+        setInvSuccess(`Invitation sent to ${inv.email}.\nToken: ${inv.token}\nAccept URL: ${window.location.origin}/accept-invite?token=${inv.token}`);
+        setInvEmail(''); setInvName(''); load();
+      } else { setInvError(result.error.message); }
+      setInvSubmitting(false);
     });
-    if (result.ok) {
-      const inv = result.data.invitation;
-      toast.success(`Invitation sent to ${inv.email}`);
-      setInvSuccess(`Invitation sent to ${inv.email}.\nToken: ${inv.token}\nAccept URL: ${window.location.origin}/accept-invite?token=${inv.token}`);
-      setInvEmail(''); setInvName(''); load();
-    } else { setInvError(result.error.message); }
-    setInvSubmitting(false);
+    setConfirmOpen(true);
   };
 
   const pendingInvitations = invitations.filter((i) => !i.accepted_at);
@@ -108,22 +121,28 @@ export function UsersPage() {
   };
 
   const handleResend = async (inv: InvitationRow, newEmail?: string, newName?: string) => {
-    setResending(inv.id);
-    const body: { invitation_id: string; email?: string; name?: string } = {
-      invitation_id: inv.id,
-    };
-    if (newEmail && newEmail.trim().toLowerCase() !== inv.email.toLowerCase()) body.email = newEmail.trim();
-    if (newName && newName.trim() !== inv.name) body.name = newName.trim();
+    const targetEmail = newEmail || inv.email;
+    setConfirmTitle('Resend Invitation');
+    setConfirmDesc(`You are about to resend 1 invitation email to:\n\n${targetEmail}\n\nDo you want to proceed?`);
+    setConfirmAction(() => async () => {
+      setResending(inv.id);
+      const body: { invitation_id: string; email?: string; name?: string } = {
+        invitation_id: inv.id,
+      };
+      if (newEmail && newEmail.trim().toLowerCase() !== inv.email.toLowerCase()) body.email = newEmail.trim();
+      if (newName && newName.trim() !== inv.name) body.name = newName.trim();
 
-    const result = await resendInvitation(body);
-    if (result.ok) {
-      toast.success(`Invitation resent to ${newEmail || inv.email}`);
-      cancelEditing();
-      load();
-    } else {
-      toast.error(result.error.message);
-    }
-    setResending(null);
+      const result = await resendInvitation(body);
+      if (result.ok) {
+        toast.success(`Invitation resent to ${newEmail || inv.email}`);
+        cancelEditing();
+        load();
+      } else {
+        toast.error(result.error.message);
+      }
+      setResending(null);
+    });
+    setConfirmOpen(true);
   };
 
   return (
@@ -382,6 +401,22 @@ export function UsersPage() {
           )}
         </>
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          setConfirmOpen(open);
+          if (!open) setConfirmAction(null);
+        }}
+        title={confirmTitle}
+        description={confirmDesc}
+        confirmLabel="Send"
+        onConfirm={() => {
+          setConfirmOpen(false);
+          if (confirmAction) confirmAction();
+        }}
+      />
     </div>
   );
 }

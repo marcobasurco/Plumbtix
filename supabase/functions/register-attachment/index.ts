@@ -38,7 +38,7 @@ const RegisterAttachmentSchema = z.object({
   file_path: z.string().regex(FILE_PATH_REGEX, 'file_path must be tickets/{ticket_id}/{filename}'),
   file_name: z.string().min(1).max(255),
   file_type: z.string().min(1).max(100),
-  file_size: z.number().int().positive(),
+  file_size: z.number().int().positive().max(10 * 1024 * 1024, 'File exceeds 10MB limit'),
 });
 
 Deno.serve(async (req: Request) => {
@@ -76,7 +76,17 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ─── 4. INSERT attachment metadata (RLS enforces access) ───
+    // ─── 4. Check attachment count limit (max 5 per ticket) ───
+    const { count: existingCount, error: countErr } = await userClient
+      .from('ticket_attachments')
+      .select('id', { count: 'exact', head: true })
+      .eq('ticket_id', ticket_id);
+
+    if (!countErr && existingCount !== null && existingCount >= 5) {
+      return err('LIMIT_EXCEEDED', 'Maximum 5 attachments per ticket', 400);
+    }
+
+    // ─── 5. INSERT attachment metadata (RLS enforces access) ───
     const { data: attachment, error: insertErr } = await userClient
       .from('ticket_attachments')
       .insert({

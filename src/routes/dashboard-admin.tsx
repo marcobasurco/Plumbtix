@@ -13,6 +13,7 @@ import { UsersPage } from '@/components/admin/UsersPage';
 import { DispatchBoard } from '@/components/admin/DispatchBoard';
 import { AnalyticsPage } from '@/components/admin/AnalyticsPage';
 import { ImportPage } from '@/components/admin/ImportPage';
+import { ReportingDashboard } from '@/components/admin/ReportingDashboard';
 
 export function AdminDashboard() {
   return (
@@ -34,6 +35,7 @@ export function AdminDashboard() {
         <Route path="dispatch" element={<DispatchBoard />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="import" element={<ImportPage />} />
+        <Route path="reports" element={<ReportingDashboard />} />
       </Routes>
     </DashboardLayout>
   );

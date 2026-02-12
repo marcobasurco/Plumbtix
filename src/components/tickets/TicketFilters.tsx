@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { TICKET_STATUSES, TICKET_SEVERITIES, STATUS_LABELS, SEVERITY_LABELS } from '@shared/types/enums';
 import type { TicketListFilters, BuildingOption } from '@/lib/tickets';
 import { fetchBuildingOptions } from '@/lib/tickets';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface TicketFiltersProps {
   filters: TicketListFilters;
@@ -16,6 +16,18 @@ export function TicketFilters({ filters, onChange }: TicketFiltersProps) {
 
   const update = (patch: Partial<TicketListFilters>) =>
     onChange({ ...filters, ...patch });
+
+  const hasActiveFilters = !!(
+    (filters.status && filters.status !== 'all') ||
+    (filters.severity && filters.severity !== 'all') ||
+    filters.building_id ||
+    filters.search ||
+    filters.date_from ||
+    filters.date_to
+  );
+
+  const clearFilters = () =>
+    onChange({});
 
   return (
     <div className="ticket-filters">
@@ -49,10 +61,40 @@ export function TicketFilters({ filters, onChange }: TicketFiltersProps) {
         <div className="ticket-filter-search-wrap">
           <Search className="ticket-filter-search-icon" />
           <input type="text" className="form-input ticket-filter-search"
-            placeholder="Search # or description…"
+            placeholder="Search tickets…"
             value={filters.search ?? ''}
             onChange={(e) => update({ search: e.target.value })} />
         </div>
+      </div>
+
+      {/* Date range filter */}
+      <div className="ticket-filters-row">
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="text-xs text-muted-foreground whitespace-nowrap">From:</label>
+          <input
+            type="date"
+            className="form-input text-sm"
+            value={filters.date_from ?? ''}
+            onChange={(e) => update({ date_from: e.target.value || undefined })}
+          />
+          <label className="text-xs text-muted-foreground whitespace-nowrap">To:</label>
+          <input
+            type="date"
+            className="form-input text-sm"
+            value={filters.date_to ?? ''}
+            onChange={(e) => update({ date_to: e.target.value || undefined })}
+          />
+        </div>
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+          >
+            <X className="h-3 w-3" /> Clear filters
+          </button>
+        )}
       </div>
     </div>
   );

@@ -19,6 +19,9 @@ export interface TicketListFilters {
   severity?: TicketSeverity | 'all';
   building_id?: string;
   search?: string;
+  date_from?: string;
+  date_to?: string;
+  priority?: string;
 }
 
 export interface TicketListRow {
@@ -80,11 +83,24 @@ export async function fetchTicketList(filters: TicketListFilters = {}) {
     query = query.eq('building_id', filters.building_id);
   }
   if (filters.search) {
-    query = query.or(
-      `description.ilike.%${filters.search}%,ticket_number.eq.${
-        parseInt(filters.search) || 0
-      }`,
-    );
+    const searchTerm = filters.search.trim();
+    const ticketNum = parseInt(searchTerm);
+    if (ticketNum && ticketNum.toString() === searchTerm) {
+      // Exact ticket number match
+      query = query.eq('ticket_number', ticketNum);
+    } else {
+      // Full-text search using tsvector
+      const tsQuery = searchTerm.split(/\s+/).filter(Boolean).join(' & ');
+      query = query.or(
+        `search_vector.fts.${tsQuery},description.ilike.%${searchTerm}%`,
+      );
+    }
+  }
+  if (filters.date_from) {
+    query = query.gte('created_at', filters.date_from);
+  }
+  if (filters.date_to) {
+    query = query.lte('created_at', filters.date_to + 'T23:59:59Z');
   }
 
   const { data, error } = await query;

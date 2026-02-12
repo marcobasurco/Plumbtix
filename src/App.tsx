@@ -18,6 +18,7 @@ import { ResetPasswordPage } from '@/routes/reset-password';
 import { AdminDashboard } from '@/routes/dashboard-admin';
 import { PMDashboard } from '@/routes/dashboard-pm';
 import { ResidentDashboard } from '@/routes/dashboard-resident';
+import { WelcomeTour } from '@/components/WelcomeTour';
 
 function RootRedirect() {
   const { role, loading, session } = useAuth();
@@ -33,6 +34,7 @@ export function App() {
         <AuthProvider>
           <ToastProvider>
             <Toaster position="bottom-right" richColors closeButton />
+            <WelcomeTour />
             <Routes>
               {/* Public */}
               <Route path="/login" element={<LoginPage />} />

@@ -121,6 +121,17 @@ Deno.serve(async (req: Request) => {
       invitation_id, existing.email, newEmail, userId,
     );
 
+    // Audit log
+    const { logAuditAction } = await import('../_shared/email.ts');
+    await logAuditAction(svc, userId, 'resend_invitation', {
+      invitation_id,
+      company_id: existing.company_id,
+      old_email: existing.email,
+      new_email: newEmail,
+      old_name: existing.name,
+      new_name: newName,
+    }, 1);
+
     // Send invitation email (fire-and-forget)
     (async () => {
       try {

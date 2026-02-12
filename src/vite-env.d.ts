@@ -4,7 +4,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string;
   readonly VITE_SUPABASE_ANON_KEY: string;
   readonly VITE_EDGE_BASE_URL: string;
-  readonly VITE_APP_URL: string;
+  readonly VITE_SENTRY_DSN?: string;
+  readonly VITE_RESEND_SANDBOX?: string;
 }
 
 interface ImportMeta {

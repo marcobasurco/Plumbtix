@@ -10,6 +10,7 @@ import {
   LogOut, Menu, Wrench, Briefcase, Moon, Sun, BarChart3,
   FileSpreadsheet,
 } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
 
 function roleRoot(role: string | null): string {
   if (role === 'proroto_admin') return '/admin';
@@ -52,6 +53,8 @@ const ADMIN_NAV: NavItem[] = [
     icon: <Kanban className="h-[18px] w-[18px]" /> },
   { label: 'Sync',      path: 'import',    matchSegment: 'import',
     icon: <FileSpreadsheet className="h-[18px] w-[18px]" /> },
+  { label: 'Reports',   path: 'reports',   matchSegment: 'reports',
+    icon: <BarChart3 className="h-[18px] w-[18px]" /> },
 ];
 
 interface Props { title: string; children: ReactNode; }
@@ -167,6 +170,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
             </Button>
             <span className="content-header-title">{activeLabel}</span>
             <div className="flex items-center gap-2">
+              <NotificationBell />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={toggleDark} className="h-8 w-8">

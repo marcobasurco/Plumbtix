@@ -146,7 +146,16 @@ Deno.serve(async (req: Request) => {
       invitation.id, company_id, email, inviteRole, userId,
     );
 
-    // ─── 8. Send invitation email via Resend (fire-and-forget) ───
+    // ─── 8. Audit log ───
+    const { logAuditAction } = await import('../_shared/email.ts');
+    await logAuditAction(svc, userId, 'send_invitation', {
+      invitation_id: invitation.id,
+      company_id,
+      email,
+      role: inviteRole,
+    }, 1);
+
+    // ─── 9. Send invitation email via Resend (fire-and-forget) ───
     (async () => {
       try {
         const { data: inviter } = await svc
