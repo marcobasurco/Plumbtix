@@ -232,12 +232,12 @@ Deno.serve(async (req: Request) => {
           const [buildingRes, spaceRes, creatorRes] = await Promise.all([
             svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', ticket.building_id).single(),
             svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', ticket.space_id).single(),
-            svc.from('users').select('full_name, email').eq('id', ticket.created_by_user_id).single(),
+            svc.from('users').select('id, full_name, email').eq('id', ticket.created_by_user_id).single(),
           ]);
 
           if (buildingRes.data && spaceRes.data && creatorRes.data) {
             const { notifyStatusChange } = await import('../_shared/notifications.ts');
-          await notifyStatusChange(svc, {
+            await notifyStatusChange(svc, {
               ticket_number: updated.ticket_number ?? ticket.ticket_number,
               id: ticket_id,
               issue_type: ticket.issue_type,

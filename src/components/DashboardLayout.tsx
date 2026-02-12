@@ -8,7 +8,7 @@
 // =============================================================================
 
 import { useState, type ReactNode, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { ROLE_LABELS } from '@shared/types/enums';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,7 @@ import {
 import {
   LayoutDashboard, Ticket, Building2, Users2, Kanban,
   LogOut, Menu, Wrench, Briefcase, Moon, Sun, BarChart3,
-  FileSpreadsheet, ChevronRight,
+  FileSpreadsheet, ChevronRight, Settings,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 
@@ -83,6 +83,7 @@ interface Props { title: string; children: ReactNode; }
 export function DashboardLayout({ title: _title, children }: Props) {
   const { profile, role, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const root = roleRoot(role);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -272,6 +273,10 @@ export function DashboardLayout({ title: _title, children }: Props) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate(`${root}/settings`)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setDarkMode(!darkMode)}>
                     {darkMode ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
                     {darkMode ? 'Light mode' : 'Dark mode'}

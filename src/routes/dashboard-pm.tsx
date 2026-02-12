@@ -8,6 +8,7 @@ import { BuildingList } from '@/components/buildings/BuildingList';
 import { BuildingDetail } from '@/components/buildings/BuildingDetail';
 import { BuildingForm } from '@/components/buildings/BuildingForm';
 import { AnalyticsPage } from '@/components/admin/AnalyticsPage';
+import { SettingsPage } from '@/components/SettingsPage';
 
 export function PMDashboard() {
   return (
@@ -22,6 +23,7 @@ export function PMDashboard() {
         <Route path="buildings/:buildingId" element={<BuildingDetail />} />
         <Route path="buildings/:buildingId/edit" element={<BuildingForm />} />
         <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Routes>
     </DashboardLayout>
   );

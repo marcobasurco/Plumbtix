@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
       const [buildingRes, spaceRes, creatorRes] = await Promise.all([
         svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
         svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
-        svc.from('users').select('full_name, email').eq('id', userId).single(),
+        svc.from('users').select('id, full_name, email').eq('id', userId).single(),
       ]);
 
       if (buildingRes.data && spaceRes.data && creatorRes.data) {

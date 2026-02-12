@@ -36,6 +36,7 @@ export interface User {
   role: UserRole;                      // user_role NOT NULL
   company_id: string | null;           // UUID → companies(id) ON DELETE SET NULL
   avatar_url: string | null;           // TEXT
+  sms_notifications_enabled: boolean;  // BOOLEAN NOT NULL DEFAULT FALSE
   created_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
   updated_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
 }

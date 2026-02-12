@@ -6,6 +6,7 @@ import { TicketDetail } from '@/components/tickets/TicketDetail';
 import { CreateTicketWizard } from '@/components/tickets/CreateTicketWizard';
 import { BuildingList } from '@/components/buildings/BuildingList';
 import { BuildingDetail } from '@/components/buildings/BuildingDetail';
+import { SettingsPage } from '@/components/SettingsPage';
 
 export function ResidentDashboard() {
   return (
@@ -17,6 +18,7 @@ export function ResidentDashboard() {
         <Route path="tickets/:ticketId" element={<TicketDetail />} />
         <Route path="buildings" element={<BuildingList />} />
         <Route path="buildings/:buildingId" element={<BuildingDetail />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Routes>
     </DashboardLayout>
   );

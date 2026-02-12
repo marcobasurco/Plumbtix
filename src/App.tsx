@@ -2,7 +2,7 @@
 // Work Orders — App Router
 // =============================================================================
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ToastProvider } from '@/components/Toast';
 import { Toaster } from 'sonner';
@@ -27,6 +27,18 @@ function RootRedirect() {
   return <Navigate to={roleHome(role)} replace />;
 }
 
+/** Short link redirect: /t/:ticketId → /{roleRoot}/tickets/:ticketId */
+function TicketShortLink() {
+  const { role, loading, session } = useAuth();
+  const { ticketId } = useParams();
+  const location = useLocation();
+  if (loading) return <Loading />;
+  if (!session) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+
+  const base = roleHome(role);
+  return <Navigate to={`${base}/tickets/${ticketId}`} replace />;
+}
+
 export function App() {
   return (
     <ErrorBoundary>
@@ -42,6 +54,9 @@ export function App() {
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/accept-invite" element={<AcceptInvitePage />} />
               <Route path="/claim-account" element={<ClaimAccountPage />} />
+
+              {/* Short link for SMS/email ticket links */}
+              <Route path="/t/:ticketId" element={<TicketShortLink />} />
 
               {/* Protected */}
               <Route element={<ProtectedRoute />}>

@@ -1,5 +1,40 @@
 # Work Orders Changelog
 
+## [0.7.0] — Twilio SMS Notifications (February 2026)
+
+### Added — SMS Notification Infrastructure
+- **Migration 00017**: `sms_notifications_enabled` column on users + `sms_log` audit table with RLS
+- **Edge Function `send-sms`**: Direct SMS sending endpoint (proroto_admin only)
+- **Shared `_shared/sms.ts`**: Twilio REST API integration with E.164 validation, sandbox mode, and audit logging
+- **Shared `_shared/notifications.ts`**: Updated with SMS dispatch for emergency and completion events
+
+### Added — SMS Triggers
+- **Emergency ticket → SMS to PMs**: When a new emergency work order is created, all property managers for the building's company receive an SMS alert (always, no opt-in required)
+- **Ticket completed → SMS to resident**: When a ticket status changes to `completed`, the ticket creator receives an SMS if they have `sms_notifications_enabled = true`
+- All SMS logged to `sms_log` table for audit and debugging
+- Sandbox mode (`TWILIO_SANDBOX=true`) logs SMS instead of sending
+
+### Added — Settings Page
+- **`/settings` route** available to all roles (admin, PM, resident)
+- Account summary card (name, email, role badge)
+- SMS Notifications card with phone input (E.164 validation + US format auto-normalization) and opt-in toggle
+- Role-specific messaging: residents see opt-in toggle, PMs see "emergency alerts always enabled" info, admins see env var note
+- Save via Supabase RLS-protected update with toast feedback
+- Settings accessible from user dropdown menu in header
+
+### Added — Short Ticket Links
+- `/t/:ticketId` redirect route for SMS/email ticket links → resolves to role-appropriate dashboard ticket detail
+
+### Added — shadcn/ui Switch Component
+- `src/components/ui/switch.tsx` — Radix Switch primitive with Tailwind styling
+
+### Changed
+- `create-ticket` and `update-ticket` edge functions now fetch creator `id` for SMS recipient resolution
+- `getCompanyPMEmails()` and `getTicketCreator()` now return `phone` and `sms_notifications_enabled` fields
+- `TicketContext.created_by` interface extended with `id` field
+- `User` TypeScript interface updated with `sms_notifications_enabled: boolean`
+- Version bumped to 0.7.0
+
 ## [0.4.0] — SaaS MVP Polish (February 10, 2026)
 
 ### Added — Subscription & Billing Foundation

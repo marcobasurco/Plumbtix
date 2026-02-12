@@ -14,6 +14,7 @@
 
 import type { SupabaseClient } from './supabase.ts';
 import { sendEmail, sendEmailBatch, type EmailPayload } from './email.ts';
+import { sendSMSAndLog, normalizePhone } from './sms.ts';
 import {
   newTicketEmail,
   statusChangeEmail,
@@ -68,6 +69,7 @@ interface TicketContext {
     common_area_type: string | null;
   };
   created_by: {
+    id: string;
     full_name: string;
     email: string;
   };
@@ -77,10 +79,10 @@ interface TicketContext {
 async function getCompanyPMEmails(
   svc: SupabaseClient,
   companyId: string,
-): Promise<Array<{ email: string; full_name: string }>> {
+): Promise<Array<{ id: string; email: string; full_name: string; phone: string | null; sms_notifications_enabled: boolean }>> {
   const { data, error } = await svc
     .from('users')
-    .select('email, full_name')
+    .select('id, email, full_name, phone, sms_notifications_enabled')
     .eq('company_id', companyId)
     .in('role', ['pm_admin', 'pm_user']);
 
@@ -91,14 +93,14 @@ async function getCompanyPMEmails(
   return data ?? [];
 }
 
-/** Get the ticket creator's email */
+/** Get the ticket creator's contact info */
 async function getTicketCreator(
   svc: SupabaseClient,
   userId: string,
-): Promise<{ email: string; full_name: string } | null> {
+): Promise<{ id: string; email: string; full_name: string; phone: string | null; sms_notifications_enabled: boolean } | null> {
   const { data, error } = await svc
     .from('users')
-    .select('email, full_name')
+    .select('id, email, full_name, phone, sms_notifications_enabled')
     .eq('id', userId)
     .single();
 
@@ -115,6 +117,91 @@ function spaceLabel(space: TicketContext['space']): string {
     return space.common_area_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
   return 'Common Area';
+}
+
+/** Build a short link to a ticket in the app */
+function ticketLink(ticketId: string): string {
+  const base = Deno.env.get('APP_URL') || 'https://workorders.proroto.com';
+  return `${base}/t/${ticketId}`;
+}
+
+/** Truncate text with ellipsis if over limit */
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1) + '…';
+}
+
+/**
+ * Send emergency SMS to property managers for a new emergency ticket.
+ * PMs always receive SMS for emergencies regardless of sms_notifications_enabled.
+ */
+async function smsEmergencyToPMs(
+  svc: SupabaseClient,
+  ticket: TicketContext,
+  pmUsers: Array<{ id: string; email: string; full_name: string; phone: string | null; sms_notifications_enabled: boolean }>,
+): Promise<void> {
+  const buildingName = truncate(ticket.building.name || ticket.building.address_line1, 40);
+  const unit = spaceLabel(ticket.space);
+  const link = ticketLink(ticket.id);
+  const desc = ticket.description
+    ? truncate(ticket.description, 80)
+    : ticket.issue_type.replace(/_/g, ' ');
+
+  // Individual truncations above bound total to ~241 chars (within 2 SMS segments)
+  const body = `[EMERGENCY] WO #${ticket.ticket_number} at ${buildingName}, ${unit}: ${desc}. View: ${link}`;
+
+  for (const pm of pmUsers) {
+    const phone = normalizePhone(pm.phone);
+    if (!phone) continue;
+
+    // PMs always get emergency SMS — no opt-in check
+    try {
+      await sendSMSAndLog(svc, {
+        to: phone,
+        body,
+        userId: pm.id,
+        ticketId: ticket.id,
+      });
+    } catch (e) {
+      console.error('[notifications] Emergency SMS to PM failed:', e);
+    }
+  }
+}
+
+/**
+ * Send SMS to resident when their ticket is completed (if opted in).
+ */
+async function smsCompletionToResident(
+  svc: SupabaseClient,
+  ticket: TicketContext,
+  creatorUserId: string,
+): Promise<void> {
+  const creator = await getTicketCreator(svc, creatorUserId);
+  if (!creator) return;
+
+  // Check opt-in
+  if (!creator.sms_notifications_enabled) return;
+
+  const phone = normalizePhone(creator.phone);
+  if (!phone) return;
+
+  const buildingName = truncate(ticket.building.name || ticket.building.address_line1, 40);
+  const unit = spaceLabel(ticket.space);
+  const link = ticketLink(ticket.id);
+
+  // Individual truncation above bounds total to ~168 chars (1 SMS segment typical)
+  const body = `WO #${ticket.ticket_number} at ${buildingName}, ${unit} has been completed. Details: ${link}`;
+
+  try {
+    await sendSMSAndLog(svc, {
+      to: phone,
+      body,
+      userId: creator.id,
+      ticketId: ticket.id,
+    });
+  } catch (e) {
+    console.error('[notifications] Completion SMS to resident failed:', e);
+  }
 }
 
 // =============================================================================
@@ -169,6 +256,20 @@ export async function notifyNewTicket(
 
     console.log('[notifications] New ticket email sent for #%d to %d recipients',
       ticket.ticket_number, recipients.length);
+
+    // ─── SMS: Emergency tickets → SMS to PMs ─────────────────────────────
+    if (ticket.severity === 'emergency') {
+      try {
+        const pmUsers = await getCompanyPMEmails(svc, ticket.building.company_id);
+        if (pmUsers.length > 0) {
+          await smsEmergencyToPMs(svc, ticket, pmUsers);
+          console.log('[notifications] Emergency SMS sent to %d PMs for #%d',
+            pmUsers.filter(p => normalizePhone(p.phone)).length, ticket.ticket_number);
+        }
+      } catch (smsErr) {
+        console.error('[notifications] Emergency SMS error (non-blocking):', smsErr);
+      }
+    }
   } catch (e) {
     console.error('[notifications] notifyNewTicket error:', e);
   }
@@ -252,6 +353,15 @@ export async function notifyStatusChange(
 
     console.log('[notifications] Status change email sent for #%d (%s→%s) to %d recipients',
       ticket.ticket_number, oldStatus, newStatus, emails.length);
+
+    // ─── SMS: Completed → notify resident (if opted in) ─────────────────
+    if (newStatus === 'completed' && ticket.created_by?.id) {
+      try {
+        await smsCompletionToResident(svc, ticket, ticket.created_by.id);
+      } catch (smsErr) {
+        console.error('[notifications] Completion SMS error (non-blocking):', smsErr);
+      }
+    }
   } catch (e) {
     console.error('[notifications] notifyStatusChange error:', e);
   }
