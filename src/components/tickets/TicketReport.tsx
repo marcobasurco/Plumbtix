@@ -227,7 +227,6 @@ export function TicketReport({ ticket, userRole, onReady }: TicketReportProps) {
   const [dataLoaded, setDataLoaded] = useState(false);
 
   const isResident = userRole === 'resident';
-  const isPM = userRole === 'pm_admin' || userRole === 'pm_user';
   const isFullReport = !isResident; // proroto_admin, pm_admin, pm_user
 
   // Fetch supporting data
@@ -270,10 +269,6 @@ export function TicketReport({ ticket, userRole, onReady }: TicketReportProps) {
   }, [dataLoaded, onReady]);
 
   // Filter comments by role
-  const visibleComments = isResident
-    ? comments.filter((c) => !c.is_internal)
-    : comments;
-
   const internalComments = isFullReport
     ? comments.filter((c) => c.is_internal)
     : [];
