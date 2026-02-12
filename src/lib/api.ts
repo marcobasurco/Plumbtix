@@ -53,6 +53,57 @@ type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: ApiError };
 
+// ---------------------------------------------------------------------------
+// JWT token management
+// ---------------------------------------------------------------------------
+
+/** Decode the `exp` claim from a JWT without a library. Returns epoch seconds or null. */
+function getJwtExp(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof decoded.exp === 'number' ? decoded.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Refresh buffer: refresh if token expires within this many seconds. */
+const REFRESH_BUFFER_S = 120; // 2 minutes
+
+/**
+ * Get a valid access token, refreshing proactively if the JWT is expired
+ * or about to expire. Returns null if no valid session can be obtained.
+ */
+async function getValidAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session?.access_token) {
+    const exp = getJwtExp(session.access_token);
+    const now = Math.floor(Date.now() / 1000);
+
+    // Token is still fresh — use it
+    if (exp && exp - now > REFRESH_BUFFER_S) {
+      return session.access_token;
+    }
+
+    // Token expired or expiring soon — force refresh
+    console.log('[api] JWT expired or expiring in <%ds, refreshing', REFRESH_BUFFER_S);
+  }
+
+  // No cached session or token is stale — try refreshing
+  const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
+  if (refreshErr) {
+    console.warn('[api] refreshSession failed:', refreshErr.message);
+  }
+  return refreshData?.session?.access_token ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Core fetch helper
+// ---------------------------------------------------------------------------
+
 /**
  * Call an Edge Function. Automatically attaches the current session JWT.
  *
@@ -89,14 +140,17 @@ async function callEdge<T>(
   }
 
   if (requireAuth) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      return {
-        ok: false,
-        error: { code: 'NO_SESSION', message: 'Not logged in', status: 401 },
-      };
+    // Get a valid access token, refreshing proactively if needed.
+    // getSession() returns CACHED data — the JWT may already be invalid
+    // server-side even if the cache looks fresh. Decode the actual exp claim.
+    const token = await getValidAccessToken();
+    if (!token) {
+      // No recoverable session — redirect to login
+      await supabase.auth.signOut().catch(() => {});
+      window.location.replace('/login');
+      return new Promise<never>(() => {});
     }
-    headers['Authorization'] = `Bearer ${session.access_token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   try {
@@ -106,16 +160,30 @@ async function callEdge<T>(
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    // If 401, try refreshing the session and retry once
+    // If 401 despite proactive refresh, try one final forced refresh + retry
     if (res.status === 401 && requireAuth) {
+      console.warn('[api] Got 401 from server, forcing session refresh');
       const { data: refreshData } = await supabase.auth.refreshSession();
-      if (refreshData?.session?.access_token) {
-        headers['Authorization'] = `Bearer ${refreshData.session.access_token}`;
+      const freshToken = refreshData?.session?.access_token;
+
+      if (freshToken) {
+        headers['Authorization'] = `Bearer ${freshToken}`;
         res = await fetch(url.toString(), {
           method,
           headers,
           body: body ? JSON.stringify(body) : undefined,
         });
+      }
+
+      // Still 401 or refresh failed — session is irrecoverable
+      if (!freshToken || res.status === 401) {
+        console.error('[api] Session irrecoverable, signing out');
+        await supabase.auth.signOut().catch(() => {});
+        // Use replace to prevent back-button loop
+        window.location.replace('/login');
+        // Return a never-resolving promise so callers don't process the error
+        // and flash UI before the redirect completes
+        return new Promise<never>(() => {});
       }
     }
 
