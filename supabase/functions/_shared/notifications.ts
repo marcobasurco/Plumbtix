@@ -93,6 +93,22 @@ async function getCompanyPMEmails(
   return data ?? [];
 }
 
+/** Get all Pro Roto admin users (for emergency SMS) */
+async function getProRotoAdminUsers(
+  svc: SupabaseClient,
+): Promise<Array<{ id: string; email: string; full_name: string; phone: string | null; sms_notifications_enabled: boolean }>> {
+  const { data, error } = await svc
+    .from('users')
+    .select('id, email, full_name, phone, sms_notifications_enabled')
+    .eq('role', 'proroto_admin');
+
+  if (error) {
+    console.error('[notifications] Failed to fetch Pro Roto admins:', error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
 /** Get the ticket creator's contact info */
 async function getTicketCreator(
   svc: SupabaseClient,
@@ -257,14 +273,27 @@ export async function notifyNewTicket(
     console.log('[notifications] New ticket email sent for #%d to %d recipients',
       ticket.ticket_number, recipients.length);
 
-    // ─── SMS: Emergency tickets → SMS to PMs ─────────────────────────────
+    // ─── SMS: Emergency tickets → SMS to PMs + Pro Roto admins ─────────
     if (ticket.severity === 'emergency') {
       try {
-        const pmUsers = await getCompanyPMEmails(svc, ticket.building.company_id);
-        if (pmUsers.length > 0) {
-          await smsEmergencyToPMs(svc, ticket, pmUsers);
-          console.log('[notifications] Emergency SMS sent to %d PMs for #%d',
-            pmUsers.filter(p => normalizePhone(p.phone)).length, ticket.ticket_number);
+        const [pmUsers, adminUsers] = await Promise.all([
+          getCompanyPMEmails(svc, ticket.building.company_id),
+          getProRotoAdminUsers(svc),
+        ]);
+
+        // Merge PMs + admins, deduplicate by user ID
+        const seen = new Set<string>();
+        const allRecipients = [...pmUsers, ...adminUsers].filter(u => {
+          if (seen.has(u.id)) return false;
+          seen.add(u.id);
+          return true;
+        });
+
+        if (allRecipients.length > 0) {
+          await smsEmergencyToPMs(svc, ticket, allRecipients);
+          const withPhone = allRecipients.filter(p => normalizePhone(p.phone)).length;
+          console.log('[notifications] Emergency SMS sent to %d recipients (%d PMs + admins with phone) for #%d',
+            withPhone, withPhone, ticket.ticket_number);
         }
       } catch (smsErr) {
         console.error('[notifications] Emergency SMS error (non-blocking):', smsErr);
