@@ -12,9 +12,9 @@
 //   3. User JWT → SELECT ticket (RLS scopes access)
 //   4. User JWT → UPDATE ticket (RLS scopes access, trigger 00005 = DB seatbelt)
 //
-// Restricted fields (proroto_admin ONLY):
-//   - assigned_technician, scheduled_date, scheduled_time_window,
-//     quote_amount, invoice_number
+// Restricted fields:
+//   - assigned_technician, scheduled_date, scheduled_time_window: proroto_admin + pm_admin
+//   - quote_amount, invoice_number: proroto_admin ONLY
 //
 // Transition matrix enforcement:
 //   - Edge Function validates FIRST (returns friendly error message)
@@ -43,9 +43,9 @@ const TICKET_STATUSES = [
 type TicketStatus = typeof TICKET_STATUSES[number];
 
 const TRANSITION_MATRIX: Record<string, Partial<Record<UserRole, readonly string[]>>> = {
-  new:              { proroto_admin: ['needs_info', 'scheduled', 'cancelled'], pm_admin: ['cancelled'], pm_user: ['cancelled'] },
-  needs_info:       { proroto_admin: ['new', 'scheduled', 'cancelled'], pm_admin: ['new', 'cancelled'], pm_user: ['new', 'cancelled'] },
-  scheduled:        { proroto_admin: ['dispatched', 'needs_info', 'cancelled'] },
+  new:              { proroto_admin: ['needs_info', 'scheduled', 'cancelled'], pm_admin: ['needs_info', 'scheduled', 'cancelled'], pm_user: ['cancelled'] },
+  needs_info:       { proroto_admin: ['new', 'scheduled', 'cancelled'], pm_admin: ['new', 'scheduled', 'cancelled'], pm_user: ['new', 'cancelled'] },
+  scheduled:        { proroto_admin: ['dispatched', 'needs_info', 'cancelled'], pm_admin: ['needs_info', 'cancelled'] },
   dispatched:       { proroto_admin: ['on_site', 'scheduled', 'cancelled'] },
   on_site:          { proroto_admin: ['in_progress', 'cancelled'] },
   in_progress:      { proroto_admin: ['waiting_approval', 'completed', 'cancelled'] },
@@ -144,16 +144,28 @@ Deno.serve(async (req: Request) => {
     }
 
     // ─── 6. Check restricted fields ───
-    const restrictedAttempts: string[] = [];
-    if (assigned_technician !== undefined) restrictedAttempts.push('assigned_technician');
-    if (scheduled_date !== undefined) restrictedAttempts.push('scheduled_date');
-    if (scheduled_time_window !== undefined) restrictedAttempts.push('scheduled_time_window');
-    if (quote_amount !== undefined) restrictedAttempts.push('quote_amount');
-    if (invoice_number !== undefined) restrictedAttempts.push('invoice_number');
+    // Scheduling fields: proroto_admin + pm_admin
+    // Financial fields: proroto_admin ONLY
+    const schedulingFields: string[] = [];
+    const financialFields: string[] = [];
 
-    if (restrictedAttempts.length > 0 && !isProRotoAdmin(role)) {
+    if (assigned_technician !== undefined) schedulingFields.push('assigned_technician');
+    if (scheduled_date !== undefined) schedulingFields.push('scheduled_date');
+    if (scheduled_time_window !== undefined) schedulingFields.push('scheduled_time_window');
+    if (quote_amount !== undefined) financialFields.push('quote_amount');
+    if (invoice_number !== undefined) financialFields.push('invoice_number');
+
+    // Financial fields: proroto_admin only
+    if (financialFields.length > 0 && !isProRotoAdmin(role)) {
       return forbidden(
-        `Only Pro Roto admin can modify: ${restrictedAttempts.join(', ')}`,
+        `Only Pro Roto admin can modify: ${financialFields.join(', ')}`,
+      );
+    }
+
+    // Scheduling fields: proroto_admin or pm_admin
+    if (schedulingFields.length > 0 && role !== 'proroto_admin' && role !== 'pm_admin') {
+      return forbidden(
+        `Only admin roles can modify: ${schedulingFields.join(', ')}`,
       );
     }
 

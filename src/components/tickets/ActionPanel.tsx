@@ -7,24 +7,25 @@ import { STATUS_LABELS } from '@shared/types/enums';
 import type { TicketStatus } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Settings2 } from 'lucide-react';
 
 interface ActionPanelProps {
   ticketId: string;
   currentStatus: TicketStatus;
-  /** Called after a successful update so parent can refetch */
   onUpdated: () => void;
 }
 
 export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelProps) {
   const { role } = useAuth();
   const isAdmin = role === 'proroto_admin';
+  const isPmAdmin = role === 'pm_admin';
+  const canEditFields = isAdmin || isPmAdmin;
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Admin-only fields
+  // Editable fields
   const [technician, setTechnician] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [timeWindow, setTimeWindow] = useState('');
@@ -42,22 +43,23 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
     setError(null);
     setSuccess(null);
 
-    // Build payload
     const payload: Partial<UpdateTicketRequest> & { ticket_id: string; status: TicketStatus } = {
       ticket_id: ticketId,
       status: targetStatus,
     };
 
-    // Attach admin fields if set
-    if (isAdmin) {
+    // Attach scheduling fields if set (admin or pm_admin)
+    if (canEditFields) {
       if (technician.trim()) payload.assigned_technician = technician.trim();
       if (scheduledDate) payload.scheduled_date = scheduledDate;
       if (timeWindow.trim()) payload.scheduled_time_window = timeWindow.trim();
+    }
+    // Financial fields: proroto_admin only
+    if (isAdmin) {
       if (quoteAmount) payload.quote_amount = parseFloat(quoteAmount);
       if (invoiceNumber.trim()) payload.invoice_number = invoiceNumber.trim();
     }
 
-    // Decline reason for PM cancellation of waiting_approval
     if (targetStatus === 'cancelled' && declineReason.trim()) {
       payload.decline_reason = declineReason.trim();
     }
@@ -66,13 +68,8 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
 
     if (result.ok) {
       setSuccess(`Ticket updated to ${STATUS_LABELS[targetStatus]}`);
-      // Clear fields
-      setTechnician('');
-      setScheduledDate('');
-      setTimeWindow('');
-      setQuoteAmount('');
-      setInvoiceNumber('');
-      setDeclineReason('');
+      setTechnician(''); setScheduledDate(''); setTimeWindow('');
+      setQuoteAmount(''); setInvoiceNumber(''); setDeclineReason('');
       onUpdated();
     } else {
       setError(result.error.message);
@@ -81,7 +78,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
   };
 
   const handleFieldUpdate = async () => {
-    if (!isAdmin) return;
+    if (!canEditFields) return;
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -92,8 +89,9 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
     if (technician.trim()) { payload.assigned_technician = technician.trim(); hasChanges = true; }
     if (scheduledDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
     if (timeWindow.trim()) { payload.scheduled_time_window = timeWindow.trim(); hasChanges = true; }
-    if (quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
-    if (invoiceNumber.trim()) { payload.invoice_number = invoiceNumber.trim(); hasChanges = true; }
+    // Financials: proroto_admin only
+    if (isAdmin && quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
+    if (isAdmin && invoiceNumber.trim()) { payload.invoice_number = invoiceNumber.trim(); hasChanges = true; }
 
     if (!hasChanges) {
       setError('No fields to update');
@@ -114,41 +112,45 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
   };
 
   return (
-    <div style={panelStyle}>
-      <h3 style={sectionTitle}>Actions</h3>
+    <div className="p-4 rounded-lg border border-border bg-card">
+      <h3 className="text-base font-semibold mb-3 pb-2 border-b border-border flex items-center gap-2">
+        <Settings2 className="h-4 w-4 text-muted-foreground" />
+        Actions
+      </h3>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       {success && (
-        <div className="success-box" style={{ marginBottom: '12px', fontSize: '0.85rem' }}>
+        <div className="mb-3 text-sm px-3 py-2 rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">
           {success}
         </div>
       )}
 
       {terminal ? (
-        <p style={mutedStyle}>
+        <p className="text-sm text-muted-foreground">
           This ticket is {STATUS_LABELS[currentStatus].toLowerCase()} — no further transitions available.
         </p>
       ) : allowed.length === 0 ? (
-        <p style={mutedStyle}>
+        <p className="text-sm text-muted-foreground">
           No actions available for your role on this ticket.
         </p>
       ) : (
         <>
           {/* Transition buttons */}
-          <div style={{ marginBottom: '16px' }}>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '8px' }}>
-              Move ticket from <strong>{STATUS_LABELS[currentStatus]}</strong> to:
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-2">
+              Move ticket from <strong className="text-foreground">{STATUS_LABELS[currentStatus]}</strong> to:
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <div className="flex flex-wrap gap-2">
               {allowed.map((target) => (
                 <button
                   key={target}
                   onClick={() => handleTransition(target)}
                   disabled={submitting}
-                  style={{
-                    ...transitionBtn,
-                    ...(target === 'cancelled' ? cancelledBtn : {}),
-                  }}
+                  className={`px-4 py-2.5 text-sm font-semibold rounded-lg text-white min-h-[44px] transition-colors disabled:opacity-50 ${
+                    target === 'cancelled'
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
                   {STATUS_LABELS[target]}
                 </button>
@@ -156,57 +158,94 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
             </div>
           </div>
 
-          {/* Decline reason for PM cancellation of waiting_approval */}
-          {currentStatus === 'waiting_approval' && !isAdmin && allowed.includes('cancelled') && (
-            <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>Decline reason (optional)</label>
+          {/* Decline reason */}
+          {currentStatus === 'waiting_approval' && !isAdmin && allowed.includes('cancelled' as TicketStatus) && (
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Decline reason (optional)</label>
               <input
                 type="text"
                 value={declineReason}
                 onChange={(e) => setDeclineReason(e.target.value)}
                 placeholder="Reason for declining the work"
-                style={inputStyle}
+                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
               />
             </div>
           )}
         </>
       )}
 
-      {/* Admin-only: editable fields */}
-      {isAdmin && !terminal && (
-        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '8px' }}>
-          <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '8px', fontWeight: 600 }}>
-            Update Fields (Admin Only)
+      {/* Editable fields: scheduling (admin + pm_admin), financials (admin only) */}
+      {canEditFields && !terminal && (
+        <div className="border-t border-border pt-4 mt-2">
+          <p className="text-xs font-semibold text-muted-foreground mb-2">
+            {isAdmin ? 'Update Fields' : 'Scheduling'}
           </p>
 
-          <div style={fieldGrid}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label style={labelStyle}>Assigned Technician</label>
-              <input type="text" value={technician} onChange={(e) => setTechnician(e.target.value)} placeholder="e.g. Bryan" style={inputStyle} />
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Assigned Technician</label>
+              <input
+                type="text"
+                value={technician}
+                onChange={(e) => setTechnician(e.target.value)}
+                placeholder="e.g. Bryan"
+                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
+              />
             </div>
             <div>
-              <label style={labelStyle}>Scheduled Date</label>
-              <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} style={inputStyle} />
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Scheduled Date</label>
+              <input
+                type="date"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
+              />
             </div>
             <div>
-              <label style={labelStyle}>Time Window</label>
-              <input type="text" value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} placeholder="e.g. 9am-12pm" style={inputStyle} />
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">Time Window</label>
+              <input
+                type="text"
+                value={timeWindow}
+                onChange={(e) => setTimeWindow(e.target.value)}
+                placeholder="e.g. 9am-12pm"
+                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
+              />
             </div>
-            <div>
-              <label style={labelStyle}>Quote Amount ($)</label>
-              <input type="number" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Invoice Number</label>
-              <input type="text" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="INV-001" style={inputStyle} />
-            </div>
+
+            {/* Financial fields: Pro Roto admin only */}
+            {isAdmin && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Quote Amount ($)</label>
+                  <input
+                    type="number"
+                    value={quoteAmount}
+                    onChange={(e) => setQuoteAmount(e.target.value)}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Invoice Number</label>
+                  <input
+                    type="text"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                    placeholder="INV-001"
+                    className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <Button
             size="sm"
             onClick={handleFieldUpdate}
             disabled={submitting}
-            className="mt-2"
+            className="mt-3"
           >
             {submitting ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
@@ -217,36 +256,3 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
     </div>
   );
 }
-
-// Styles
-const panelStyle: React.CSSProperties = {
-  padding: '16px', background: '#f9fafb', borderRadius: '8px',
-  border: '1px solid #e5e7eb',
-};
-const sectionTitle: React.CSSProperties = {
-  fontSize: '1rem', fontWeight: 600, marginBottom: '12px',
-  paddingBottom: '8px', borderBottom: '1px solid #e5e7eb',
-};
-const mutedStyle: React.CSSProperties = { color: '#9ca3af', fontSize: '0.85rem' };
-const transitionBtn: React.CSSProperties = {
-  padding: '10px 16px', fontSize: '0.875rem', fontWeight: 600,
-  background: '#2563eb', color: '#fff', border: 'none',
-  borderRadius: '8px', cursor: 'pointer', minHeight: '44px',
-  WebkitTapHighlightColor: 'transparent',
-};
-const cancelledBtn: React.CSSProperties = {
-  background: '#dc2626',
-};
-const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '0.8rem', fontWeight: 600,
-  color: '#374151', marginBottom: '4px',
-};
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px',
-  border: '1px solid #d1d5db', borderRadius: '8px',
-  fontSize: '1rem', minHeight: '44px',
-};
-const fieldGrid: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-  gap: '12px',
-};

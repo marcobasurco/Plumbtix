@@ -24,18 +24,19 @@ export const TRANSITION_MATRIX: Record<
 > = {
   new: {
     proroto_admin: ['needs_info', 'scheduled', 'cancelled'],
-    pm_admin:      ['cancelled'],
+    pm_admin:      ['needs_info', 'scheduled', 'cancelled'],
     pm_user:       ['cancelled'],
   },
 
   needs_info: {
     proroto_admin: ['new', 'scheduled', 'cancelled'],
-    pm_admin:      ['new', 'cancelled'],
+    pm_admin:      ['new', 'scheduled', 'cancelled'],
     pm_user:       ['new', 'cancelled'],
   },
 
   scheduled: {
     proroto_admin: ['dispatched', 'needs_info', 'cancelled'],
+    pm_admin:      ['needs_info', 'cancelled'],
   },
 
   dispatched: {
