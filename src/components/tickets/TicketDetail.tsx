@@ -170,14 +170,29 @@ export function TicketDetail() {
 
   const handlePdfReady = useCallback(async () => {
     const el = pdfReportRef.current;
-    if (!el || !ticket) return;
+    if (!el || !ticket) {
+      setPdfReady(false);
+      setPdfGenerating(false);
+      return;
+    }
 
     try {
       // Dynamic imports to keep main bundle small
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
+      const html2canvasModule = await import('html2canvas');
+      const jspdfModule = await import('jspdf');
+      const html2canvas = html2canvasModule.default;
+      const jsPDF = jspdfModule.jsPDF || jspdfModule.default;
+
+      // Temporarily move element on-screen for html2canvas capture
+      el.style.position = 'fixed';
+      el.style.left = '0';
+      el.style.top = '0';
+      el.style.zIndex = '99999';
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+
+      // Small delay to let browser paint
+      await new Promise(r => setTimeout(r, 100));
 
       const canvas = await html2canvas(el, {
         scale: 2,
@@ -185,6 +200,8 @@ export function TicketDetail() {
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
+        width: 800,
+        windowWidth: 800,
       });
 
       const imgData = canvas.toDataURL('image/png');
@@ -501,16 +518,19 @@ export function TicketDetail() {
         </div>
       )}
 
-      {/* Off-screen PDF report — rendered for html2canvas capture */}
+      {/* Off-screen PDF report — positioned for html2canvas capture */}
       {pdfReady && role && (
         <div
           style={{
             position: 'fixed',
-            left: '-9999px',
+            left: 0,
             top: 0,
             width: '800px',
             background: '#fff',
             zIndex: -1,
+            opacity: 0,
+            pointerEvents: 'none',
+            overflow: 'visible',
           }}
         >
           <TicketReport
