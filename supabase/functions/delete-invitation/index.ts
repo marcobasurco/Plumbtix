@@ -16,8 +16,7 @@
 // =============================================================================
 
 import { handleCors } from '../_shared/cors.ts';
-import { createServiceClient, createUserClient } from '../_shared/supabase.ts';
-import { getAuthenticatedUserId } from '../_shared/auth.ts';
+import { createServiceClient, createUserClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, notFound, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 
@@ -74,14 +73,7 @@ Deno.serve(async (req: Request) => {
     // but failed to create the public.users record (or user never completed setup)
     const invEmail = invitation.email.toLowerCase();
 
-    // Look up auth user by email
-    const { data: authList } = await svc.auth.admin.listUsers({
-      page: 1,
-      perPage: 1,
-    });
-
-    // listUsers doesn't filter by email, so we use a different approach
-    // Try to find the user in public.users first
+    // Check if this email exists in public.users
     const { data: publicUser } = await svc
       .from('users')
       .select('id')
