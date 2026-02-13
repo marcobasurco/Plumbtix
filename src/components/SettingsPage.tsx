@@ -252,17 +252,17 @@ export function SettingsPage() {
           )}
 
           {isAdmin && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-4">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-4">
               <div className="flex gap-2">
-                <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                    Admin SMS
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    Emergency alerts enabled
                   </p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
-                    SMS notifications for Pro Roto admins are managed via the
-                    PROROTO_EMERGENCY_EMAILS environment variable. Add your phone
-                    number here for future SMS features.
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    As a Pro Roto admin, you automatically receive SMS alerts for
+                    all emergency work orders. Just add your phone number above.
+                    You can also manage phone numbers for PM users from the Users page.
                   </p>
                 </div>
               </div>
