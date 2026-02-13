@@ -162,7 +162,7 @@ export function PublicTicketView() {
           </div>
           <h1 className="text-lg font-semibold text-foreground mb-2">Work Order Not Found</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            {error || 'This work order doesn't exist or the link may have expired.'}
+            {error || "This work order doesn't exist or the link may have expired."}
           </p>
           <Link
             to="/login"
