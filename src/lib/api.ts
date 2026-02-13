@@ -127,41 +127,25 @@ async function callEdge<T>(
     if (res.status === 401 && requireAuth) {
       console.warn('[api] 401 from %s — attempting session refresh', path);
 
-      const { data: refreshData, error: refreshErr } =
-        await supabase.auth.refreshSession();
+      const { data: refreshData } = await supabase.auth.refreshSession();
 
-      if (refreshErr || !refreshData?.session?.access_token) {
-        console.error('[api] Session refresh failed:', refreshErr?.message);
-        // Log diagnostics for debugging persistent 401
-        console.error('[api] Diagnostics: EDGE_BASE=%s, SUPABASE_URL=%s, path=%s',
-          EDGE_BASE, SUPABASE_URL, path);
-        return {
-          ok: false,
-          error: {
-            code: 'SESSION_EXPIRED',
-            message: 'Your session has expired. Please sign in again.',
-            status: 401,
-          },
-        };
+      if (refreshData?.session?.access_token) {
+        // Retry with the refreshed token
+        headers['Authorization'] = `Bearer ${refreshData.session.access_token}`;
+        res = await fetch(url.toString(), {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+        });
       }
 
-      // Retry with the refreshed token
-      headers['Authorization'] = `Bearer ${refreshData.session.access_token}`;
-      res = await fetch(url.toString(), {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
-
-      // If STILL 401 after a valid refresh — this is a config/infra problem,
-      // not a session problem. Log diagnostics and surface the real error.
+      // If STILL 401 — log diagnostics for troubleshooting
       if (res.status === 401) {
         console.error(
-          '[api] STILL 401 after successful refresh. This is likely an env mismatch.\n' +
-          '  VITE_SUPABASE_URL:   %s\n' +
-          '  VITE_EDGE_BASE_URL:  %s\n' +
-          '  Ensure EDGE_BASE = SUPABASE_URL + "/functions/v1"',
-          SUPABASE_URL, EDGE_BASE,
+          '[api] Persistent 401 after session refresh on %s.\n' +
+          '  Likely cause: functions deployed without --no-verify-jwt.\n' +
+          '  Fix: npm run functions:deploy',
+          path,
         );
       }
     }

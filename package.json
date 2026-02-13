@@ -19,7 +19,9 @@
     "db:verify": "supabase db reset && echo '=== All migrations applied ==='",
     "supabase:diff": "supabase db diff --use-migra",
     "functions:serve": "supabase functions serve --env-file ./supabase/.env.local",
-    "functions:deploy": "supabase functions deploy"
+    "functions:deploy": "supabase functions deploy --no-verify-jwt",
+    "functions:deploy:one": "supabase functions deploy --no-verify-jwt",
+    "deploy": "npm run build && supabase functions deploy --no-verify-jwt && echo 'Edge functions deployed. Push to GitHub to trigger Netlify build.'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

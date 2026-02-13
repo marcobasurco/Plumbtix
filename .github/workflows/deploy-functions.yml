@@ -1,0 +1,54 @@
+# =============================================================================
+# PlumbTix — Deploy Edge Functions
+# =============================================================================
+# Triggers on push to main when any edge function file changes.
+# ALWAYS deploys with --no-verify-jwt to prevent Kong gateway JWT rejection.
+#
+# Required GitHub Secrets:
+#   SUPABASE_ACCESS_TOKEN  — from supabase.com/dashboard → Account → Access Tokens
+#   SUPABASE_PROJECT_REF   — cqrzgwqarziggggujiha
+# =============================================================================
+
+name: Deploy Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+
+  # Allow manual trigger from Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy-functions:
+    name: Deploy to Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy all Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "Deploying all edge functions with --no-verify-jwt..."
+          supabase functions deploy \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
+            --no-verify-jwt
+          echo "✅ All functions deployed successfully"
+
+      - name: Verify deployment
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "Listing deployed functions..."
+          supabase functions list --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
