@@ -427,23 +427,11 @@
 .dark .recharts-cartesian-grid line { stroke: #1e293b !important; }
 .dark .recharts-legend-item-text { color: #94a3b8 !important; }
 
-/* Print — Work Order Report */
-.print-report { display: none; }
+/* Print — Reports Dashboard (window.print on analytics page) */
 @media print {
-  /* When .print-report exists, hide EVERYTHING else and show only the report */
-  body:has(.print-report) > *:not(#root) { display: none !important; }
-  body:has(.print-report) #root > * { display: none !important; }
-  /* Walk up the DOM: show .print-report and all its ancestors */
-  body:has(.print-report) #root { display: block !important; }
-  body:has(.print-report) .print-report { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 99999; background: white; }
-  body:has(.print-report) .print-report * { color: #1a1a1a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  /* Preserve severity badge background colors in print */
-  body:has(.print-report) .print-report [style*="background"] { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  /* Reset page margins */
   @page { margin: 0.5in; size: letter; }
-  /* Fallback when .print-report does NOT exist — print the normal view (reports dashboard) */
+  /* Hide app chrome */
   .sidebar, .content-header, nav, [data-sidebar], .print\:hidden { display: none !important; }
-  /* Always hide PDF capture elements during print */
   [data-pdf-wrapper] { display: none !important; }
   .content-area { margin-left: 0 !important; }
   .content-main { padding: 0 !important; max-width: none; }

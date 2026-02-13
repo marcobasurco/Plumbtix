@@ -6,7 +6,7 @@
 // Mobile-responsive: stacks to single column on small screens.
 // =============================================================================
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchTicketDetail, type TicketDetailRow } from '@/lib/tickets';
 import { useAuth } from '@/lib/auth';
@@ -29,7 +29,6 @@ import {
   ChevronLeft, FileText, MapPin, Wrench, Calendar,
   User, Phone, KeyRound, Clock, Printer, Download, Loader2,
 } from 'lucide-react';
-import { TicketReport } from './TicketReport';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('en-US', {
@@ -106,9 +105,8 @@ export function TicketDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [printReady, setPrintReady] = useState(false);
+  const [printGenerating, setPrintGenerating] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
-  const reportRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!ticketId) return;
@@ -147,18 +145,28 @@ export function TicketDetail() {
     return false;
   })();
 
-  const handlePrint = useCallback(() => {
-    setPrintReady(true);
-  }, []);
-
-  const handleReportReady = useCallback(() => {
-    window.print();
-    const cleanup = () => {
-      setPrintReady(false);
-      toast.success('Work order sent to printer');
-    };
-    window.addEventListener('afterprint', cleanup, { once: true });
-  }, []);
+  // ── Print: generates the same PDF and opens in new tab for printing ──
+  const handlePrint = useCallback(async () => {
+    if (!ticket || !role) return;
+    setPrintGenerating(true);
+    try {
+      const { printTicketPdf } = await import('./generateTicketPdf');
+      await printTicketPdf(ticket, role as UserRole);
+      toast.success('Work order opened for printing');
+    } catch (e) {
+      const msg = e instanceof Error && e.message === 'POPUP_BLOCKED'
+        ? 'Popup blocked — PDF downloaded instead. Allow popups for auto-print.'
+        : 'Print failed. Try Download PDF instead.';
+      if (e instanceof Error && e.message === 'POPUP_BLOCKED') {
+        toast.info(msg);
+      } else {
+        console.error('[Print] Failed:', e);
+        toast.error(msg);
+      }
+    } finally {
+      setPrintGenerating(false);
+    }
+  }, [ticket, role]);
 
   // ── PDF Download via @react-pdf/renderer (programmatic, no DOM capture) ──
   const handleDownloadPdf = useCallback(async () => {
@@ -221,10 +229,12 @@ export function TicketDetail() {
                 size="sm"
                 className="gap-1.5"
                 onClick={handlePrint}
-                disabled={printReady}
+                disabled={printGenerating}
               >
-                <Printer className="h-3.5 w-3.5" />
-                {printReady ? 'Preparing…' : 'Print'}
+                {printGenerating
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Printer className="h-3.5 w-3.5" />}
+                {printGenerating ? 'Preparing…' : 'Print'}
               </Button>
               <Button
                 variant="outline"
@@ -438,18 +448,6 @@ export function TicketDetail() {
           </Card>
         </div>
       </div>
-
-      {/* Hidden print report — revealed by @media print CSS */}
-      {printReady && role && (
-        <div ref={reportRef} className="print-report">
-          <TicketReport
-            ticket={ticket}
-            userRole={role as UserRole}
-            onReady={handleReportReady}
-            mode="print"
-          />
-        </div>
-      )}
 
     </PageTransition>
   );

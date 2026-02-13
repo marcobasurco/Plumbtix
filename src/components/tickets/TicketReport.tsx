@@ -164,12 +164,48 @@ export const TicketReport = forwardRef<HTMLDivElement, TicketReportProps>(
       return () => { cancelled = true; };
     }, [ticket.id]);
 
+    // Wait for ALL images (photos + QR) to finish loading before signaling ready
     useEffect(() => {
-      if (dataLoaded && onReady) {
+      if (!dataLoaded || !onReady) return;
+
+      const container = ref && typeof ref !== 'function' ? ref.current : document.getElementById('plumbtix-report');
+      if (!container) {
+        const t = setTimeout(onReady, mode === 'pdf' ? 600 : 300);
+        return () => clearTimeout(t);
+      }
+
+      const images = Array.from(container.querySelectorAll('img')) as HTMLImageElement[];
+      if (images.length === 0) {
         const t = setTimeout(onReady, mode === 'pdf' ? 600 : 150);
         return () => clearTimeout(t);
       }
-    }, [dataLoaded, onReady, mode]);
+
+      let resolved = false;
+      const finish = () => {
+        if (resolved) return;
+        resolved = true;
+        // Small extra delay for browser paint
+        setTimeout(onReady, mode === 'pdf' ? 300 : 100);
+      };
+
+      // Timeout fallback — don't block print forever if an image fails
+      const timeout = setTimeout(finish, 8000);
+
+      let loaded = 0;
+      const total = images.length;
+      const check = () => { loaded++; if (loaded >= total) finish(); };
+
+      images.forEach(img => {
+        if (img.complete && img.naturalWidth > 0) {
+          check();
+        } else {
+          img.addEventListener('load', check, { once: true });
+          img.addEventListener('error', check, { once: true });
+        }
+      });
+
+      return () => { resolved = true; clearTimeout(timeout); };
+    }, [dataLoaded, onReady, mode, ref, photoUrls]);
 
     const internalComments = isFullReport ? comments.filter(c => c.is_internal) : [];
     const externalComments = comments.filter(c => !c.is_internal);
@@ -207,7 +243,7 @@ export const TicketReport = forwardRef<HTMLDivElement, TicketReportProps>(
               {ticket.completed_at && <div>Completed: {fmtDate(ticket.completed_at)}</div>}
             </div>
             <div style={{ textAlign: 'center' }}>
-              <img src={qrImgUrl(ticketUrl)} alt="QR" style={{ width: 68, height: 68 }} crossOrigin="anonymous" />
+              <img src={qrImgUrl(ticketUrl)} alt="QR" style={{ width: 68, height: 68 }} />
               <div style={{ fontSize: '7px', color: '#aaa' }}>Scan to view</div>
             </div>
           </div>
@@ -267,7 +303,7 @@ export const TicketReport = forwardRef<HTMLDivElement, TicketReportProps>(
             <div style={S.sectionTitle}>Photos ({photoUrls.length})</div>
             <div style={S.photoGrid}>
               {photoUrls.map((p, i) => (
-                <img key={i} src={p.url} alt={p.name} style={S.photoThumb} crossOrigin="anonymous" />
+                <img key={i} src={p.url} alt={p.name} style={S.photoThumb} />
               ))}
             </div>
           </div>
