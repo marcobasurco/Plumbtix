@@ -22,7 +22,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRealtime } from '@/hooks/useRealtime';
 import { toast } from 'sonner';
-import { Loader2, Mail, CheckCircle2, ChevronDown, Pencil, Send, Phone, X, Save } from 'lucide-react';
+import { Loader2, Mail, CheckCircle2, ChevronDown, Pencil, Send, Phone, X, Save, Trash2 } from 'lucide-react';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -82,6 +82,7 @@ export function UsersPage() {
   const [editEmail, setEditEmail] = useState('');
   const [editName, setEditName] = useState('');
   const [resending, setResending] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   // User editing state (phone + SMS)
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -229,6 +230,27 @@ export function UsersPage() {
         toast.error(result.error.message);
       }
       setResending(null);
+    });
+    setConfirmOpen(true);
+  };
+
+  const handleDeleteInvitation = (inv: InvitationRow) => {
+    setConfirmTitle('Delete Invitation');
+    setConfirmDesc(`Delete the invitation for ${inv.name} (${inv.email})?\n\nThis cannot be undone. You can send a new invitation afterwards.`);
+    setConfirmAction(() => async () => {
+      setDeleting(inv.id);
+      const { error: delErr } = await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', inv.id);
+
+      if (delErr) {
+        toast.error('Failed to delete invitation', { description: delErr.message });
+      } else {
+        toast.success(`Invitation for ${inv.email} deleted`);
+        load();
+      }
+      setDeleting(null);
     });
     setConfirmOpen(true);
   };
@@ -508,6 +530,14 @@ export function UsersPage() {
                                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                     : <Send className="h-3.5 w-3.5" />}
                                 </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                                  title="Delete Invitation"
+                                  disabled={deleting === inv.id}
+                                  onClick={() => handleDeleteInvitation(inv)}>
+                                  {deleting === inv.id
+                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    : <Trash2 className="h-3.5 w-3.5" />}
+                                </Button>
                               </div>
                             </div>
                           </>
@@ -581,7 +611,8 @@ export function UsersPage() {
         }}
         title={confirmTitle}
         description={confirmDesc}
-        confirmLabel="Send"
+        confirmLabel={confirmTitle.includes('Delete') ? 'Delete' : 'Send'}
+        variant={confirmTitle.includes('Delete') ? 'destructive' : 'default'}
         onConfirm={() => {
           setConfirmOpen(false);
           if (confirmAction) confirmAction();
