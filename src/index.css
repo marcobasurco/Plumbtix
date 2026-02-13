@@ -443,6 +443,8 @@
   @page { margin: 0.5in; size: letter; }
   /* Fallback when .print-report does NOT exist — print the normal view (reports dashboard) */
   .sidebar, .content-header, nav, [data-sidebar], .print\:hidden { display: none !important; }
+  /* Always hide PDF capture elements during print */
+  [data-pdf-wrapper] { display: none !important; }
   .content-area { margin-left: 0 !important; }
   .content-main { padding: 0 !important; max-width: none; }
   /* Keep chart colors in print */
