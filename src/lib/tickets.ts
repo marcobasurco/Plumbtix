@@ -145,6 +145,11 @@ export interface TicketDetailRow {
     gate_code: string | null;
     onsite_contact_name: string | null;
     onsite_contact_phone: string | null;
+    company: {
+      id: string;
+      name: string;
+      logo_url: string | null;
+    } | null;
   };
   space: {
     id: string;
@@ -168,7 +173,8 @@ export async function fetchTicketDetail(ticketId: string) {
       *,
       building:buildings!inner(
         id, name, address_line1, address_line2, city, state, zip,
-        gate_code, onsite_contact_name, onsite_contact_phone
+        gate_code, onsite_contact_name, onsite_contact_phone,
+        company:companies(id, name, logo_url)
       ),
       space:spaces!inner(id, space_type, unit_number, common_area_type, floor),
       created_by:users!tickets_created_by_user_id_fkey(id, full_name, email, phone)

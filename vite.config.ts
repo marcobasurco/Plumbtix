@@ -10,6 +10,13 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, 'shared'),
     },
   },
+  define: {
+    // Buffer polyfill for @react-pdf/renderer
+    'global': 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['@react-pdf/renderer', 'buffer'],
+  },
   server: {
     port: 5173,
     proxy: {
@@ -22,5 +29,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Isolate @react-pdf into its own chunk (loaded on demand)
+          'react-pdf': ['@react-pdf/renderer'],
+        },
+      },
+    },
   },
 });

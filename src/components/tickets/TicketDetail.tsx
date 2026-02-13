@@ -107,10 +107,8 @@ export function TicketDetail() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [printReady, setPrintReady] = useState(false);
-  const [pdfReady, setPdfReady] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
-  const pdfReportRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!ticketId) return;
@@ -162,138 +160,21 @@ export function TicketDetail() {
     window.addEventListener('afterprint', cleanup, { once: true });
   }, []);
 
-  // ── PDF Download via html2canvas + jsPDF ──
-  const handleDownloadPdf = useCallback(() => {
-    setPdfReady(true);
+  // ── PDF Download via @react-pdf/renderer (programmatic, no DOM capture) ──
+  const handleDownloadPdf = useCallback(async () => {
+    if (!ticket || !role) return;
     setPdfGenerating(true);
-  }, []);
-
-  const handlePdfReady = useCallback(async () => {
-    const el = pdfReportRef.current;
-    if (!el || !ticket) {
-      setPdfReady(false);
-      setPdfGenerating(false);
-      return;
-    }
-
     try {
-      // Dynamic imports — keeps main bundle small
-      const html2canvasModule = await import('html2canvas');
-      const jspdfModule = await import('jspdf');
-      const html2canvas = html2canvasModule.default;
-      const JsPDF = jspdfModule.jsPDF ?? jspdfModule.default;
-
-      // ── 1. Wait for all images (QR code, photos) to load ──
-      const images = Array.from(el.querySelectorAll('img'));
-      await Promise.allSettled(
-        images.map(img =>
-          img.complete
-            ? Promise.resolve()
-            : new Promise<void>((res) => {
-                img.onload = () => res();
-                img.onerror = () => res(); // don't block on failed images
-              })
-        )
-      );
-
-      // ── 2. Force element visible for capture ──
-      // html2canvas MUST see a fully-painted, on-screen element.
-      // We temporarily make it visible behind a white overlay.
-      const wrapper = el.closest('[data-pdf-wrapper]') as HTMLElement;
-      if (wrapper) {
-        wrapper.style.position = 'fixed';
-        wrapper.style.left = '0';
-        wrapper.style.top = '0';
-        wrapper.style.width = '816px'; // letter width at 96dpi
-        wrapper.style.zIndex = '99998';
-        wrapper.style.opacity = '1';
-        wrapper.style.visibility = 'visible';
-        wrapper.style.overflow = 'visible';
-        wrapper.style.background = '#ffffff';
-      }
-
-      // Small delay for browser paint
-      await new Promise(r => setTimeout(r, 200));
-
-      // ── 3. Capture with html2canvas ──
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-        scrollY: 0,
-        scrollX: 0,
-        windowWidth: 816,
-        onclone: (clonedDoc: Document) => {
-          // Force light mode on the cloned document
-          const clonedEl = clonedDoc.querySelector('#plumbtix-report') as HTMLElement;
-          if (clonedEl) {
-            clonedEl.style.background = '#ffffff';
-            clonedEl.style.color = '#1a1a1a';
-          }
-          // Remove dark mode class if present
-          clonedDoc.documentElement.classList.remove('dark');
-          clonedDoc.body.style.background = '#ffffff';
-          clonedDoc.body.style.color = '#1a1a1a';
-        },
-      });
-
-      // ── 4. Generate PDF with proper multi-page slicing ──
-      const pdf = new JsPDF('p', 'mm', 'letter');
-      const pageWidth = pdf.internal.pageSize.getWidth();   // ~215.9mm
-      const pageHeight = pdf.internal.pageSize.getHeight();  // ~279.4mm
-      const margin = 10; // mm
-      const contentWidth = pageWidth - margin * 2;
-      const contentHeight = pageHeight - margin * 2;
-
-      // Calculate how the canvas maps to PDF dimensions
-      const pxPerMm = canvas.width / contentWidth;
-      const pageHeightPx = contentHeight * pxPerMm;
-      const totalPages = Math.ceil(canvas.height / pageHeightPx);
-
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) pdf.addPage();
-
-        // Slice a page-sized chunk from the canvas
-        const sourceY = page * pageHeightPx;
-        const sourceH = Math.min(pageHeightPx, canvas.height - sourceY);
-
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sourceH;
-
-        const ctx = sliceCanvas.getContext('2d');
-        if (ctx) {
-          // Fill white background (prevents black pages)
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-          // Draw the relevant slice
-          ctx.drawImage(
-            canvas,
-            0, sourceY, canvas.width, sourceH,
-            0, 0, canvas.width, sourceH,
-          );
-        }
-
-        const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.95);
-        const sliceHeightMm = sourceH / pxPerMm;
-
-        pdf.addImage(sliceData, 'JPEG', margin, margin, contentWidth, sliceHeightMm);
-      }
-
-      pdf.save(`WorkOrder-${ticket.ticket_number}.pdf`);
+      const { downloadTicketPdf } = await import('./generateTicketPdf');
+      await downloadTicketPdf(ticket, role as UserRole);
       toast.success('PDF downloaded');
     } catch (e) {
       console.error('[PDF] Generation failed:', e);
       toast.error('PDF generation failed. Try Print instead.');
     } finally {
-      setPdfReady(false);
       setPdfGenerating(false);
     }
-  }, [ticket]);
+  }, [ticket, role]);
 
   if (loading) {
     return (
@@ -570,59 +451,6 @@ export function TicketDetail() {
         </div>
       )}
 
-      {/* PDF capture container — must be visible for html2canvas */}
-      {pdfReady && role && (
-        <>
-          {/* Overlay to hide the capture from the user */}
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 99999,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <div style={{
-              background: '#fff',
-              borderRadius: '8px',
-              padding: '24px 32px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#333',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
-            }}>
-              Generating PDF…
-            </div>
-          </div>
-          {/* The actual report — rendered BEHIND the overlay but fully visible for capture */}
-          <div
-            data-pdf-wrapper
-            style={{
-              position: 'fixed',
-              left: 0,
-              top: 0,
-              width: '816px',
-              background: '#ffffff',
-              zIndex: 99998,
-              opacity: 1,
-              visibility: 'visible',
-              overflow: 'visible',
-              pointerEvents: 'none',
-            }}
-          >
-            <TicketReport
-              ref={pdfReportRef}
-              ticket={ticket}
-              userRole={role as UserRole}
-              onReady={handlePdfReady}
-              mode="pdf"
-            />
-          </div>
-        </>
-      )}
     </PageTransition>
   );
 }
