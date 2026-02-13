@@ -152,7 +152,7 @@ export const TicketReport = forwardRef<HTMLDivElement, TicketReportProps>(
             for (const att of imgs) {
               const { data } = await supabase.storage
                 .from('ticket-attachments')
-                .createSignedUrl(att.storage_path, 300);
+                .createSignedUrl(att.file_path, 300);
               if (data?.signedUrl) urls.push({ name: att.file_name, url: data.signedUrl });
             }
             if (!cancelled) setPhotoUrls(urls);
