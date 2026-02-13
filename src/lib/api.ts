@@ -34,9 +34,24 @@ import type {
 
 const EDGE_BASE = import.meta.env.VITE_EDGE_BASE_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 if (!EDGE_BASE) {
   throw new Error('Missing VITE_EDGE_BASE_URL in environment');
+}
+
+// ---------------------------------------------------------------------------
+// Startup: detect EDGE_BASE / SUPABASE_URL mismatch (common cause of
+// persistent "Invalid JWT" — JWT signed by Project A, sent to Project B)
+// ---------------------------------------------------------------------------
+if (SUPABASE_URL && EDGE_BASE && !EDGE_BASE.startsWith(SUPABASE_URL)) {
+  console.error(
+    '[api] ⚠️ VITE_EDGE_BASE_URL does not start with VITE_SUPABASE_URL!\n' +
+    '  SUPABASE_URL: %s\n  EDGE_BASE:    %s\n' +
+    '  This causes persistent "Invalid JWT" because the JWT is signed\n' +
+    '  by one project but validated by another.',
+    SUPABASE_URL, EDGE_BASE,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -52,57 +67,6 @@ export interface ApiError {
 type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: ApiError };
-
-// ---------------------------------------------------------------------------
-// JWT token management
-// ---------------------------------------------------------------------------
-
-/** Decode the `exp` claim from a JWT without a library. Returns epoch seconds or null. */
-function getJwtExp(token: string): number | null {
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-    return typeof decoded.exp === 'number' ? decoded.exp : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Refresh buffer: refresh if token expires within this many seconds. */
-const REFRESH_BUFFER_S = 120; // 2 minutes
-
-/**
- * Get a valid access token, refreshing proactively if the JWT is expired
- * or about to expire. Returns null if no valid session can be obtained.
- */
-async function getValidAccessToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (session?.access_token) {
-    const exp = getJwtExp(session.access_token);
-    const now = Math.floor(Date.now() / 1000);
-
-    // Token is still fresh — use it
-    if (exp && exp - now > REFRESH_BUFFER_S) {
-      return session.access_token;
-    }
-
-    // Token expired or expiring soon — force refresh
-    console.log('[api] JWT expired or expiring in <%ds, refreshing', REFRESH_BUFFER_S);
-  }
-
-  // No cached session or token is stale — try refreshing
-  const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
-  if (refreshErr) {
-    console.warn('[api] refreshSession failed:', refreshErr.message);
-  }
-  return refreshData?.session?.access_token ?? null;
-}
-
-// ---------------------------------------------------------------------------
-// Core fetch helper
-// ---------------------------------------------------------------------------
 
 /**
  * Call an Edge Function. Automatically attaches the current session JWT.
@@ -140,17 +104,16 @@ async function callEdge<T>(
   }
 
   if (requireAuth) {
-    // Get a valid access token, refreshing proactively if needed.
-    // getSession() returns CACHED data — the JWT may already be invalid
-    // server-side even if the cache looks fresh. Decode the actual exp claim.
-    const token = await getValidAccessToken();
-    if (!token) {
-      // No recoverable session — redirect to login
-      await supabase.auth.signOut().catch(() => {});
-      window.location.replace('/login');
-      return new Promise<never>(() => {});
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      return {
+        ok: false,
+        error: { code: 'NO_SESSION', message: 'Not logged in. Please sign in and try again.', status: 401 },
+      };
     }
-    headers['Authorization'] = `Bearer ${token}`;
+
+    headers['Authorization'] = `Bearer ${session.access_token}`;
   }
 
   try {
@@ -160,35 +123,46 @@ async function callEdge<T>(
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    // If 401 despite proactive refresh, try one final forced refresh + retry
+    // On 401, try refreshing the session once and retry
     if (res.status === 401 && requireAuth) {
-      console.warn('[api] Got 401 from server, forcing session refresh');
-      const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
-      const freshToken = refreshData?.session?.access_token;
+      console.warn('[api] 401 from %s — attempting session refresh', path);
 
-      if (!freshToken) {
-        // Refresh token is dead — session truly expired, redirect to login
-        console.error('[api] refreshSession failed, signing out:', refreshErr?.message);
-        await supabase.auth.signOut().catch(() => {});
-        window.location.replace('/login');
-        return new Promise<never>(() => {});
+      const { data: refreshData, error: refreshErr } =
+        await supabase.auth.refreshSession();
+
+      if (refreshErr || !refreshData?.session?.access_token) {
+        console.error('[api] Session refresh failed:', refreshErr?.message);
+        // Log diagnostics for debugging persistent 401
+        console.error('[api] Diagnostics: EDGE_BASE=%s, SUPABASE_URL=%s, path=%s',
+          EDGE_BASE, SUPABASE_URL, path);
+        return {
+          ok: false,
+          error: {
+            code: 'SESSION_EXPIRED',
+            message: 'Your session has expired. Please sign in again.',
+            status: 401,
+          },
+        };
       }
 
-      // Refresh succeeded — retry with fresh token
-      headers['Authorization'] = `Bearer ${freshToken}`;
+      // Retry with the refreshed token
+      headers['Authorization'] = `Bearer ${refreshData.session.access_token}`;
       res = await fetch(url.toString(), {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
       });
 
-      // If STILL 401 after a successful refresh, the session is unrecoverable
-      // (user deleted, banned, JWT secret rotated, etc.) — redirect to login
+      // If STILL 401 after a valid refresh — this is a config/infra problem,
+      // not a session problem. Log diagnostics and surface the real error.
       if (res.status === 401) {
-        console.error('[api] Still 401 after refresh, signing out');
-        await supabase.auth.signOut().catch(() => {});
-        window.location.replace('/login');
-        return new Promise<never>(() => {});
+        console.error(
+          '[api] STILL 401 after successful refresh. This is likely an env mismatch.\n' +
+          '  VITE_SUPABASE_URL:   %s\n' +
+          '  VITE_EDGE_BASE_URL:  %s\n' +
+          '  Ensure EDGE_BASE = SUPABASE_URL + "/functions/v1"',
+          SUPABASE_URL, EDGE_BASE,
+        );
       }
     }
 
