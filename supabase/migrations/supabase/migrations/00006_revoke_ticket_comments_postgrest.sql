@@ -1,0 +1,74 @@
+-- ============================================================================
+-- MIGRATION 00006 — ADDITIVE — REVOKE POSTGREST ACCESS ON ticket_comments
+-- ============================================================================
+--
+-- Purpose:
+--   Block ALL direct PostgREST access to public.ticket_comments.
+--   All comment reads and writes MUST go through Edge Functions.
+--
+-- Problem solved:
+--   Section 5 (LOCKED) has "pm_entitled_comments" with FOR ALL and no
+--   is_internal filter. This allows PMs to:
+--     - SELECT internal comments via direct PostgREST GET
+--     - INSERT comments with is_internal=true via direct PostgREST POST
+--   We cannot modify locked RLS policies. REVOKE at the privilege level
+--   blocks access BEFORE RLS is evaluated.
+--
+-- What this does:
+--   REVOKE ALL on public.ticket_comments FROM anon
+--   REVOKE ALL on public.ticket_comments FROM authenticated
+--
+--   "ALL" means SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER.
+--   No PostgREST operation can touch this table with anon or authenticated roles.
+--
+-- What this does NOT change:
+--   ✗ No RLS policy changes (Section 5 locked, 41 policies unchanged)
+--   ✗ No table/column/index changes (Section 4 locked)
+--   ✗ No other tables affected
+--   ✗ service_role retains full access (Postgres superuser bypass)
+--
+-- Edge Function impact:
+--   get-ticket-comments  → uses service_role for SELECT (user JWT verifies
+--                           ticket access first, then service_role reads comments)
+--   create-comment       → uses service_role for INSERT (user JWT verifies
+--                           ticket access first, then service_role inserts)
+--   All other functions   → unaffected (they don't touch ticket_comments)
+--
+-- ============================================================================
+
+REVOKE ALL ON public.ticket_comments FROM anon;
+REVOKE ALL ON public.ticket_comments FROM authenticated;
+
+-- ============================================================================
+-- VERIFICATION QUERIES
+-- ============================================================================
+--
+-- V.1 Confirm ALL privileges revoked for anon:
+--   SELECT has_table_privilege('anon', 'public.ticket_comments', 'SELECT');
+--   Expected: false
+--   SELECT has_table_privilege('anon', 'public.ticket_comments', 'INSERT');
+--   Expected: false
+--
+-- V.2 Confirm ALL privileges revoked for authenticated:
+--   SELECT has_table_privilege('authenticated', 'public.ticket_comments', 'SELECT');
+--   Expected: false
+--   SELECT has_table_privilege('authenticated', 'public.ticket_comments', 'INSERT');
+--   Expected: false
+--
+-- V.3 Confirm service_role retains full access:
+--   SELECT has_table_privilege('service_role', 'public.ticket_comments', 'SELECT');
+--   Expected: true
+--   SELECT has_table_privilege('service_role', 'public.ticket_comments', 'INSERT');
+--   Expected: true
+--
+-- V.4 Confirm RLS policies unchanged (Section 5 untouched):
+--   SELECT COUNT(*) FROM pg_policies WHERE schemaname = 'public';
+--   Expected: 41
+--
+-- V.5 Direct PostgREST test (as authenticated user):
+--   curl http://127.0.0.1:54321/rest/v1/ticket_comments \
+--     -H "apikey: <anon_key>" \
+--     -H "Authorization: Bearer <user_jwt>"
+--   Expected: 403 or empty result with permission error
+--
+-- ============================================================================
