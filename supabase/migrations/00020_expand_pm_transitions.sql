@@ -1,8 +1,8 @@
 -- =============================================================================
 -- Migration 00020: Expand PM role transitions + field access
 -- =============================================================================
--- pm_admin can now: schedule, assign technician, set needs_info
--- pm_user gets: schedule from waiting_approval (unchanged), cancel
+-- pm_admin can now: schedule, assign technician, set needs_info (NO cancel)
+-- pm_user gets: approve waiting_approval only (NO cancel)
 -- Must match: shared/types/transitions.ts + update-ticket edge function
 -- =============================================================================
 
@@ -61,30 +61,26 @@ BEGIN
                 allowed := false;
         END CASE;
 
-    -- pm_admin: expanded — can schedule, triage, cancel
+    -- pm_admin: can schedule and triage, but NOT cancel
     ELSIF caller_role = 'pm_admin' THEN
         CASE OLD.status
             WHEN 'new' THEN
-                allowed := NEW.status IN ('needs_info', 'scheduled', 'cancelled');
+                allowed := NEW.status IN ('needs_info', 'scheduled');
             WHEN 'needs_info' THEN
-                allowed := NEW.status IN ('new', 'scheduled', 'cancelled');
+                allowed := NEW.status IN ('new', 'scheduled');
             WHEN 'scheduled' THEN
-                allowed := NEW.status IN ('needs_info', 'cancelled');
+                allowed := NEW.status IN ('needs_info');
             WHEN 'waiting_approval' THEN
-                allowed := NEW.status IN ('scheduled', 'cancelled');
+                allowed := NEW.status IN ('scheduled');
             ELSE
                 allowed := false;
         END CASE;
 
-    -- pm_user: can cancel early + approve/decline waiting
+    -- pm_user: approve waiting_approval only, no cancel
     ELSIF caller_role = 'pm_user' THEN
         CASE OLD.status
-            WHEN 'new' THEN
-                allowed := NEW.status IN ('cancelled');
-            WHEN 'needs_info' THEN
-                allowed := NEW.status IN ('new', 'cancelled');
             WHEN 'waiting_approval' THEN
-                allowed := NEW.status IN ('scheduled', 'cancelled');
+                allowed := NEW.status IN ('scheduled');
             ELSE
                 allowed := false;
         END CASE;

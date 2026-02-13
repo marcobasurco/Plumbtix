@@ -24,19 +24,17 @@ export const TRANSITION_MATRIX: Record<
 > = {
   new: {
     proroto_admin: ['needs_info', 'scheduled', 'cancelled'],
-    pm_admin:      ['needs_info', 'scheduled', 'cancelled'],
-    pm_user:       ['cancelled'],
+    pm_admin:      ['needs_info', 'scheduled'],
   },
 
   needs_info: {
     proroto_admin: ['new', 'scheduled', 'cancelled'],
-    pm_admin:      ['new', 'scheduled', 'cancelled'],
-    pm_user:       ['new', 'cancelled'],
+    pm_admin:      ['new', 'scheduled'],
   },
 
   scheduled: {
     proroto_admin: ['dispatched', 'needs_info', 'cancelled'],
-    pm_admin:      ['needs_info', 'cancelled'],
+    pm_admin:      ['needs_info'],
   },
 
   dispatched: {
@@ -53,8 +51,8 @@ export const TRANSITION_MATRIX: Record<
 
   waiting_approval: {
     proroto_admin: ['scheduled', 'in_progress', 'cancelled'],
-    pm_admin:      ['scheduled', 'cancelled'],
-    pm_user:       ['scheduled', 'cancelled'],
+    pm_admin:      ['scheduled'],
+    pm_user:       ['scheduled'],
   },
 
   completed: {

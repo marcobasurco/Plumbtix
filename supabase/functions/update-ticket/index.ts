@@ -43,13 +43,13 @@ const TICKET_STATUSES = [
 type TicketStatus = typeof TICKET_STATUSES[number];
 
 const TRANSITION_MATRIX: Record<string, Partial<Record<UserRole, readonly string[]>>> = {
-  new:              { proroto_admin: ['needs_info', 'scheduled', 'cancelled'], pm_admin: ['needs_info', 'scheduled', 'cancelled'], pm_user: ['cancelled'] },
-  needs_info:       { proroto_admin: ['new', 'scheduled', 'cancelled'], pm_admin: ['new', 'scheduled', 'cancelled'], pm_user: ['new', 'cancelled'] },
-  scheduled:        { proroto_admin: ['dispatched', 'needs_info', 'cancelled'], pm_admin: ['needs_info', 'cancelled'] },
+  new:              { proroto_admin: ['needs_info', 'scheduled', 'cancelled'], pm_admin: ['needs_info', 'scheduled'] },
+  needs_info:       { proroto_admin: ['new', 'scheduled', 'cancelled'], pm_admin: ['new', 'scheduled'] },
+  scheduled:        { proroto_admin: ['dispatched', 'needs_info', 'cancelled'], pm_admin: ['needs_info'] },
   dispatched:       { proroto_admin: ['on_site', 'scheduled', 'cancelled'] },
   on_site:          { proroto_admin: ['in_progress', 'cancelled'] },
   in_progress:      { proroto_admin: ['waiting_approval', 'completed', 'cancelled'] },
-  waiting_approval: { proroto_admin: ['scheduled', 'in_progress', 'cancelled'], pm_admin: ['scheduled', 'cancelled'], pm_user: ['scheduled', 'cancelled'] },
+  waiting_approval: { proroto_admin: ['scheduled', 'in_progress', 'cancelled'], pm_admin: ['scheduled'], pm_user: ['scheduled'] },
   completed:        { proroto_admin: ['invoiced'] },
   invoiced:         {},
   cancelled:        {},

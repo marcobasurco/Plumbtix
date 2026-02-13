@@ -158,19 +158,6 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
             </div>
           </div>
 
-          {/* Decline reason */}
-          {currentStatus === 'waiting_approval' && !isAdmin && allowed.includes('cancelled' as TicketStatus) && (
-            <div className="mb-4">
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Decline reason (optional)</label>
-              <input
-                type="text"
-                value={declineReason}
-                onChange={(e) => setDeclineReason(e.target.value)}
-                placeholder="Reason for declining the work"
-                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
-              />
-            </div>
-          )}
         </>
       )}
 
