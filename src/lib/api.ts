@@ -293,6 +293,13 @@ export function resendInvitation(body: ResendInvitationRequest) {
   });
 }
 
+export function deleteInvitation(invitationId: string) {
+  return callEdge<{ deleted: boolean }>('delete-invitation', {
+    method: 'POST',
+    body: { invitation_id: invitationId },
+  });
+}
+
 export function updateOccupant(body: UpdateOccupantRequest) {
   return callEdge<UpdateOccupantResponse>('update-occupant', {
     method: 'POST',

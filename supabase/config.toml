@@ -108,6 +108,9 @@ verify_jwt = false
 [functions.delete-entitlement]
 verify_jwt = false
 
+[functions.delete-invitation]
+verify_jwt = false
+
 [functions.delete-occupant]
 verify_jwt = false
 

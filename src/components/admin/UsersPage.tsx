@@ -7,7 +7,7 @@ import {
   type InvitationRow,
   type CompanyOption,
 } from '@/lib/admin';
-import { sendInvitation, resendInvitation } from '@/lib/api';
+import { sendInvitation, resendInvitation, deleteInvitation } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
 import { ROLE_LABELS, INVITATION_ROLES } from '@shared/types/enums';
 import type { InvitationRole } from '@shared/types/enums';
@@ -236,19 +236,16 @@ export function UsersPage() {
 
   const handleDeleteInvitation = (inv: InvitationRow) => {
     setConfirmTitle('Delete Invitation');
-    setConfirmDesc(`Delete the invitation for ${inv.name} (${inv.email})?\n\nThis cannot be undone. You can send a new invitation afterwards.`);
+    setConfirmDesc(`Delete the invitation for ${inv.name} (${inv.email})?\n\nThis will also remove any partially-created account so the email can be invited again.`);
     setConfirmAction(() => async () => {
       setDeleting(inv.id);
-      const { error: delErr } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', inv.id);
+      const result = await deleteInvitation(inv.id);
 
-      if (delErr) {
-        toast.error('Failed to delete invitation', { description: delErr.message });
-      } else {
+      if (result.ok) {
         toast.success(`Invitation for ${inv.email} deleted`);
         load();
+      } else {
+        toast.error('Failed to delete invitation', { description: result.error.message });
       }
       setDeleting(null);
     });
