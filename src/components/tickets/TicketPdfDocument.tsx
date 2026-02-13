@@ -219,7 +219,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
     type?: string; preferred_date?: string; preferred_time?: string;
   } | null;
 
-  const ticketUrl = `https://workorders.proroto.com/tickets/${ticket.id}`;
+  const ticketUrl = `https://workorders.proroto.com/p/${ticket.id}`;
   const qrSrc = qrUrl(ticketUrl);
   const logoUrl = bld.company?.logo_url || null;
   const companyName = bld.company?.name || 'Pro Roto Inc.';

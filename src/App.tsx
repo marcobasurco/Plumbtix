@@ -19,6 +19,7 @@ import { AdminDashboard } from '@/routes/dashboard-admin';
 import { PMDashboard } from '@/routes/dashboard-pm';
 import { ResidentDashboard } from '@/routes/dashboard-resident';
 import { WelcomeTour } from '@/components/WelcomeTour';
+import { PublicTicketView } from '@/routes/public-ticket';
 
 function RootRedirect() {
   const { role, loading, session } = useAuth();
@@ -55,8 +56,11 @@ export function App() {
               <Route path="/accept-invite" element={<AcceptInvitePage />} />
               <Route path="/claim-account" element={<ClaimAccountPage />} />
 
-              {/* Short link for SMS/email ticket links */}
+              {/* Short link for SMS/email ticket links (requires login) */}
               <Route path="/t/:ticketId" element={<TicketShortLink />} />
+
+              {/* Public ticket view — QR code / shareable link (no login) */}
+              <Route path="/p/:ticketId" element={<PublicTicketView />} />
 
               {/* Protected */}
               <Route element={<ProtectedRoute />}>

@@ -64,7 +64,7 @@ function fmtCurrency(amount: number | null): string {
 
 function getTicketUrl(ticketId: string): string {
   const base = typeof window !== 'undefined' ? window.location.origin : 'https://workorders.proroto.com';
-  return `${base}/tickets/${ticketId}`;
+  return `${base}/p/${ticketId}`;
 }
 
 // QR via public API — works in browser and PDF capture

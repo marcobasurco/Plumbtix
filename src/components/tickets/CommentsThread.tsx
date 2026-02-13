@@ -3,7 +3,7 @@ import { getTicketComments, createComment } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MessageSquare } from 'lucide-react';
 import { ROLE_LABELS } from '@shared/types/enums';
 
 interface CommentEntry {
@@ -77,7 +77,7 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
     if (result.ok) {
       setText('');
       setIsInternal(false);
-      await loadComments(); // Refresh from server
+      await loadComments();
     } else {
       setPostError(result.error.message);
     }
@@ -86,40 +86,49 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
 
   return (
     <div>
-      <h3 style={sectionTitle}>
+      <h3 className="text-base font-semibold mb-3 pb-2 border-b border-border flex items-center gap-2">
+        <MessageSquare className="h-4 w-4 text-muted-foreground" />
         Comments
-        {comments.length > 0 && <span style={{ fontWeight: 400, color: '#9ca3af' }}> ({comments.length})</span>}
+        {comments.length > 0 && (
+          <span className="font-normal text-muted-foreground"> ({comments.length})</span>
+        )}
       </h3>
 
       {/* Comment list */}
       {loading ? (
-        <p style={mutedStyle}>Loading comments…</p>
+        <p className="text-sm text-muted-foreground">Loading comments…</p>
       ) : error ? (
         <ErrorBanner message={error} onDismiss={() => setError(null)} />
       ) : comments.length === 0 ? (
-        <p style={mutedStyle}>No comments yet.</p>
+        <p className="text-sm text-muted-foreground">No comments yet.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+        <div className="flex flex-col gap-3 mb-4">
           {comments.map((c) => (
-            <div key={c.id} style={{
-              ...commentBox,
-              ...(c.is_internal ? internalStyle : {}),
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '4px' }}>
+            <div
+              key={c.id}
+              className={`px-3.5 py-2.5 rounded-md border text-foreground ${
+                c.is_internal
+                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                  : 'bg-card border-border'
+              }`}
+            >
+              <div className="flex justify-between items-baseline flex-wrap gap-1">
                 <div>
-                  <strong style={{ fontSize: '0.85rem' }}>{c.author.full_name}</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginLeft: '6px' }}>
+                  <strong className="text-sm">{c.author.full_name}</strong>
+                  <span className="text-xs text-muted-foreground ml-1.5">
                     {ROLE_LABELS[c.author.role as keyof typeof ROLE_LABELS] ?? c.author.role}
                   </span>
                 </div>
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                <span className="text-xs text-muted-foreground">
                   {formatDateTime(c.created_at)}
                 </span>
               </div>
               {c.is_internal && (
-                <span style={internalBadge}>Internal</span>
+                <span className="inline-block text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 mt-1">
+                  Internal
+                </span>
               )}
-              <p style={{ margin: '4px 0 0', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
+              <p className="mt-1 text-sm whitespace-pre-wrap">
                 {c.comment_text}
               </p>
             </div>
@@ -128,7 +137,7 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
       )}
 
       {/* Compose */}
-      <form onSubmit={handleSubmit} style={{ marginTop: '8px' }}>
+      <form onSubmit={handleSubmit} className="mt-2">
         <ErrorBanner message={postError} onDismiss={() => setPostError(null)} />
 
         <textarea
@@ -136,17 +145,18 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
           onChange={(e) => setText(e.target.value)}
           placeholder="Add a comment…"
           rows={3}
-          style={textareaStyle}
+          className="w-full px-3 py-2.5 border border-border rounded-lg text-sm font-[inherit] resize-y min-h-[80px] bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
         />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+        <div className="flex items-center justify-between mt-2">
           <div>
             {isAdmin && (
-              <label style={{ fontSize: '0.8rem', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <label className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1">
                 <input
                   type="checkbox"
                   checked={isInternal}
                   onChange={(e) => setIsInternal(e.target.checked)}
+                  className="accent-primary"
                 />
                 Internal note (only visible to Pro Roto)
               </label>
@@ -166,28 +176,3 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
     </div>
   );
 }
-
-// Styles
-const sectionTitle: React.CSSProperties = {
-  fontSize: '1rem', fontWeight: 600, marginBottom: '12px',
-  paddingBottom: '8px', borderBottom: '1px solid #e5e7eb',
-};
-const mutedStyle: React.CSSProperties = { color: '#9ca3af', fontSize: '0.85rem' };
-const commentBox: React.CSSProperties = {
-  padding: '10px 14px', borderRadius: '6px',
-  border: '1px solid #e5e7eb', background: '#fff',
-};
-const internalStyle: React.CSSProperties = {
-  background: '#fffbeb', border: '1px solid #fde68a',
-};
-const internalBadge: React.CSSProperties = {
-  display: 'inline-block', fontSize: '0.65rem', fontWeight: 700,
-  textTransform: 'uppercase', padding: '1px 6px', borderRadius: '4px',
-  background: '#fef3c7', color: '#92400e', marginTop: '4px',
-};
-const textareaStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px',
-  border: '1px solid #d1d5db', borderRadius: '8px',
-  fontSize: '1rem', fontFamily: 'inherit',
-  resize: 'vertical', minHeight: '80px',
-};
