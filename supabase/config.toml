@@ -60,3 +60,89 @@ enabled = false
 
 [edge_runtime]
 policy = "oneshot"
+
+# ---------------------------------------------------------------------------
+# Edge Functions — JWT Verification
+# ---------------------------------------------------------------------------
+# Disable Kong's gateway-level JWT verification for ALL functions.
+# Each function handles its own auth:
+#   - Public functions (accept-invitation, claim-resident): no auth required
+#   - Authenticated functions: validate JWT via createUserClient + getAuthenticatedUserId
+# Without this, Kong rejects the JWT before the function can run,
+# causing persistent "Invalid JWT" errors.
+# ---------------------------------------------------------------------------
+
+[functions.accept-invitation]
+verify_jwt = false
+
+[functions.claim-resident]
+verify_jwt = false
+
+[functions.create-building]
+verify_jwt = false
+
+[functions.create-comment]
+verify_jwt = false
+
+[functions.create-company]
+verify_jwt = false
+
+[functions.create-entitlement]
+verify_jwt = false
+
+[functions.create-occupant]
+verify_jwt = false
+
+[functions.create-space]
+verify_jwt = false
+
+[functions.create-ticket]
+verify_jwt = false
+
+[functions.delete-attachment]
+verify_jwt = false
+
+[functions.delete-building]
+verify_jwt = false
+
+[functions.delete-entitlement]
+verify_jwt = false
+
+[functions.delete-occupant]
+verify_jwt = false
+
+[functions.delete-space]
+verify_jwt = false
+
+[functions.get-ticket-comments]
+verify_jwt = false
+
+[functions.register-attachment]
+verify_jwt = false
+
+[functions.resend-invitation]
+verify_jwt = false
+
+[functions.resend-test]
+verify_jwt = false
+
+[functions.send-invitation]
+verify_jwt = false
+
+[functions.send-sms]
+verify_jwt = false
+
+[functions.update-building]
+verify_jwt = false
+
+[functions.update-company]
+verify_jwt = false
+
+[functions.update-occupant]
+verify_jwt = false
+
+[functions.update-space]
+verify_jwt = false
+
+[functions.update-ticket]
+verify_jwt = false
