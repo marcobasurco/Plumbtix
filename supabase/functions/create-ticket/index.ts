@@ -59,8 +59,10 @@ Deno.serve(async (req: Request) => {
   try {
     userClient = createUserClient(req);
     userId = await getAuthenticatedUserId(userClient);
-  } catch {
-    return unauthorized();
+  } catch (authError) {
+    const msg = authError instanceof Error ? authError.message : 'Unknown auth error';
+    console.error('[create-ticket] Auth failed:', msg);
+    return unauthorized(msg);
   }
 
   const parsed = await parseBody(req, CreateTicketSchema);

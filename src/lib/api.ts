@@ -163,26 +163,31 @@ async function callEdge<T>(
     // If 401 despite proactive refresh, try one final forced refresh + retry
     if (res.status === 401 && requireAuth) {
       console.warn('[api] Got 401 from server, forcing session refresh');
-      const { data: refreshData } = await supabase.auth.refreshSession();
+      const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
       const freshToken = refreshData?.session?.access_token;
 
-      if (freshToken) {
-        headers['Authorization'] = `Bearer ${freshToken}`;
-        res = await fetch(url.toString(), {
-          method,
-          headers,
-          body: body ? JSON.stringify(body) : undefined,
-        });
+      if (!freshToken) {
+        // Refresh token is dead — session truly expired, redirect to login
+        console.error('[api] refreshSession failed, signing out:', refreshErr?.message);
+        await supabase.auth.signOut().catch(() => {});
+        window.location.replace('/login');
+        return new Promise<never>(() => {});
       }
 
-      // Still 401 or refresh failed — session is irrecoverable
-      if (!freshToken || res.status === 401) {
-        console.error('[api] Session irrecoverable, signing out');
+      // Refresh succeeded — retry with fresh token
+      headers['Authorization'] = `Bearer ${freshToken}`;
+      res = await fetch(url.toString(), {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      // If STILL 401 after a successful refresh, the session is unrecoverable
+      // (user deleted, banned, JWT secret rotated, etc.) — redirect to login
+      if (res.status === 401) {
+        console.error('[api] Still 401 after refresh, signing out');
         await supabase.auth.signOut().catch(() => {});
-        // Use replace to prevent back-button loop
         window.location.replace('/login');
-        // Return a never-resolving promise so callers don't process the error
-        // and flash UI before the redirect completes
         return new Promise<never>(() => {});
       }
     }
