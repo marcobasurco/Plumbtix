@@ -11,22 +11,33 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('company-logos', 'company-logos', true)
 ON CONFLICT (id) DO NOTHING;
 
--- RLS: Anyone can read logos (public bucket)
-CREATE POLICY IF NOT EXISTS "Public read company logos"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'company-logos');
+-- RLS policies (idempotent via DO blocks)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public read company logos') THEN
+    CREATE POLICY "Public read company logos"
+      ON storage.objects FOR SELECT
+      USING (bucket_id = 'company-logos');
+  END IF;
+END $$;
 
--- RLS: pm_admin can upload logos for their company
-CREATE POLICY IF NOT EXISTS "PM admins upload company logos"
-  ON storage.objects FOR INSERT
-  WITH CHECK (
-    bucket_id = 'company-logos'
-    AND auth.role() = 'authenticated'
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'PM admins upload company logos') THEN
+    CREATE POLICY "PM admins upload company logos"
+      ON storage.objects FOR INSERT
+      WITH CHECK (
+        bucket_id = 'company-logos'
+        AND auth.role() = 'authenticated'
+      );
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "PM admins delete company logos"
-  ON storage.objects FOR DELETE
-  USING (
-    bucket_id = 'company-logos'
-    AND auth.role() = 'authenticated'
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'PM admins delete company logos') THEN
+    CREATE POLICY "PM admins delete company logos"
+      ON storage.objects FOR DELETE
+      USING (
+        bucket_id = 'company-logos'
+        AND auth.role() = 'authenticated'
+      );
+  END IF;
+END $$;
