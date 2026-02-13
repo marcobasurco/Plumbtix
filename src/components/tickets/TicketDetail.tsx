@@ -27,7 +27,7 @@ import { useRealtime } from '@/hooks/useRealtime';
 import { toast } from 'sonner';
 import {
   ChevronLeft, FileText, MapPin, Wrench, Calendar,
-  User, Phone, KeyRound, Clock, Printer, Download,
+  User, Phone, KeyRound, Clock, Printer, Download, Loader2,
 } from 'lucide-react';
 import { TicketReport } from './TicketReport';
 
@@ -107,7 +107,10 @@ export function TicketDetail() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [printReady, setPrintReady] = useState(false);
+  const [pdfReady, setPdfReady] = useState(false);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+  const pdfReportRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!ticketId) return;
@@ -148,19 +151,80 @@ export function TicketDetail() {
 
   const handlePrint = useCallback(() => {
     setPrintReady(true);
-    // TicketReport's onReady callback fires window.print()
   }, []);
 
   const handleReportReady = useCallback(() => {
     window.print();
-    // Reset after print dialog closes
     const cleanup = () => {
       setPrintReady(false);
       toast.success('Work order sent to printer');
     };
-    // afterprint fires when dialog closes (print or cancel)
     window.addEventListener('afterprint', cleanup, { once: true });
   }, []);
+
+  // ── PDF Download via html2canvas + jsPDF ──
+  const handleDownloadPdf = useCallback(() => {
+    setPdfReady(true);
+    setPdfGenerating(true);
+  }, []);
+
+  const handlePdfReady = useCallback(async () => {
+    const el = pdfReportRef.current;
+    if (!el || !ticket) return;
+
+    try {
+      // Dynamic imports to keep main bundle small
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'letter');
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 5;
+      const contentWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+      // Multi-page support
+      let yOffset = 0;
+      let page = 0;
+
+      while (yOffset < imgHeight) {
+        if (page > 0) pdf.addPage();
+
+        pdf.addImage(
+          imgData, 'PNG',
+          margin,
+          margin - yOffset,
+          contentWidth,
+          imgHeight
+        );
+
+        yOffset += pageHeight - margin * 2;
+        page++;
+      }
+
+      pdf.save(`WorkOrder-${ticket.ticket_number}.pdf`);
+      toast.success('PDF downloaded');
+    } catch (e) {
+      console.error('PDF generation failed:', e);
+      toast.error('PDF generation failed. Try the Print option instead.');
+    } finally {
+      setPdfReady(false);
+      setPdfGenerating(false);
+    }
+  }, [ticket]);
 
   if (loading) {
     return (
@@ -210,17 +274,19 @@ export function TicketDetail() {
                 disabled={printReady}
               >
                 <Printer className="h-3.5 w-3.5" />
-                {printReady ? 'Preparing…' : 'Print Work Order'}
+                {printReady ? 'Preparing…' : 'Print'}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
-                onClick={handlePrint}
-                disabled={printReady}
+                onClick={handleDownloadPdf}
+                disabled={pdfGenerating}
               >
-                <Download className="h-3.5 w-3.5" />
-                Download PDF
+                {pdfGenerating
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Download className="h-3.5 w-3.5" />}
+                {pdfGenerating ? 'Generating…' : 'Download PDF'}
               </Button>
             </>
           )}
@@ -430,6 +496,29 @@ export function TicketDetail() {
             ticket={ticket}
             userRole={role as UserRole}
             onReady={handleReportReady}
+            mode="print"
+          />
+        </div>
+      )}
+
+      {/* Off-screen PDF report — rendered for html2canvas capture */}
+      {pdfReady && role && (
+        <div
+          style={{
+            position: 'fixed',
+            left: '-9999px',
+            top: 0,
+            width: '800px',
+            background: '#fff',
+            zIndex: -1,
+          }}
+        >
+          <TicketReport
+            ref={pdfReportRef}
+            ticket={ticket}
+            userRole={role as UserRole}
+            onReady={handlePdfReady}
+            mode="pdf"
           />
         </div>
       )}

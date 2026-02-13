@@ -436,11 +436,20 @@
   /* Walk up the DOM: show .print-report and all its ancestors */
   body:has(.print-report) #root { display: block !important; }
   body:has(.print-report) .print-report { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 99999; background: white; }
-  body:has(.print-report) .print-report * { color: #1a1a1a !important; background: transparent !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body:has(.print-report) .print-report * { color: #1a1a1a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* Preserve severity badge background colors in print */
+  body:has(.print-report) .print-report [style*="background"] { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   /* Reset page margins */
   @page { margin: 0.5in; size: letter; }
-  /* Fallback when .print-report does NOT exist — print the normal view */
-  .sidebar, .content-header { display: none !important; }
+  /* Fallback when .print-report does NOT exist — print the normal view (reports dashboard) */
+  .sidebar, .content-header, nav, [data-sidebar], .print\:hidden { display: none !important; }
   .content-area { margin-left: 0 !important; }
   .content-main { padding: 0 !important; max-width: none; }
+  /* Keep chart colors in print */
+  .recharts-surface { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .recharts-wrapper { page-break-inside: avoid; }
+  /* Cards: remove shadows, keep borders */
+  [class*="card"] { box-shadow: none !important; border: 1px solid #e5e5e5 !important; }
+  /* Show print-only elements */
+  .print\:block { display: block !important; }
 }
