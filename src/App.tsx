@@ -60,7 +60,7 @@ export function App() {
               <Route path="/t/:ticketId" element={<TicketShortLink />} />
 
               {/* Public ticket view — QR code / shareable link (no login) */}
-              <Route path="/p/:ticketId" element={<PublicTicketView />} />
+              <Route path="/p/:token" element={<PublicTicketView />} />
 
               {/* Protected */}
               <Route element={<ProtectedRoute />}>

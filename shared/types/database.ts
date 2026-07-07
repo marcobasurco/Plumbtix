@@ -136,6 +136,8 @@ export interface Ticket {
   completed_at: string | null;         // TIMESTAMPTZ
   created_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
   updated_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  public_token: string | null;         // UUID UNIQUE (migration 00021)
+  public_enabled: boolean;             // BOOLEAN NOT NULL DEFAULT FALSE (migration 00021)
 }
 
 /** Shape for tickets.scheduling_preference JSONB */

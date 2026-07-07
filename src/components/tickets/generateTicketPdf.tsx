@@ -9,8 +9,10 @@
 // =============================================================================
 
 import { pdf } from '@react-pdf/renderer';
+import QRCode from 'qrcode';
 import { TicketPdfDocument } from './TicketPdfDocument';
 import type { PdfCommentEntry, PdfTicketData } from './TicketPdfDocument';
+import { publicTicketUrl } from './SharingCard';
 import { fetchStatusLog, fetchAttachments } from '@/lib/tickets';
 import { getTicketComments } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
@@ -54,9 +56,26 @@ async function generatePdfBlob(
     }
   }
 
-  const pdfData: PdfTicketData = { statusLog, comments, photoUrls };
+  // ── 3. QR code: local generation, only when public sharing is enabled ──
+  // Generated in-browser with the `qrcode` library as a base64 data URL.
+  // No ticket URL ever leaves the client (previously leaked to qrserver.com),
+  // and PDF generation works offline.
+  let qrDataUrl: string | null = null;
+  if (ticket.public_enabled && ticket.public_token) {
+    try {
+      qrDataUrl = await QRCode.toDataURL(publicTicketUrl(ticket.public_token), {
+        width: 240,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+      });
+    } catch (e) {
+      console.warn('[PDF] QR generation failed, omitting QR:', e);
+    }
+  }
 
-  // ── 3. Render PDF document to blob ──
+  const pdfData: PdfTicketData = { statusLog, comments, photoUrls, qrDataUrl };
+
+  // ── 4. Render PDF document to blob ──
   return pdf(
     <TicketPdfDocument ticket={ticket} userRole={role} data={pdfData} />
   ).toBlob();

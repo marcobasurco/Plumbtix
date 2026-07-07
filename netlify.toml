@@ -1,17 +1,46 @@
 # ===========================================================================
-# Work Orders — Netlify Configuration
+# PlumbTix — Netlify Configuration (v0.9.0)
 # ===========================================================================
 # Domain: workorders.proroto.com
 # SPA: React + React Router (client-side routing)
 # Build: Vite (TypeScript → dist/)
+#
+# Env vars that must be set in Netlify UI (Site settings → Environment):
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_EDGE_BASE_URL,
+#   VITE_SENTRY_DSN (optional)
+# VITE_PUBLIC_APP_URL is set per-context below — do NOT set it in the UI,
+# or it will override the deploy-preview behavior.
 # ===========================================================================
 
 [build]
-  command   = "npm install && npm run build"
+  command   = "npm install --no-audit --no-fund && npm run build"
   publish   = "dist"
 
+[build.environment]
+  NODE_VERSION = "20"
+  # The Supabase anon key is public by design (RLS is the security layer).
+  # Without this, Netlify's secrets scanner fails the build when it finds
+  # these values embedded in the compiled JS bundle.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_ANON_KEY,VITE_SUPABASE_URL,VITE_EDGE_BASE_URL,VITE_PUBLIC_APP_URL,VITE_SENTRY_DSN"
+
 # ---------------------------------------------------------------------------
-# SPA fallback — all routes serve index.html (React Router handles routing)
+# Per-context environment
+# ---------------------------------------------------------------------------
+# Production: share links + printed QR codes always point at the real domain,
+# even if someone generates a PDF while browsing a *.netlify.app URL.
+[context.production.environment]
+  VITE_PUBLIC_APP_URL = "https://workorders.proroto.com"
+
+# Deploy previews / branch deploys: VITE_PUBLIC_APP_URL intentionally unset —
+# the app falls back to window.location.origin, so preview QR codes point at
+# the preview (never leaking preview tickets onto production URLs and
+# never printing preview URLs from production).
+
+# ---------------------------------------------------------------------------
+# SPA fallback — all routes serve index.html (React Router handles routing).
+# Netlify serves real files (assets, icons, sw.js) first; only misses fall
+# through to this rule, so /p/:token, /t/:id, /settings etc. all work on
+# hard refresh and from QR scans.
 # ---------------------------------------------------------------------------
 [[redirects]]
   from   = "/*"
@@ -19,25 +48,73 @@
   status = 200
 
 # ---------------------------------------------------------------------------
-# Security & caching headers
+# Security headers (all routes)
 # ---------------------------------------------------------------------------
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options          = "DENY"
-    X-Content-Type-Options   = "nosniff"
-    Referrer-Policy          = "strict-origin-when-cross-origin"
-    Permissions-Policy       = "camera=(), microphone=(), geolocation=()"
-    X-XSS-Protection         = "1; mode=block"
+    X-Frame-Options           = "DENY"
+    X-Content-Type-Options    = "nosniff"
+    Referrer-Policy           = "strict-origin-when-cross-origin"
+    Permissions-Policy        = "camera=(self), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    # CSP in REPORT-ONLY mode first. Watch the browser console on
+    # login → ticket detail → photo upload → video upload → Print/PDF →
+    # public /p/ page. If no CSP violations appear after a few days,
+    # rename this header to Content-Security-Policy to enforce.
+    #   • *.supabase.co + wss:  — PostgREST, Edge Functions, Storage, Realtime
+    #   • unpkg.com             — @ffmpeg/core WASM (video compression)
+    #   • blob: + wasm-unsafe-eval — ffmpeg worker + @react-pdf output tabs
+    #   • data:                 — QR data URLs, inline logos
+    #   • *.sentry.io           — error reporting
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://unpkg.com https://*.sentry.io; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
-# Cache static assets aggressively (Vite hashes filenames)
+# ---------------------------------------------------------------------------
+# Public ticket pages: never index. These are login-less, token-gated views —
+# search engines have no business crawling or caching them.
+# ---------------------------------------------------------------------------
+[[headers]]
+  for = "/p/*"
+  [headers.values]
+    X-Robots-Tag  = "noindex, nofollow, noarchive"
+    Cache-Control = "no-store"
+
+# Short SMS/email redirect links — same treatment
+[[headers]]
+  for = "/t/*"
+  [headers.values]
+    X-Robots-Tag  = "noindex, nofollow, noarchive"
+    Cache-Control = "no-store"
+
+# ---------------------------------------------------------------------------
+# Caching
+# ---------------------------------------------------------------------------
+# Vite-hashed assets: cache forever
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Don't cache index.html (must always serve latest)
+# index.html: always revalidate (SPA entry point)
 [[headers]]
   for = "/index.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# Service worker: MUST revalidate every load or updates get stuck behind
+# the old SW for up to 24h
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# PWA icons: not content-hashed, cache for a day
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

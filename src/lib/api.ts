@@ -17,6 +17,8 @@ import type {
   CreateTicketResponse,
   UpdateTicketRequest,
   UpdateTicketResponse,
+  TogglePublicSharingRequest,
+  TogglePublicSharingResponse,
   GetTicketCommentsResponse,
   CreateCommentRequest,
   CreateCommentResponse,
@@ -247,6 +249,13 @@ export function createTicket(body: CreateTicketRequest) {
 export function updateTicket(body: UpdateTicketRequest) {
   return callEdge<UpdateTicketResponse>('update-ticket', {
     method: 'PATCH',
+    body,
+  });
+}
+
+export function togglePublicSharing(body: TogglePublicSharingRequest) {
+  return callEdge<TogglePublicSharingResponse>('toggle-public-sharing', {
+    method: 'POST',
     body,
   });
 }

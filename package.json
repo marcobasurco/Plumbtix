@@ -1,6 +1,6 @@
 {
   "name": "work-orders",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "description": "PlumbTix \u2014 Work Order Management by Pro Roto Inc.",
   "scripts": {
@@ -54,7 +54,8 @@
     "xlsx": "^0.18.5",
     "zod": "^3.23.8",
     "@ffmpeg/ffmpeg": "^0.12.10",
-    "@ffmpeg/util": "^0.12.1"
+    "@ffmpeg/util": "^0.12.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
@@ -71,7 +72,8 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.7.0",
     "vite": "^6.1.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "@types/qrcode": "^1.5.5"
   },
   "engines": {
     "node": ">=20.0.0"

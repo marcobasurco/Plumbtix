@@ -3,7 +3,7 @@
 // =============================================================================
 // Standalone page for QR code / shareable links. No login required.
 // Shows limited, resident-safe ticket data.
-// Route: /p/:ticketId
+// Route: /p/:token  (token = tickets.public_token, NOT the ticket id)
 // =============================================================================
 
 import { useEffect, useState } from 'react';
@@ -111,7 +111,7 @@ const STATUS_CLASSES: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export function PublicTicketView() {
-  const { ticketId } = useParams<{ ticketId: string }>();
+  const { token } = useParams<{ token: string }>();
   const [ticket, setTicket] = useState<PublicTicket | null>(null);
   const [comments, setComments] = useState<PublicComment[]>([]);
   const [statusLog, setStatusLog] = useState<PublicStatusLog[]>([]);
@@ -120,12 +120,15 @@ export function PublicTicketView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!ticketId) return;
+    if (!token) return;
     setLoading(true);
     setError(null);
 
-    const base = import.meta.env.VITE_EDGE_BASE_URL || '';
-    fetch(`${base}/functions/v1/get-public-ticket?id=${ticketId}`)
+    // VITE_EDGE_BASE_URL already includes /functions/v1 (same convention
+    // as src/lib/api.ts callEdge). Previously this line appended it again,
+    // producing /functions/v1/functions/v1/… and breaking the public view.
+    const base = (import.meta.env.VITE_EDGE_BASE_URL || '').replace(/\/$/, '');
+    fetch(`${base}/get-public-ticket?token=${encodeURIComponent(token)}`)
       .then(async (res) => {
         const json = await res.json();
         if (!json.ok) throw new Error(json.error?.message || 'Failed to load ticket');
@@ -136,7 +139,7 @@ export function PublicTicketView() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [ticketId]);
+  }, [token]);
 
   // ── Loading state ──
   if (loading) {

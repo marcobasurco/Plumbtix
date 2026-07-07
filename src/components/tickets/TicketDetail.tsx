@@ -16,6 +16,7 @@ import { StatusTimeline } from './StatusTimeline';
 import { CommentsThread } from './CommentsThread';
 import { AttachmentsList } from './AttachmentsList';
 import { ActionPanel } from './ActionPanel';
+import { SharingCard } from './SharingCard';
 import { PageTransition } from '@/components/PageTransition';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -434,13 +435,21 @@ export function TicketDetail() {
           </Card>
         </div>
 
-        {/* Right column: action panel + attachments */}
+        {/* Right column: action panel + sharing + attachments */}
         <div className="space-y-5">
           <ActionPanel
             ticketId={ticket.id}
             currentStatus={ticket.status as TicketStatus}
             onUpdated={handleUpdated}
           />
+          {(role === 'proroto_admin' || role === 'pm_admin') && (
+            <SharingCard
+              ticketId={ticket.id}
+              publicToken={ticket.public_token}
+              publicEnabled={ticket.public_enabled}
+              onChanged={handleUpdated}
+            />
+          )}
           <Card>
             <CardContent className="p-4">
               <AttachmentsList ticketId={ticket.id} />

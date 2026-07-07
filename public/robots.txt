@@ -1,0 +1,5 @@
+# PlumbTix is an authenticated work-order portal — nothing here should be
+# crawled or indexed. Public share pages (/p/*) additionally send
+# X-Robots-Tag: noindex via Netlify headers.
+User-agent: *
+Disallow: /

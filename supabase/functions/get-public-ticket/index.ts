@@ -1,8 +1,15 @@
 // =============================================================================
 // Work Orders — Edge Function: get-public-ticket
 // =============================================================================
-// Route:  GET /functions/v1/get-public-ticket?id=UUID
+// Route:  GET /functions/v1/get-public-ticket?token=UUID
 // Auth:   NONE — this is a public endpoint for QR code / shareable links.
+//
+// Security model (migration 00021):
+//   • Lookup is by tickets.public_token — a random UUID unrelated to the
+//     ticket's primary key. Knowing a ticket id grants NOTHING here.
+//   • The ticket must have public_enabled = TRUE. Disabling sharing from
+//     the ticket detail page revokes every previously shared link/QR
+//     instantly (this endpoint returns 404).
 //
 // Returns a limited, resident-safe subset of ticket data:
 //   ✓ Ticket number, status, severity, issue type, description
@@ -25,11 +32,11 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleCors();
   if (req.method !== 'GET') return err('METHOD_NOT_ALLOWED', 'GET required', 405);
 
-  // ─── 1. Validate id param ───
+  // ─── 1. Validate token param ───
   const url = new URL(req.url);
-  const ticketId = url.searchParams.get('id');
-  if (!ticketId || !UUID_REGEX.test(ticketId)) {
-    return err('VALIDATION_ERROR', 'id query parameter is required (UUID)');
+  const token = url.searchParams.get('token');
+  if (!token || !UUID_REGEX.test(token)) {
+    return err('VALIDATION_ERROR', 'token query parameter is required (UUID)');
   }
 
   try {
@@ -58,7 +65,8 @@ Deno.serve(async (req: Request) => {
         space:spaces!inner(id, space_type, unit_number, common_area_type, floor),
         created_by:users!tickets_created_by_user_id_fkey(id, full_name)
       `)
-      .eq('id', ticketId)
+      .eq('public_token', token)
+      .eq('public_enabled', true)
       .maybeSingle();
 
     if (ticketErr) {
@@ -66,8 +74,12 @@ Deno.serve(async (req: Request) => {
       return serverError('Failed to load ticket');
     }
     if (!ticket) {
-      return notFound('Ticket not found');
+      // Same 404 whether the token never existed or sharing was revoked —
+      // don't leak which case it is.
+      return notFound('Work order not found or no longer shared');
     }
+
+    const ticketId = ticket.id as string;
 
     // ─── 3. Fetch external comments only (no internal) ───
     const { data: rawComments } = await svc

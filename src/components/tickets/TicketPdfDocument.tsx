@@ -33,6 +33,9 @@ export interface PdfTicketData {
   statusLog: StatusLogRow[];
   comments: PdfCommentEntry[];
   photoUrls: { name: string; url: string }[];
+  /** Locally generated QR (base64 data URL) linking to the public ticket
+   *  view. null when public sharing is disabled — no QR is printed. */
+  qrDataUrl: string | null;
 }
 
 interface Props {
@@ -69,10 +72,6 @@ function fmtPhone(raw: string | null): string {
   if (d.length === 11 && d[0] === '1') return `(${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`;
   if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
   return raw;
-}
-
-function qrUrl(data: string): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(data)}&format=png`;
 }
 
 // ---------------------------------------------------------------------------
@@ -207,7 +206,7 @@ const s = StyleSheet.create({
 export function TicketPdfDocument({ ticket, userRole, data }: Props) {
   const isResident = userRole === 'resident';
   const isFullReport = !isResident;
-  const { statusLog, comments, photoUrls } = data;
+  const { statusLog, comments, photoUrls, qrDataUrl } = data;
 
   const bld = ticket.building;
   const spc = ticket.space;
@@ -219,8 +218,6 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
     type?: string; preferred_date?: string; preferred_time?: string;
   } | null;
 
-  const ticketUrl = `https://workorders.proroto.com/p/${ticket.id}`;
-  const qrSrc = qrUrl(ticketUrl);
   const logoUrl = bld.company?.logo_url || null;
   const companyName = bld.company?.name || 'Pro Roto Inc.';
 
@@ -269,10 +266,12 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
             {ticket.completed_at && (
               <Text style={s.headerMeta}>Completed: {fmtDate(ticket.completed_at)}</Text>
             )}
-            <View style={s.qrWrap}>
-              <Image src={qrSrc} style={s.qrImg} />
-              <Text style={s.qrLabel}>Scan to view online</Text>
-            </View>
+            {qrDataUrl && (
+              <View style={s.qrWrap}>
+                <Image src={qrDataUrl} style={s.qrImg} />
+                <Text style={s.qrLabel}>Scan to view online</Text>
+              </View>
+            )}
           </View>
         </View>
 

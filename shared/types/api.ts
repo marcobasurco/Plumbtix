@@ -75,6 +75,20 @@ export interface UpdateTicketResponse {
   ticket: Ticket;
 }
 
+// --- POST /functions/v1/toggle-public-sharing ---
+export interface TogglePublicSharingRequest {
+  ticket_id: string;
+  enabled: boolean;
+  /** When true, rotates public_token — invalidating all previously shared links/QRs */
+  regenerate?: boolean;
+}
+export interface TogglePublicSharingResponse {
+  ticket_id: string;
+  public_enabled: boolean;
+  /** Present only while sharing is enabled */
+  public_token: string | null;
+}
+
 // --- GET /functions/v1/get-ticket-comments?ticket_id=UUID ---
 export interface GetTicketCommentsRequest {
   ticket_id: string;

@@ -134,6 +134,8 @@ export interface TicketDetailRow {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  public_token: string | null;   // migration 00021 — random share token
+  public_enabled: boolean;       // migration 00021 — public view on/off
   building: {
     id: string;
     name: string | null;

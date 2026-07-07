@@ -1,5 +1,39 @@
 # Work Orders Changelog
 
+## [0.9.0] — Token-Based Public Sharing + Local QR Generation (July 2026)
+
+### Security — Public Ticket Access Overhaul
+- **Migration 00021**: `public_token` (random UUID, UNIQUE) + `public_enabled` (default `false`) columns on `tickets`, plus a partial lookup index on enabled rows. Purely additive — no locked-section changes.
+- **`get-public-ticket` rewritten**: resolves by `?token=<public_token>` and requires `public_enabled = true`. Knowing a ticket's primary-key UUID no longer grants public access. Revoked/unknown tokens return an identical 404 (no information leak).
+- **New Edge Function `toggle-public-sharing`**: proroto_admin + pm_admin enable/disable sharing per ticket. Reads AND writes via caller JWT — existing tickets RLS is the enforcement layer, no service role. Supports `regenerate` to rotate the token and burn all previously shared links.
+- ⚠️ **Breaking (deliberate)**: previously printed `/p/<ticket_id>` QR codes and links stop working. Sharing is now opt-in per ticket; re-enable and reprint where needed. An optional backfill statement (commented out in migration 00021) can restore public access for all existing tickets with new revocable URLs.
+
+### Security — QR Codes No Longer Leak to Third Parties
+- Replaced `api.qrserver.com` remote QR generation with the `qrcode` npm library. QR codes are now generated in-browser as base64 data URLs — ticket URLs never leave the client, and PDF generation works offline.
+- QR block on the printed work order renders **only when public sharing is enabled** (with the token URL, not the ticket id). Otherwise it's omitted.
+- Deleted dead `TicketReport.tsx` (unreferenced since the v0.8.1 PDF print rewrite; contained the last remaining qrserver call).
+
+### Added — Public Sharing UI
+- **`SharingCard`** in the ticket detail sidebar (proroto_admin + pm_admin): on/off switch, copy-link button, monospace link display, and "New link" (token regeneration with confirm dialog).
+- `TicketDetailRow` / shared `Ticket` type extended with `public_token` / `public_enabled`.
+- New API client wrapper `togglePublicSharing()` + shared request/response types.
+
+### Fixed
+- **Public ticket view URL bug**: `public-ticket.tsx` appended `/functions/v1` to `VITE_EDGE_BASE_URL`, which already contains it (same convention as `callEdge`), producing `/functions/v1/functions/v1/…`. The public view now uses the same base-URL convention as the rest of the app.
+
+### Configuration
+- New optional env var `VITE_PUBLIC_APP_URL` — base URL for share links and printed QR codes (falls back to `window.location.origin`). Set to `https://workorders.proroto.com` in production.
+- Dependencies: `qrcode@^1.5.4`, `@types/qrcode@^1.5.5`. Version bumped to 0.9.0.
+
+### Netlify — Deployment Hardening
+- **Per-context env**: `VITE_PUBLIC_APP_URL` pinned to `https://workorders.proroto.com` in production context only; deploy previews fall back to their own origin so preview QR codes never point at (or leak from) production.
+- **Secrets scanning**: `SECRETS_SCAN_OMIT_KEYS` whitelists the VITE_* values that are public by design (anon key, URLs), preventing Netlify's scanner from failing builds when it finds them in the compiled bundle.
+- **Security headers**: added HSTS; added a Content-Security-Policy in **Report-Only** mode tuned for the actual stack (Supabase REST/Realtime/Storage, unpkg ffmpeg WASM, blob workers, data-URL QR codes, Sentry). Flip to enforcing after a clean observation window.
+- **Public pages unindexable**: `/p/*` and `/t/*` send `X-Robots-Tag: noindex, nofollow, noarchive` + `Cache-Control: no-store`; new `public/robots.txt` disallows all crawling of the portal.
+- **Service worker fix**: `/sw.js` now `max-age=0, must-revalidate` — previously uncached-by-accident, but with no explicit header a CDN default could pin users to a stale app shell for up to 24h after deploys.
+- **Build**: Node 20 pinned; npm flags quieted. Note: no `package-lock.json` is committed — commit one and switch the build command to `npm ci` for reproducible builds.
+
+
 ## [0.7.0] — Twilio SMS Notifications (February 2026)
 
 ### Added — SMS Notification Infrastructure
