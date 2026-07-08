@@ -157,7 +157,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
         toast.error(msg);
       }
     },
-    [isEdit, editSpace, buildingId, duplicateWarning, onSaved, toast],
+    [isEdit, editSpace, buildingId, duplicateWarning, onSaved],
   );
 
   // Type toggle handler

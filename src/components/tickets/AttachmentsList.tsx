@@ -218,7 +218,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
     }
     setTimeout(() => setUploading([]), 3000);
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [ticketId, load]);
+  }, [ticketId, load, items]);
 
   // ─── Delete handler ───
   const handleDelete = useCallback(async (att: AttachmentWithUrl) => {

@@ -12,6 +12,9 @@
 //
 // Profile fetch uses user JWT (users_read_own RLS policy allows self-read).
 // No service role key in the frontend.
+//
+// Security: on sign-out (user-initiated OR session expiry), all Cache API
+// entries are purged so no app data lingers on shared/lost devices.
 // =============================================================================
 
 import {
@@ -26,6 +29,25 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 import type { User } from '@shared/types/database';
 import type { UserRole } from '@shared/types/enums';
+
+// ---------------------------------------------------------------------------
+// Cache hygiene
+// ---------------------------------------------------------------------------
+
+/** Delete every Cache API cache (app shell + anything a past SW version
+ *  stored). Called on sign-out so no data survives logout on this device.
+ *  The service worker repopulates the app shell on the next load. */
+async function clearRuntimeCaches(): Promise<void> {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  } catch (e) {
+    // Non-fatal: sign-out must still complete even if cache clearing fails
+    console.warn('[auth] Failed to clear caches on sign-out:', e);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Context shape
@@ -102,7 +124,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // so we do NOT also call getSession() (which would double-fetch the profile).
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (event, newSession) => {
+        // Covers session expiry / remote sign-out, not just the button
+        if (event === 'SIGNED_OUT') {
+          void clearRuntimeCaches();
+        }
         handleSession(newSession);
       },
     );
@@ -139,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     setLoading(true);
     await supabase.auth.signOut();
+    await clearRuntimeCaches();
     setSession(null);
     setProfile(null);
     setError(null);
