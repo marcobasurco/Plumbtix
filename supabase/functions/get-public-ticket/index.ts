@@ -28,8 +28,42 @@ import { createServiceClient } from '../_shared/supabase.ts';
 import { ok, err, notFound, serverError } from '../_shared/response.ts';
 import { UUID_REGEX } from '../_shared/validation.ts';
 
+// ── Rate limiting ──
+// In-memory sliding window per client IP. Honest scope: state lives per
+// isolate and resets on cold start, so this is a hammer-blunter (stops
+// scripted flooding / log spam / invocation-cost abuse), not a distributed
+// quota. Token space (UUIDv4) already makes guessing computationally
+// pointless; this just makes trying expensive-per-minute.
+const RATE_LIMIT = 30;            // requests
+const RATE_WINDOW_MS = 60_000;    // per minute per IP
+const hits = new Map<string, number[]>();
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const windowStart = now - RATE_WINDOW_MS;
+  const list = (hits.get(ip) ?? []).filter((t) => t > windowStart);
+  if (list.length >= RATE_LIMIT) {
+    hits.set(ip, list);
+    return true;
+  }
+  list.push(now);
+  hits.set(ip, list);
+  // Opportunistic cleanup so the map can't grow unbounded
+  if (hits.size > 5000) {
+    for (const [k, v] of hits) {
+      if (v.every((t) => t <= windowStart)) hits.delete(k);
+    }
+  }
+  return false;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleCors();
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  if (rateLimited(ip)) {
+    return err('RATE_LIMITED', 'Too many requests — try again shortly', 429);
+  }
   if (req.method !== 'GET') return err('METHOD_NOT_ALLOWED', 'GET required', 405);
 
   // ─── 1. Validate token param ───
@@ -119,17 +153,21 @@ Deno.serve(async (req: Request) => {
       .select('id, file_path, file_name, file_type')
       .eq('ticket_id', ticketId);
 
+    // Batch-sign all image paths in ONE storage round-trip (previously a
+    // sequential createSignedUrl per photo — 5 photos = 5 waits before the
+    // public page could render).
     const photos: { name: string; url: string }[] = [];
-    if (attachments) {
-      for (const att of attachments) {
-        if (att.file_type?.startsWith('image/')) {
-          const { data: signed } = await svc.storage
-            .from('ticket-attachments')
-            .createSignedUrl(att.file_path, 3600); // 1 hour
-          if (signed?.signedUrl) {
-            photos.push({ name: att.file_name, url: signed.signedUrl });
-          }
-        }
+    const images = (attachments ?? []).filter((a) => a.file_type?.startsWith('image/'));
+    if (images.length > 0) {
+      const { data: signed, error: signErr } = await svc.storage
+        .from('ticket-attachments')
+        .createSignedUrls(images.map((a) => a.file_path), 3600); // 1 hour
+      if (signErr) {
+        console.error('[get-public-ticket] Batch signing failed:', signErr.message);
+      }
+      for (let i = 0; i < images.length; i++) {
+        const url = signed?.[i]?.signedUrl;
+        if (url) photos.push({ name: images[i].file_name, url });
       }
     }
 
