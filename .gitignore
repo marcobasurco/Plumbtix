@@ -19,3 +19,6 @@ test-results/
 playwright-report/
 test-results/
 playwright-report/
+mobile*.png
+preview-*.png
+*.b64
