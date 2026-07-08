@@ -28,45 +28,19 @@ import { createServiceClient } from '../_shared/supabase.ts';
 import { ok, err, notFound, serverError } from '../_shared/response.ts';
 import { UUID_REGEX } from '../_shared/validation.ts';
 
-// ── Rate limiting ──
-// In-memory sliding window per client IP. Honest scope: state lives per
-// isolate and resets on cold start, so this is a hammer-blunter (stops
-// scripted flooding / log spam / invocation-cost abuse), not a distributed
-// quota. Token space (UUIDv4) already makes guessing computationally
-// pointless; this just makes trying expensive-per-minute.
-const RATE_LIMIT = 30;            // requests
-const RATE_WINDOW_MS = 60_000;    // per minute per IP
-const hits = new Map<string, number[]>();
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const windowStart = now - RATE_WINDOW_MS;
-  const list = (hits.get(ip) ?? []).filter((t) => t > windowStart);
-  if (list.length >= RATE_LIMIT) {
-    hits.set(ip, list);
-    return true;
-  }
-  list.push(now);
-  hits.set(ip, list);
-  // Opportunistic cleanup so the map can't grow unbounded
-  if (hits.size > 5000) {
-    for (const [k, v] of hits) {
-      if (v.every((t) => t <= windowStart)) hits.delete(k);
-    }
-  }
-  return false;
-}
+// Rate limit: 30 requests per minute per client IP, enforced via the
+// check_rate_limit() DB function (migration 00025). Database-backed because
+// Supabase Edge uses a fresh isolate per request — in-memory counters reset
+// every call and cannot limit. Fail-open: if the limiter check itself errors,
+// the request proceeds (availability > strictness for a read-only endpoint).
+const RATE_LIMIT = 30;
+const RATE_WINDOW_SECS = 60;
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleCors();
-
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  const _limited = rateLimited(ip);
-  console.log('[ratelimit-debug] ip=%s count=%d limited=%s', ip, (hits.get(ip) ?? []).length, _limited);
-  if (_limited) {
-    return err('RATE_LIMITED', 'Too many requests — try again shortly', 429);
-  }
   if (req.method !== 'GET') return err('METHOD_NOT_ALLOWED', 'GET required', 405);
+
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 
   // ─── 1. Validate token param ───
   const url = new URL(req.url);
@@ -77,6 +51,23 @@ Deno.serve(async (req: Request) => {
 
   try {
     const svc = createServiceClient();
+
+    // ─── Rate limit (DB-backed, shared across isolates) ───
+    try {
+      const { data: allowed, error: rlErr } = await svc.rpc('check_rate_limit', {
+        p_bucket: `get-public-ticket:${clientIp}`,
+        p_limit: RATE_LIMIT,
+        p_window_secs: RATE_WINDOW_SECS,
+      });
+      if (rlErr) {
+        // Fail open — never let limiter infrastructure take the endpoint down
+        console.error('[get-public-ticket] rate-limit check failed (allowing):', rlErr.message);
+      } else if (allowed === false) {
+        return err('RATE_LIMITED', 'Too many requests — try again shortly', 429);
+      }
+    } catch (e) {
+      console.error('[get-public-ticket] rate-limit exception (allowing):', e);
+    }
 
     // ─── 2. Fetch ticket with building + space + reporter ───
     const { data: ticket, error: ticketErr } = await svc
