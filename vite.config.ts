@@ -31,9 +31,22 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
+        // Named vendor chunks — EAGER dependencies only.
+        //
+        // ⚠ Do NOT list dynamically-imported packages here (@react-pdf,
+        // recharts, xlsx, @sentry/browser). Object-form manualChunks hoists
+        // such chunks into the entry's static imports to preserve module
+        // initialization order — which made the login page preload the
+        // 1.4MB PDF renderer. Packages reached only via import() are split
+        // automatically by Rollup and load truly on demand.
+        //
+        // These three are needed at startup anyway, so pinning them buys
+        // stable long-term caching (app code changes no longer invalidate
+        // users' cached React/Supabase chunks) at zero eager-load cost.
         manualChunks: {
-          // Isolate @react-pdf into its own chunk (loaded on demand)
-          'react-pdf': ['@react-pdf/renderer'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'supabase': ['@supabase/supabase-js'],
+          'motion': ['framer-motion'],
         },
       },
     },

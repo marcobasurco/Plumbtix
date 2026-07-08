@@ -9,7 +9,13 @@
 
 import { useState, useRef, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as XLSX from 'xlsx';
+import type * as XLSXType from 'xlsx';
+
+// xlsx (~900KB) is loaded on demand — only when an admin actually generates
+// a template or uploads a file — instead of shipping in the page bundle.
+async function loadXLSX(): Promise<typeof XLSXType> {
+  return await import('xlsx');
+}
 import { supabase } from '@/lib/supabaseClient';
 import { createCompany, updateCompany, fetchCompanyList, type CompanyListRow } from '@/lib/admin';
 import { createBuilding, updateBuilding, createSpace, updateSpace, fetchBuildingOccupants, createOccupant } from '@/lib/buildings';
@@ -118,7 +124,8 @@ const STATUS_COLOR: Record<RowResult['status'], string> = {
 // Template generation
 // ---------------------------------------------------------------------------
 
-function generateTemplate(type: ImportType) {
+async function generateTemplate(type: ImportType) {
+  const XLSX = await loadXLSX();
   const wb = XLSX.utils.book_new();
   const tab = TABS.find((t) => t.key === type)!;
   const headers = [...tab.requiredColumns, ...tab.optionalColumns];
@@ -239,7 +246,7 @@ type UserFull = {
 export function ImportPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
-  const wbRef = useRef<ReturnType<typeof XLSX.read> | null>(null);
+  const wbRef = useRef<XLSXType.WorkBook | null>(null);
 
   const [activeTab, setActiveTab] = useState<ImportType>('companies');
   const [fileName, setFileName] = useState<string | null>(null);
@@ -253,7 +260,8 @@ export function ImportPage() {
   const tab = TABS.find((t) => t.key === activeTab)!;
 
   // Parse a specific sheet from the stored workbook
-  const parseSheet = useCallback((tabKey: ImportType, wb: ReturnType<typeof XLSX.read>) => {
+  const parseSheet = useCallback(async (tabKey: ImportType, wb: XLSXType.WorkBook) => {
+    const XLSX = await loadXLSX();
     const tabLabel = TABS.find((t) => t.key === tabKey)?.label ?? '';
     const matchedSheet = wb.SheetNames.find((s) => s.toLowerCase() === tabLabel.toLowerCase())
       ?? wb.SheetNames.find((s) => s.toLowerCase() !== 'instructions')
@@ -283,8 +291,9 @@ export function ImportPage() {
     setError(null); setResults(null); setFileName(file.name);
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
+        const XLSX = await loadXLSX();
         const data = new Uint8Array(ev.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: 'array' });
         wbRef.current = wb;
