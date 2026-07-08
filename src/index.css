@@ -131,6 +131,7 @@
 @layer base {
   * { @apply border-border; }
   html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+  html { overflow-x: hidden; } /* iOS Safari half-ignores this on body alone */
   body { @apply bg-background text-foreground font-sans; font-size: var(--text-base); line-height: var(--leading-relaxed); min-height: 100vh; overflow-x: hidden; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -311,6 +312,7 @@
 .dashboard-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
 .chart-card { overflow: hidden; }
 .chart-empty { display: flex; align-items: center; justify-content: center; height: 100%; font-size: var(--text-sm); color: hsl(var(--muted-foreground)); }
+.dashboard-bottom > * { min-width: 0; } /* grid tracks won't inflate past viewport */
 .dashboard-bottom { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
 .recent-ticket-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 18px; border-bottom: 1px solid hsl(var(--border)); cursor: pointer; transition: background var(--duration-fast); }
 .recent-ticket-row:hover { background: hsl(var(--muted)); }

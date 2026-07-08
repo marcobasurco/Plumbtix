@@ -340,14 +340,19 @@ export function DashboardOverview() {
                       {ISSUE_TYPE_LABELS[t.issue_type as IssueType] ?? t.issue_type}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  {/* minWidth:0 (not flexShrink:0): a rigid cluster made this row's
+                      min-content wider than phone screens, inflating the shared
+                      .dashboard-bottom grid track — every sibling section bled off-screen.
+                      Badges stay rigid; the date absorbs the squeeze via ellipsis. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     <span className="text-xs text-muted" style={{ display: 'none' }}>
-                      {/* hidden on mobile via CSS class if needed */}
                       {t.building_name}
                     </span>
                     <SeverityIndicator severity={t.severity} />
                     <StatusDot status={t.status} />
-                    <span className="text-xs text-muted" style={{ minWidth: 80, textAlign: 'right' }}>
+                    <span className="text-xs text-muted"
+                      style={{ textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden',
+                               textOverflow: 'ellipsis', minWidth: 0, flexShrink: 1 }}>
                       {formatDate(t.created_at)}
                     </span>
                   </div>
