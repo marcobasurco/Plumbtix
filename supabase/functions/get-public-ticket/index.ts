@@ -61,7 +61,9 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleCors();
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  if (rateLimited(ip)) {
+  const _limited = rateLimited(ip);
+  console.log('[ratelimit-debug] ip=%s count=%d limited=%s', ip, (hits.get(ip) ?? []).length, _limited);
+  if (_limited) {
     return err('RATE_LIMITED', 'Too many requests — try again shortly', 429);
   }
   if (req.method !== 'GET') return err('METHOD_NOT_ALLOWED', 'GET required', 405);
