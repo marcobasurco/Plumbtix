@@ -165,6 +165,7 @@ export interface TicketDetailRow {
   updated_at: string;
   public_token: string | null;   // migration 00021 — random share token
   public_enabled: boolean;       // migration 00021 — public view on/off
+  technician_id: string | null;  // migration 00023 — roster FK
   building: {
     id: string;
     name: string | null;

@@ -138,6 +138,18 @@ export interface Ticket {
   updated_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
   public_token: string | null;         // UUID UNIQUE (migration 00021)
   public_enabled: boolean;             // BOOLEAN NOT NULL DEFAULT FALSE (migration 00021)
+  technician_id: string | null;        // UUID REFERENCES technicians (migration 00023)
+}
+
+/** Pro Roto field crew roster (migration 00023) */
+export interface Technician {
+  id: string;                          // UUID PRIMARY KEY
+  name: string;                        // TEXT NOT NULL
+  phone: string | null;                // TEXT
+  email: string | null;                // TEXT
+  active: boolean;                     // BOOLEAN NOT NULL DEFAULT TRUE
+  created_at: string;                  // TIMESTAMPTZ
+  updated_at: string;                  // TIMESTAMPTZ
 }
 
 /** Shape for tickets.scheduling_preference JSONB */

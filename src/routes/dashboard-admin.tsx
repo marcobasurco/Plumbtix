@@ -11,6 +11,7 @@ import { CompanyList } from '@/components/admin/CompanyList';
 import { CompanyDetail } from '@/components/admin/CompanyDetail';
 import { UsersPage } from '@/components/admin/UsersPage';
 import { DispatchBoard } from '@/components/admin/DispatchBoard';
+import { TechniciansPage } from '@/components/admin/TechniciansPage';
 import { AnalyticsPage } from '@/components/admin/AnalyticsPage';
 import { ImportPage } from '@/components/admin/ImportPage';
 import { ReportingDashboard } from '@/components/admin/ReportingDashboard';
@@ -34,6 +35,7 @@ export function AdminDashboard() {
         <Route path="companies/:companyId/buildings/new" element={<BuildingForm />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="dispatch" element={<DispatchBoard />} />
+        <Route path="technicians" element={<TechniciansPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="import" element={<ImportPage />} />
         <Route path="reports" element={<ReportingDashboard />} />

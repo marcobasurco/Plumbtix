@@ -64,7 +64,9 @@ export interface CreateTicketResponse {
 export interface UpdateTicketRequest {
   ticket_id: string;
   status?: TicketStatus;
-  assigned_technician?: string;
+  assigned_technician?: string | null;
+  /** Roster FK (migration 00023). Takes precedence over assigned_technician; null clears assignment. */
+  technician_id?: string | null;
   scheduled_date?: string;
   scheduled_time_window?: string;
   quote_amount?: number;

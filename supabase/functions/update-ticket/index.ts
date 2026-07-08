@@ -70,6 +70,7 @@ const UpdateTicketSchema = z.object({
   ticket_id: z.string().regex(UUID_REGEX, 'Invalid ticket_id'),
   status: z.enum(TICKET_STATUSES).optional(),
   assigned_technician: z.string().max(255).nullable().optional(),
+  technician_id: z.string().regex(UUID_REGEX, 'Invalid technician_id').nullable().optional(),
   scheduled_date: z.string().optional(),
   scheduled_time_window: z.string().max(100).optional(),
   quote_amount: z.number().min(0).nullable().optional(),
@@ -109,6 +110,7 @@ Deno.serve(async (req: Request) => {
     ticket_id,
     status: targetStatus,
     assigned_technician,
+    technician_id,
     scheduled_date,
     scheduled_time_window,
     quote_amount,
@@ -150,6 +152,7 @@ Deno.serve(async (req: Request) => {
     const financialFields: string[] = [];
 
     if (assigned_technician !== undefined) schedulingFields.push('assigned_technician');
+    if (technician_id !== undefined) schedulingFields.push('technician_id');
     if (scheduled_date !== undefined) schedulingFields.push('scheduled_date');
     if (scheduled_time_window !== undefined) schedulingFields.push('scheduled_time_window');
     if (quote_amount !== undefined) financialFields.push('quote_amount');
@@ -180,6 +183,29 @@ Deno.serve(async (req: Request) => {
     }
 
     if (assigned_technician !== undefined) updatePayload.assigned_technician = assigned_technician;
+    // technician_id: resolve against the roster (migration 00023) and write
+    // BOTH the FK and the denormalized name so PDF/public/notifications keep
+    // working. technician_id takes precedence over free-text when both sent.
+    if (technician_id !== undefined) {
+      if (technician_id === null) {
+        updatePayload.technician_id = null;
+        updatePayload.assigned_technician = null;
+      } else {
+        const { data: tech, error: techErr } = await userClient
+          .from('technicians')
+          .select('id, name, active')
+          .eq('id', technician_id)
+          .maybeSingle();
+        if (techErr || !tech) {
+          return notFound('Technician not found');
+        }
+        if (!tech.active) {
+          return err('VALIDATION_ERROR', 'Technician is inactive', 400);
+        }
+        updatePayload.technician_id = tech.id;
+        updatePayload.assigned_technician = tech.name;
+      }
+    }
     if (scheduled_date !== undefined) updatePayload.scheduled_date = scheduled_date;
     if (scheduled_time_window !== undefined) updatePayload.scheduled_time_window = scheduled_time_window;
     if (quote_amount !== undefined) updatePayload.quote_amount = quote_amount;

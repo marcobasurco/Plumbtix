@@ -70,6 +70,7 @@ const ADMIN_EXTRA: NavItem[] = [
   { label: 'Companies', path: 'companies', matchSegment: 'companies', icon: <Briefcase className="h-[18px] w-[18px]" />, section: 'Management' },
   { label: 'Users', path: 'users', matchSegment: 'users', icon: <Users2 className="h-[18px] w-[18px]" />, section: 'Management' },
   { label: 'Dispatch', path: 'dispatch', matchSegment: 'dispatch', icon: <Kanban className="h-[18px] w-[18px]" />, section: 'Management' },
+  { label: 'Technicians', path: 'technicians', matchSegment: 'technicians', icon: <Wrench className="h-[18px] w-[18px]" />, section: 'Management' },
   { label: 'Sync', path: 'import', matchSegment: 'import', icon: <FileSpreadsheet className="h-[18px] w-[18px]" />, section: 'Tools' },
   { label: 'Reports', path: 'reports', matchSegment: 'reports', icon: <BarChart3 className="h-[18px] w-[18px]" />, section: 'Tools' },
 ];
