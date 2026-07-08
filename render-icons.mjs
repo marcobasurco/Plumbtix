@@ -60,6 +60,10 @@ if (mode === 'preview') {
   await shoot(page, gen(192), 192, 'public/icons/icon-192.png');
   await shoot(page, gen(512), 512, 'public/icons/icon-512.png');
   await shoot(page, gen(512, true), 512, 'public/icons/icon-maskable-512.png');
+  // iOS ignores manifest icons; Add-to-Home-Screen reads apple-touch-icon.
+  // Full-bleed (maskable-style) — iOS applies its own corner rounding.
+  await shoot(page, gen(180, true), 180, 'public/apple-touch-icon.png');
+  await shoot(page, gen(64), 64, 'public/favicon.png'); // browser tab
   // Manifest: bump cache-buster to v3, ensure maskable entry
   let mjson = JSON.parse(fs.readFileSync('public/manifest.json', 'utf8'));
   mjson.icons = [
