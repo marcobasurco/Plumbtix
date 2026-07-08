@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { fetchTicketList, type TicketListRow, type TicketListFilters } from '@/lib/tickets';
+import { fetchTicketList, TICKET_PAGE_SIZE, type TicketListRow, type TicketListFilters } from '@/lib/tickets';
 import { ISSUE_TYPE_LABELS } from '@shared/types/enums';
 import { StatusBadge } from './StatusBadge';
 import { SeverityBadge } from './SeverityBadge';
@@ -9,7 +9,7 @@ import { ErrorBanner } from '@/components/ErrorBanner';
 import { PageTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Ticket, ChevronRight } from 'lucide-react';
+import { Plus, Ticket, ChevronRight, Loader2 } from 'lucide-react';
 import { useRealtimeTickets } from '@/hooks/useRealtime';
 
 function formatDate(iso: string): string {
@@ -156,7 +156,10 @@ export function TicketList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tickets, setTickets] = useState<TicketListRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [visibleLimit, setVisibleLimit] = useState(TICKET_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<TicketListFilters>(() => {
@@ -178,15 +181,49 @@ export function TicketList() {
     setSearchParams(params, { replace: true });
   }, [filters, setSearchParams]);
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { setTickets(await fetchTicketList(filters)); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Failed to load tickets'); }
-    finally { setLoading(false); }
-  }, [filters]);
+  // ── Pagination: growing window ──
+  // We always fetch rows 0..limit-1. "Load more" grows the limit; realtime
+  // refreshes refetch the SAME window, so a database change never collapses
+  // the user's scrolled list back to page one.
+  const loadWindow = useCallback(
+    async (limit: number, mode: 'initial' | 'more' | 'refresh') => {
+      if (mode === 'initial') setLoading(true);
+      if (mode === 'more') setLoadingMore(true);
+      setError(null);
+      try {
+        const { rows, count } = await fetchTicketList(filters, limit);
+        setTickets(rows);
+        setTotalCount(count);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load tickets');
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [filters],
+  );
 
-  useEffect(() => { load(); }, [load]);
-  useRealtimeTickets(load, !loading);
+  // Filter change (and mount): reset the window and reload from scratch
+  useEffect(() => {
+    setVisibleLimit(TICKET_PAGE_SIZE);
+    loadWindow(TICKET_PAGE_SIZE, 'initial');
+  }, [loadWindow]);
+
+  const handleLoadMore = () => {
+    const next = visibleLimit + TICKET_PAGE_SIZE;
+    setVisibleLimit(next);
+    loadWindow(next, 'more');
+  };
+
+  // Realtime: silently refresh whatever window is currently visible
+  const refresh = useCallback(() => {
+    loadWindow(visibleLimit, 'refresh');
+  }, [loadWindow, visibleLimit]);
+  useRealtimeTickets(refresh, !loading);
+
+  const hasMore = tickets.length < totalCount;
+  const remaining = totalCount - tickets.length;
 
   return (
     <PageTransition>
@@ -194,7 +231,7 @@ export function TicketList() {
         <div className="min-w-0">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">Tickets</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
+            {totalCount} ticket{totalCount !== 1 ? 's' : ''}
           </p>
         </div>
         <Button asChild>
@@ -230,6 +267,22 @@ export function TicketList() {
 
           {/* Desktop: table layout */}
           <TicketTable tickets={tickets} onRowClick={(id) => navigate(id)} />
+
+          {/* Load more — shown only when the window hasn't reached the total */}
+          {hasMore && (
+            <div className="flex flex-col items-center gap-2 mt-6">
+              <Button variant="outline" onClick={handleLoadMore} disabled={loadingMore}>
+                {loadingMore ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Loading…</>
+                ) : (
+                  <>Load {Math.min(TICKET_PAGE_SIZE, remaining)} more</>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Showing {tickets.length} of {totalCount}
+              </p>
+            </div>
+          )}
         </>
       )}
     </PageTransition>

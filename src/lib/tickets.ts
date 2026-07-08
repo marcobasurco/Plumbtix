@@ -51,7 +51,31 @@ export interface TicketListRow {
   };
 }
 
-export async function fetchTicketList(filters: TicketListFilters = {}) {
+/** Default page size for the ticket list window */
+export const TICKET_PAGE_SIZE = 50;
+
+export interface TicketListPage {
+  rows: TicketListRow[];
+  /** Total matching tickets (before the limit) — from PostgREST exact count */
+  count: number;
+}
+
+/**
+ * Fetch tickets newest-first, limited to a window of `limit` rows.
+ *
+ * Pagination model: a GROWING WINDOW rather than discrete pages — callers
+ * refetch rows 0..limit-1 with a larger limit to "load more". This keeps
+ * realtime refreshes trivially correct (refetch same window) at the cost of
+ * refetching earlier rows, which is fine at this data size.
+ *
+ * Why this exists: PostgREST caps responses at 1,000 rows (max_rows in
+ * supabase config). Without an explicit limit, tickets beyond the cap
+ * silently vanish from the list.
+ */
+export async function fetchTicketList(
+  filters: TicketListFilters = {},
+  limit: number = TICKET_PAGE_SIZE,
+): Promise<TicketListPage> {
   let query = supabase
     .from('tickets')
     .select(`
@@ -66,8 +90,10 @@ export async function fetchTicketList(filters: TicketListFilters = {}) {
       building:buildings!inner(id, name, address_line1, city),
       space:spaces!inner(id, space_type, unit_number, common_area_type),
       created_by:users!tickets_created_by_user_id_fkey(id, full_name)
-    `)
-    .order('created_at', { ascending: false });
+    `, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false }) // tiebreaker: stable order for equal timestamps
+    .range(0, limit - 1);
 
   if (filters.status && filters.status !== 'all') {
     if (filters.status === 'open') {
@@ -103,14 +129,17 @@ export async function fetchTicketList(filters: TicketListFilters = {}) {
     query = query.lte('created_at', filters.date_to + 'T23:59:59Z');
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     console.error('[tickets] List fetch failed:', error.message);
     throw new Error(error.message);
   }
 
-  return (data ?? []) as unknown as TicketListRow[];
+  return {
+    rows: (data ?? []) as unknown as TicketListRow[],
+    count: count ?? 0,
+  };
 }
 
 // ---------------------------------------------------------------------------

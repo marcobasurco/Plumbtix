@@ -45,7 +45,8 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 vi.mock('@/lib/tickets', () => ({
-  fetchTicketList: vi.fn().mockResolvedValue([]),
+  fetchTicketList: vi.fn().mockResolvedValue({ rows: [], count: 0 }),
+  TICKET_PAGE_SIZE: 50,
   fetchBuildingOptions: vi.fn().mockResolvedValue([]),
 }));
 
