@@ -16,7 +16,7 @@
 --   • UPDATE  → one row per audited column that actually changed
 --   • Audited: status, severity, issue_type, description, access_instructions,
 --     assigned_technician, scheduled_date, scheduled_time_window,
---     quote_amount, invoice_number, decline_reason, public_enabled,
+--     quote_amount, invoice_number, public_enabled,
 --     public_token (values MASKED — tokens never stored in the audit trail)
 --   • changed_by = auth.uid(); NULL for service-role writes (rendered as
 --     "System" in the UI — e.g. toggle-public-sharing's service write)
@@ -131,10 +131,6 @@ BEGIN
         VALUES (NEW.id, actor, 'invoice_number', OLD.invoice_number, NEW.invoice_number);
     END IF;
 
-    IF NEW.decline_reason IS DISTINCT FROM OLD.decline_reason THEN
-        INSERT INTO public.ticket_audit_log (ticket_id, changed_by, field, old_value, new_value)
-        VALUES (NEW.id, actor, 'decline_reason', OLD.decline_reason, NEW.decline_reason);
-    END IF;
 
     IF NEW.public_enabled IS DISTINCT FROM OLD.public_enabled THEN
         INSERT INTO public.ticket_audit_log (ticket_id, changed_by, field, old_value, new_value)

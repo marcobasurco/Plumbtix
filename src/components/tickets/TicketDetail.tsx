@@ -444,6 +444,7 @@ export function TicketDetail() {
           <ActionPanel
             ticketId={ticket.id}
             currentStatus={ticket.status as TicketStatus}
+            currentTechnicianId={ticket.technician_id}
             onUpdated={handleUpdated}
           />
           {(role === 'proroto_admin' || role === 'pm_admin') && (

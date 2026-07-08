@@ -14,10 +14,12 @@ import { Loader2, Settings2 } from 'lucide-react';
 interface ActionPanelProps {
   ticketId: string;
   currentStatus: TicketStatus;
+  /** Currently assigned technician (roster FK) — dropdown pre-selects this */
+  currentTechnicianId: string | null;
   onUpdated: () => void;
 }
 
-export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelProps) {
+export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUpdated }: ActionPanelProps) {
   const { role } = useAuth();
   const isAdmin = role === 'proroto_admin';
   const isPmAdmin = role === 'pm_admin';
@@ -28,9 +30,15 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
   const [success, setSuccess] = useState<string | null>(null);
 
   // Editable fields
-  // technicianId: '' = no change · '__clear__' = unassign · uuid = assign
-  const [technicianId, setTechnicianId] = useState('');
+  // technicianId mirrors the CURRENT assignment ('' = unassigned); a change
+  // is sent only when it differs from currentTechnicianId on save.
+  const [technicianId, setTechnicianId] = useState(currentTechnicianId ?? '');
   const [technicians, setTechnicians] = useState<Technician[]>([]);
+
+  // Keep the dropdown in sync when the ticket refreshes after a save
+  useEffect(() => {
+    setTechnicianId(currentTechnicianId ?? '');
+  }, [currentTechnicianId]);
   const [scheduledDate, setScheduledDate] = useState('');
   const [timeWindow, setTimeWindow] = useState('');
   const [quoteAmount, setQuoteAmount] = useState('');
@@ -62,7 +70,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
 
     // Attach scheduling fields if set (admin or pm_admin)
     if (canEditFields) {
-      if (technicianId) payload.technician_id = technicianId === '__clear__' ? null : technicianId;
+      if (technicianId !== (currentTechnicianId ?? '')) payload.technician_id = technicianId || null;
       if (scheduledDate) payload.scheduled_date = scheduledDate;
       if (timeWindow.trim()) payload.scheduled_time_window = timeWindow.trim();
     }
@@ -80,7 +88,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
 
     if (result.ok) {
       setSuccess(`Ticket updated to ${STATUS_LABELS[targetStatus]}`);
-      setTechnicianId(''); setScheduledDate(''); setTimeWindow('');
+      setScheduledDate(''); setTimeWindow('');
       setQuoteAmount(''); setInvoiceNumber(''); setDeclineReason('');
       onUpdated();
     } else {
@@ -98,7 +106,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
     const payload: Partial<UpdateTicketRequest> & { ticket_id: string } = { ticket_id: ticketId };
     let hasChanges = false;
 
-    if (technicianId) { payload.technician_id = technicianId === '__clear__' ? null : technicianId; hasChanges = true; }
+    if (technicianId !== (currentTechnicianId ?? '')) { payload.technician_id = technicianId || null; hasChanges = true; }
     if (scheduledDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
     if (timeWindow.trim()) { payload.scheduled_time_window = timeWindow.trim(); hasChanges = true; }
     // Financials: proroto_admin only
@@ -114,7 +122,7 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
     const result = await updateTicket(payload as UpdateTicketRequest);
     if (result.ok) {
       setSuccess('Ticket fields updated');
-      setTechnicianId(''); setScheduledDate(''); setTimeWindow('');
+      setScheduledDate(''); setTimeWindow('');
       setQuoteAmount(''); setInvoiceNumber('');
       onUpdated();
     } else {
@@ -188,11 +196,10 @@ export function ActionPanel({ ticketId, currentStatus, onUpdated }: ActionPanelP
                 onChange={(e) => setTechnicianId(e.target.value)}
                 className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
               >
-                <option value="">No change</option>
+                <option value="">— Unassigned —</option>
                 {technicians.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
-                <option value="__clear__">— Unassign —</option>
               </select>
             </div>
             <div>
