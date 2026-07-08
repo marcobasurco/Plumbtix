@@ -15,3 +15,5 @@ supabase/.temp/
 Thumbs.db
 *.log
 npm-debug.log*
+test-results/
+playwright-report/
