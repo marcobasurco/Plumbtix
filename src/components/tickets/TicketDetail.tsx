@@ -17,6 +17,7 @@ import { CommentsThread } from './CommentsThread';
 import { AttachmentsList } from './AttachmentsList';
 import { ActionPanel } from './ActionPanel';
 import { SharingCard } from './SharingCard';
+import { AuditTrail } from './AuditTrail';
 import { PageTransition } from '@/components/PageTransition';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -431,6 +432,9 @@ export function TicketDetail() {
           <Card>
             <CardContent className="p-4">
               <CommentsThread ticketId={ticket.id} />
+
+              {/* Change history — database-recorded, proroto_admin only */}
+              {role === 'proroto_admin' && <AuditTrail ticketId={ticket.id} />}
             </CardContent>
           </Card>
         </div>
