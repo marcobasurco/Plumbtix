@@ -13,6 +13,7 @@
 // =============================================================================
 
 import type { SupabaseClient } from './supabase.ts';
+import { reportError } from './sentry.ts';
 import { sendEmail, sendEmailBatch, type EmailPayload } from './email.ts';
 import { sendSMSAndLog, normalizePhone } from './sms.ts';
 import {
@@ -180,6 +181,7 @@ async function smsEmergencyToPMs(
       });
     } catch (e) {
       console.error('[notifications] Emergency SMS to PM failed:', e);
+      reportError(e, { area: 'notifications', event: 'emergency_sms_pm' });
     }
   }
 }
@@ -217,6 +219,7 @@ async function smsCompletionToResident(
     });
   } catch (e) {
     console.error('[notifications] Completion SMS to resident failed:', e);
+    reportError(e, { area: 'notifications', event: 'completion_sms' });
   }
 }
 
@@ -297,10 +300,12 @@ export async function notifyNewTicket(
         }
       } catch (smsErr) {
         console.error('[notifications] Emergency SMS error (non-blocking):', smsErr);
+        reportError(smsErr, { area: 'notifications', event: 'emergency_sms' });
       }
     }
   } catch (e) {
     console.error('[notifications] notifyNewTicket error:', e);
+    reportError(e, { area: 'notifications', event: 'new_ticket' });
   }
 }
 
@@ -389,10 +394,12 @@ export async function notifyStatusChange(
         await smsCompletionToResident(svc, ticket, ticket.created_by.id);
       } catch (smsErr) {
         console.error('[notifications] Completion SMS error (non-blocking):', smsErr);
+        reportError(smsErr, { area: 'notifications', event: 'completion_sms_status' });
       }
     }
   } catch (e) {
     console.error('[notifications] notifyStatusChange error:', e);
+    reportError(e, { area: 'notifications', event: 'status_change' });
   }
 }
 
@@ -483,6 +490,7 @@ export async function notifyComment(
       data.ticketNumber, emails.length);
   } catch (e) {
     console.error('[notifications] notifyComment error:', e);
+    reportError(e, { area: 'notifications', event: 'comment' });
   }
 }
 
@@ -502,6 +510,7 @@ export async function notifyInvitation(data: InvitationEmailData): Promise<void>
     console.log('[notifications] Invitation email sent to %s', data.recipientEmail);
   } catch (e) {
     console.error('[notifications] notifyInvitation error:', e);
+    reportError(e, { area: 'notifications', event: 'invitation' });
   }
 }
 
@@ -521,5 +530,6 @@ export async function notifyResidentClaim(data: ResidentClaimEmailData): Promise
     console.log('[notifications] Resident claim email sent to %s', data.occupantEmail);
   } catch (e) {
     console.error('[notifications] notifyResidentClaim error:', e);
+    reportError(e, { area: 'notifications', event: 'resident_claim' });
   }
 }

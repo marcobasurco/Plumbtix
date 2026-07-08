@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { corsHeaders } from './cors.ts';
+import { reportError } from './sentry.ts';
 
 /**
  * Return a success response (200 by default).
@@ -67,6 +68,12 @@ export function serverError(internalMessage?: string): Response {
   if (internalMessage) {
     console.error('[SERVER_ERROR]', internalMessage);
   }
+  // Every 500 from every function lands in Sentry (no-op without SENTRY_DSN).
+  // The Error is constructed here so Sentry's stack trace points at the
+  // calling function file — enough to identify which function failed.
+  reportError(new Error(internalMessage ?? 'Unhandled server error'), {
+    source: 'serverError',
+  });
   return err('INTERNAL_ERROR', 'An unexpected error occurred', 500);
 }
 
