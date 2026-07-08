@@ -38,3 +38,11 @@ if (sentryDsn) {
       console.warn('[sentry] Failed to load monitoring SDK:', e);
     });
 }
+
+// Service worker registration (moved from an inline index.html script so the
+// enforced CSP can drop inline-script allowances entirely).
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}

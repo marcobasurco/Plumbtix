@@ -12,24 +12,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <title>PlumbTix — Work Order Management</title>
     <!-- Prevent flash of wrong theme -->
-    <script>
-      (function() {
-        var t = localStorage.getItem('plumbtix-theme');
-        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').catch(function() {});
-        });
-      }
-    </script>
   </body>
 </html>

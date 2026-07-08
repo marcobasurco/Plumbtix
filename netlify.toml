@@ -67,7 +67,7 @@
     #   • blob: + wasm-unsafe-eval — ffmpeg worker + @react-pdf output tabs
     #   • data:                 — QR data URLs, inline logos
     #   • *.sentry.io           — error reporting
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://unpkg.com https://*.sentry.io; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://unpkg.com https://*.sentry.io; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 # ---------------------------------------------------------------------------
 # Public ticket pages: never index. These are login-less, token-gated views —
