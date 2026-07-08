@@ -2,7 +2,7 @@
 
 // Buffer polyfill for @react-pdf/renderer
 declare global {
-  // eslint-disable-next-line no-var
+   
   var Buffer: typeof import('buffer').Buffer;
 }
 

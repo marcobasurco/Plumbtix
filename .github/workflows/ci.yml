@@ -1,8 +1,10 @@
 # =============================================================================
 # PlumbTix — CI/CD Pipeline
 # =============================================================================
-# On PR: lint, typecheck, test, build
-# On merge to main: deploy preview to Netlify
+# On PR: lint, typecheck, test, build (+ e2e)
+# On merge to main: lint, typecheck, test, build
+# Production deploys are handled by Netlify's git integration (frontend)
+# and deploy-functions.yml (Supabase edge functions) — NOT by this workflow.
 # =============================================================================
 
 name: CI/CD
@@ -14,7 +16,7 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
 
 jobs:
   ci:
@@ -32,15 +34,13 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npx eslint src/ --ext .ts,.tsx --max-warnings 0
-        continue-on-error: true
+        run: npx eslint src/ shared/
 
       - name: Type check
         run: npm run typecheck
 
       - name: Unit tests
         run: npx vitest run --reporter=verbose
-        continue-on-error: true
 
       - name: Build
         run: npm run build
@@ -75,36 +75,3 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           VITE_EDGE_BASE_URL: ${{ secrets.EDGE_BASE_URL }}
-
-  deploy:
-    name: Deploy to Netlify
-    runs-on: ubuntu-latest
-    needs: ci
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          VITE_EDGE_BASE_URL: ${{ secrets.EDGE_BASE_URL }}
-          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-
-      - name: Deploy to Netlify
-        uses: nwtgck/actions-netlify@v3
-        with:
-          publish-dir: ./dist
-          production-deploy: true
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
