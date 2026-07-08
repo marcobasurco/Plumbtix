@@ -3,9 +3,13 @@
 // =============================================================================
 // Route:  POST /functions/v1/toggle-public-sharing
 // Auth:   JWT required — proroto_admin or pm_admin only
-// Client: User JWT for BOTH read and write. Existing tickets RLS is the
-//         enforcement layer (proroto_admin FOR ALL; pm_admin FOR ALL scoped
-//         to own company's buildings). No service role needed.
+//
+// Access model (migration 00022):
+//   • READ via the caller's JWT — existing tickets RLS proves the caller can
+//     access this ticket (pm_admin is company-scoped, proroto_admin sees all).
+//   • WRITE via the service role — a BEFORE trigger on tickets blocks ALL
+//     changes to public_token/public_enabled from end-user JWTs, so this
+//     function is the only path that can modify sharing settings.
 //
 // Body:
 //   { ticket_id: UUID, enabled: boolean, regenerate?: boolean }
@@ -17,13 +21,10 @@
 //   enabled=false → sets public_enabled=false. Token is KEPT so re-enabling
 //                   restores previously printed QR codes. Use regenerate to
 //                   burn old links.
-//
-// Note: migration 00005's transition trigger only fires on status changes,
-// so this update never trips it.
 // =============================================================================
 
 import { handleCors } from '../_shared/cors.ts';
-import { createUserClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
+import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, forbidden, notFound, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 import { getCallerRole } from '../_shared/auth.ts';
@@ -65,6 +66,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     // ─── 4. Load ticket via caller JWT (RLS scopes access) ───
+    // If the caller's RLS can't see this ticket, they can't toggle it.
     const { data: ticket, error: fetchErr } = await userClient
       .from('tickets')
       .select('id, public_token, public_enabled')
@@ -89,8 +91,11 @@ Deno.serve(async (req: Request) => {
       updatePayload.public_token = crypto.randomUUID();
     }
 
-    // ─── 6. Update via caller JWT (RLS enforces company scoping) ───
-    const { data: updated, error: updateErr } = await userClient
+    // ─── 6. Write via SERVICE role ───
+    // Migration 00022's trigger blocks these columns for authenticated JWTs;
+    // access was already proven in step 4, role in step 2.
+    const svc = createServiceClient();
+    const { data: updated, error: updateErr } = await svc
       .from('tickets')
       .update(updatePayload)
       .eq('id', ticket_id)
