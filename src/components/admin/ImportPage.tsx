@@ -454,9 +454,23 @@ export function ImportPage() {
 
             // ─── UNITS: match by building + unit_number ───
             case 'units': {
-              const building = allBuildings.find((b) =>
+              // Multi-company safety: the same address/name can exist under
+              // several PM companies. company_name (optional column) scopes
+              // the lookup; ambiguous matches error instead of silently
+              // attaching data to the wrong company's building.
+              let candidates = allBuildings.filter((b) =>
                 looseMatch(b.address_line1, row.building_address) || looseMatch(b.name, row.building_address)
               );
+              if (row.company_name) {
+                const co = companies.find((c) => looseMatch(c.name, row.company_name));
+                if (!co) { rowResults.push({ row: rowNum, status: 'error', message: `Company "${row.company_name}" not found` }); break; }
+                candidates = candidates.filter((b) => b.company_id === co.id);
+              }
+              if (candidates.length > 1) {
+                rowResults.push({ row: rowNum, status: 'error', message: `Building "${row.building_address}" exists under multiple companies — add a company_name column to disambiguate` });
+                break;
+              }
+              const building = candidates[0];
               if (!building) { rowResults.push({ row: rowNum, status: 'error', message: `Building "${row.building_address}" not found` }); break; }
               if (!row.unit_number) { rowResults.push({ row: rowNum, status: 'skipped', message: 'Empty unit number' }); break; }
 
@@ -496,9 +510,23 @@ export function ImportPage() {
 
             // ─── OCCUPANTS: match by building + unit + email ───
             case 'occupants': {
-              const building = allBuildings.find((b) =>
+              // Multi-company safety: the same address/name can exist under
+              // several PM companies. company_name (optional column) scopes
+              // the lookup; ambiguous matches error instead of silently
+              // attaching data to the wrong company's building.
+              let candidates = allBuildings.filter((b) =>
                 looseMatch(b.address_line1, row.building_address) || looseMatch(b.name, row.building_address)
               );
+              if (row.company_name) {
+                const co = companies.find((c) => looseMatch(c.name, row.company_name));
+                if (!co) { rowResults.push({ row: rowNum, status: 'error', message: `Company "${row.company_name}" not found` }); break; }
+                candidates = candidates.filter((b) => b.company_id === co.id);
+              }
+              if (candidates.length > 1) {
+                rowResults.push({ row: rowNum, status: 'error', message: `Building "${row.building_address}" exists under multiple companies — add a company_name column to disambiguate` });
+                break;
+              }
+              const building = candidates[0];
               if (!building) { rowResults.push({ row: rowNum, status: 'error', message: `Building "${row.building_address}" not found` }); break; }
 
               const space = allSpaces.find((s) =>
