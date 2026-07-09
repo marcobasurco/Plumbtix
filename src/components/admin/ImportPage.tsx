@@ -984,7 +984,7 @@ export function ImportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rawRows.slice(0, 100).map((row, i) => {
+                  {rawRows.map((row, i) => {
                     const r = results?.[i];
                     const bg = r?.status === 'error' ? 'bg-red-50/60' : r?.status === 'created' ? 'bg-green-50/60' : r?.status === 'updated' ? 'bg-blue-50/60' : '';
                     return (
@@ -1010,11 +1010,6 @@ export function ImportPage() {
                   })}
                 </tbody>
               </table>
-              {rawRows.length > 100 && (
-                <div className="px-3 py-2 text-xs text-muted-foreground text-center bg-muted/30 border-t border-border">
-                  Showing first 100 of {rawRows.length} rows
-                </div>
-              )}
             </div>
           )}
 
