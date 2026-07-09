@@ -825,7 +825,7 @@ export function ImportPage() {
               <FileSpreadsheet className="h-5 w-5 text-primary shrink-0" />
               <div className="min-w-0">
                 <div className="text-sm font-semibold">Complete Template</div>
-                <div className="text-xs text-muted-foreground">All 5 sheets + instructions</div>
+                <div className="text-xs text-muted-foreground">All 6 sheets + instructions</div>
               </div>
             </button>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
@@ -842,21 +842,30 @@ export function ImportPage() {
             </div>
           </div>
           <div className="text-[11px] text-muted-foreground">
-            Import order: Companies → Buildings → Units → Occupants → Users
+            Import order: ① Companies → ② Buildings → ③ Units → ④ Occupants → ⑤ Users → ⑥ Equipment
           </div>
         </CardContent>
       </Card>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
-      {/* Type tabs */}
-      <div className="company-tabs mb-5">
-        {TABS.map((t) => (
-          <button key={t.key} className={`company-tab ${activeTab === t.key ? 'active' : ''}`}
-            onClick={() => handleTabSwitch(t.key)}>
+      {/* Type tabs — numbered pills so the import sequence is self-evident */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {TABS.map((t, i) => (
+          <button
+            key={t.key}
+            onClick={() => handleTabSwitch(t.key)}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+              activeTab === t.key
+                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                : 'bg-card text-foreground border-border hover:bg-muted/60'
+            }`}
+          >
+            <span className={`inline-flex items-center justify-center h-5 w-5 rounded-full text-[11px] font-bold ${
+              activeTab === t.key ? 'bg-primary-foreground/20' : 'bg-muted text-muted-foreground'
+            }`}>{i + 1}</span>
             {t.icon}
-            <span className="hidden sm:inline">{t.label}</span>
-            <span className="sm:hidden">{t.label.slice(0, 5)}</span>
+            {t.label}
           </button>
         ))}
       </div>
