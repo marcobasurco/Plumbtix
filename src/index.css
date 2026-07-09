@@ -448,3 +448,35 @@
   /* Show print-only elements */
   .print\:block { display: block !important; }
 }
+
+/* ── Company/detail tab strips ───────────────────────────────────────────
+   These classes were referenced by CompanyDetail (and originally ImportPage)
+   but never defined — tabs rendered as unstyled inline buttons mashed
+   together ("Buildings10Users0Invites2"). Pill styling, matching the app. */
+.company-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.company-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.company-tab:hover { background: hsl(var(--muted) / 0.6); }
+.company-tab.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+  box-shadow: 0 1px 2px hsl(var(--primary) / 0.3);
+}
