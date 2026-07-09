@@ -27,6 +27,8 @@ export const COMMON_AREA_TYPES = [
   'crawlspace',
   'laundry',
   'water_room',
+  'gym',
+  'restroom',
   'other',
 ] as const;
 export type CommonAreaType = (typeof COMMON_AREA_TYPES)[number];
@@ -111,6 +113,8 @@ export const COMMON_AREA_LABELS: Record<CommonAreaType, string> = {
   crawlspace: 'Crawlspace',
   laundry: 'Laundry Room',
   water_room: 'Main Water Room',
+  gym: 'Gym / Fitness',
+  restroom: 'Public Restroom',
   other: 'Other',
 };
 

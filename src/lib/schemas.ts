@@ -84,6 +84,7 @@ export const SpaceSchema = z
     space_type: z.enum(['unit', 'common_area']),
     unit_number: z.string().max(20).default(''),
     common_area_type: z.string().default(''),
+    label: z.string().max(80).optional().default(''),
     floor: z.string().default(''),
     bedrooms: z.string().default(''),
     bathrooms: z.string().default(''),

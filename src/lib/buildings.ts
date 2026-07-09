@@ -241,6 +241,7 @@ export interface SpaceRow {
   space_type: 'unit' | 'common_area';
   unit_number: string | null;
   common_area_type: CommonAreaType | null;
+  label: string | null;
   floor: number | null;
   bedrooms: number | null;
   bathrooms: number | null;
@@ -251,6 +252,7 @@ export interface SpaceFormData {
   space_type: 'unit' | 'common_area';
   unit_number: string;
   common_area_type: CommonAreaType | '';
+  label?: string;
   floor: string;
   bedrooms: string;
   bathrooms: string;
@@ -286,11 +288,13 @@ export async function createSpace(buildingId: string, form: SpaceFormData) {
   if (form.space_type === 'unit') {
     body.unit_number = form.unit_number.trim();
     body.common_area_type = null;
+    body.label = form.label?.trim() || null;
     body.bedrooms = form.bedrooms ? parseInt(form.bedrooms) : null;
     body.bathrooms = form.bathrooms ? parseFloat(form.bathrooms) : null;
   } else {
     body.unit_number = null;
     body.common_area_type = form.common_area_type || null;
+    body.label = form.label?.trim() || null;
     body.bedrooms = null;
     body.bathrooms = null;
   }
@@ -308,11 +312,13 @@ export async function updateSpace(id: string, form: SpaceFormData) {
   if (form.space_type === 'unit') {
     body.unit_number = form.unit_number.trim();
     body.common_area_type = null;
+    body.label = form.label?.trim() || null;
     body.bedrooms = form.bedrooms ? parseInt(form.bedrooms) : null;
     body.bathrooms = form.bathrooms ? parseFloat(form.bathrooms) : null;
   } else {
     body.unit_number = null;
     body.common_area_type = form.common_area_type || null;
+    body.label = form.label?.trim() || null;
     body.bedrooms = null;
     body.bathrooms = null;
   }

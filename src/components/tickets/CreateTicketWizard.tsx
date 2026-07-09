@@ -286,7 +286,7 @@ export function CreateTicketWizard() {
       return `Unit ${s.unit_number}${s.floor != null ? ` (Floor ${s.floor})` : ''}`;
     }
     const label = s.common_area_type
-      ? COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type
+      ? (s.label || (COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type))
       : s.space_type;
     return `${label}${s.floor != null ? ` (Floor ${s.floor})` : ''}`;
   }

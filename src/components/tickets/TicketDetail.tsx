@@ -18,6 +18,7 @@ import { AttachmentsList } from './AttachmentsList';
 import { ActionPanel } from './ActionPanel';
 import { SharingCard } from './SharingCard';
 import { AuditTrail } from './AuditTrail';
+import { EquipmentCard } from './EquipmentCard';
 import { PageTransition } from '@/components/PageTransition';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -204,7 +205,7 @@ export function TicketDetail() {
 
   const spaceLabel = spc.space_type === 'unit' && spc.unit_number
     ? `Unit ${spc.unit_number}`
-    : spc.common_area_type?.replace(/_/g, ' ') ?? spc.space_type;
+    : (spc.label || spc.common_area_type?.replace(/_/g, ' ') || spc.space_type);
 
   return (
     <PageTransition>
@@ -434,6 +435,11 @@ export function TicketDetail() {
               <CommentsThread ticketId={ticket.id} />
 
               {/* Change history — database-recorded, proroto_admin only */}
+              {/* Tech prep: what machinery lives in this building (parts intel) */}
+              {role !== 'resident' && (
+                <EquipmentCard buildingId={(ticket as unknown as { building?: { id?: string } }).building?.id ?? (ticket as unknown as { building_id?: string }).building_id ?? null} />
+              )}
+
               {role === 'proroto_admin' && <AuditTrail ticketId={ticket.id} />}
             </CardContent>
           </Card>

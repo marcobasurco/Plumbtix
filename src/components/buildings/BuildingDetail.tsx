@@ -131,7 +131,7 @@ export function BuildingDetail() {
   const spaceLabel = (s: SpaceRow) =>
     s.space_type === 'unit'
       ? `Unit ${s.unit_number}`
-      : COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type;
+      : (s.label || (COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type));
 
   if (loading) {
     return (
@@ -379,7 +379,7 @@ export function BuildingDetail() {
             {/* Mobile: cards */}
             <div className="md:hidden space-y-2">
               {commonAreas.map((s) => {
-                const areaLabel = COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type;
+                const areaLabel = (s.label || (COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type));
                 return (
                   <React.Fragment key={s.id}>
                     <div className="rounded-lg border border-border p-3">
@@ -426,7 +426,7 @@ export function BuildingDetail() {
                 </thead>
                 <tbody>
                   {commonAreas.map((s) => {
-                    const areaLabel = COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type;
+                    const areaLabel = (s.label || (COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type));
                     return (
                       <React.Fragment key={s.id}>
                         <tr className="transition-colors hover:bg-muted/50">

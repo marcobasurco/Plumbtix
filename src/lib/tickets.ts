@@ -44,6 +44,7 @@ export interface TicketListRow {
     space_type: string;
     unit_number: string | null;
     common_area_type: string | null;
+    label: string | null;
   };
   created_by: {
     id: string;
@@ -88,7 +89,7 @@ export async function fetchTicketList(
       created_at,
       updated_at,
       building:buildings!inner(id, name, address_line1, city),
-      space:spaces!inner(id, space_type, unit_number, common_area_type),
+      space:spaces!inner(id, space_type, unit_number, common_area_type, label),
       created_by:users!tickets_created_by_user_id_fkey(id, full_name)
     `, { count: 'exact' })
     .order('created_at', { ascending: false })
@@ -188,6 +189,7 @@ export interface TicketDetailRow {
     space_type: string;
     unit_number: string | null;
     common_area_type: string | null;
+    label: string | null;
     floor: number | null;
   };
   created_by: {
@@ -208,7 +210,7 @@ export async function fetchTicketDetail(ticketId: string) {
         gate_code, onsite_contact_name, onsite_contact_phone,
         company:companies(id, name, logo_url)
       ),
-      space:spaces!inner(id, space_type, unit_number, common_area_type, floor),
+      space:spaces!inner(id, space_type, unit_number, common_area_type, label, floor),
       created_by:users!tickets_created_by_user_id_fkey(id, full_name, email, phone)
     `)
     .eq('id', ticketId)
