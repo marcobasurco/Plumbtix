@@ -17,7 +17,7 @@ import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 
 const COMMON_AREA_TYPES = [
   'boiler_room', 'pool', 'garage', 'roof',
-  'crawlspace', 'laundry', 'water_room', 'other',
+  'crawlspace', 'laundry', 'water_room', 'gym', 'restroom', 'other',
 ] as const;
 
 // Discriminated union: mirrors the DB CHECK constraint exactly
@@ -26,7 +26,8 @@ const UnitSchema = z.object({
   space_type: z.literal('unit'),
   unit_number: z.string().min(1, 'Unit number is required for units').max(20).transform((v) => v.trim()),
   common_area_type: z.null().optional().default(null),
-  floor: z.number().int().optional().nullable().default(null),
+  label: z.string().max(80).optional().nullable().default(null),
+  floor: z.union([z.number().int(), z.string().regex(/^\d+$/).transform(Number)]).optional().nullable().default(null),
   bedrooms: z.number().int().optional().nullable().default(null),
   bathrooms: z.number().optional().nullable().default(null),
 });
@@ -38,7 +39,8 @@ const CommonAreaSchema = z.object({
   common_area_type: z.enum(COMMON_AREA_TYPES, {
     errorMap: () => ({ message: 'Invalid common area type' }),
   }),
-  floor: z.number().int().optional().nullable().default(null),
+  label: z.string().max(80).optional().nullable().default(null),
+  floor: z.union([z.number().int(), z.string().regex(/^\d+$/).transform(Number)]).optional().nullable().default(null),
   bedrooms: z.null().optional().default(null),
   bathrooms: z.null().optional().default(null),
 });
@@ -76,6 +78,7 @@ Deno.serve(async (req: Request) => {
         space_type: spaceData.space_type,
         unit_number: spaceData.unit_number ?? null,
         common_area_type: spaceData.common_area_type ?? null,
+        label: spaceData.label ?? null,
         floor: spaceData.floor ?? null,
         bedrooms: spaceData.bedrooms ?? null,
         bathrooms: spaceData.bathrooms ?? null,

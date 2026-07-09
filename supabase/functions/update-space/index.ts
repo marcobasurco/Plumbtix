@@ -13,7 +13,7 @@ import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 
 const COMMON_AREA_TYPES = [
   'boiler_room', 'pool', 'garage', 'roof',
-  'crawlspace', 'laundry', 'water_room', 'other',
+  'crawlspace', 'laundry', 'water_room', 'gym', 'restroom', 'other',
 ] as const;
 
 const UpdateUnitSchema = z.object({
@@ -21,7 +21,8 @@ const UpdateUnitSchema = z.object({
   space_type: z.literal('unit'),
   unit_number: z.string().min(1).max(20).transform((v) => v.trim()),
   common_area_type: z.null().optional().default(null),
-  floor: z.number().int().optional().nullable().default(null),
+  label: z.string().max(80).optional().nullable().default(null),
+  floor: z.union([z.number().int(), z.string().regex(/^\d+$/).transform(Number)]).optional().nullable().default(null),
   bedrooms: z.number().int().optional().nullable().default(null),
   bathrooms: z.number().optional().nullable().default(null),
 });
@@ -31,7 +32,8 @@ const UpdateCommonAreaSchema = z.object({
   space_type: z.literal('common_area'),
   unit_number: z.null().optional().default(null),
   common_area_type: z.enum(COMMON_AREA_TYPES),
-  floor: z.number().int().optional().nullable().default(null),
+  label: z.string().max(80).optional().nullable().default(null),
+  floor: z.union([z.number().int(), z.string().regex(/^\d+$/).transform(Number)]).optional().nullable().default(null),
   bedrooms: z.null().optional().default(null),
   bathrooms: z.null().optional().default(null),
 });
@@ -68,6 +70,7 @@ Deno.serve(async (req: Request) => {
         space_type: updateFields.space_type,
         unit_number: updateFields.unit_number ?? null,
         common_area_type: updateFields.common_area_type ?? null,
+        label: updateFields.label ?? null,
         floor: updateFields.floor ?? null,
         bedrooms: updateFields.bedrooms ?? null,
         bathrooms: updateFields.bathrooms ?? null,
