@@ -356,7 +356,7 @@ export function ImportPage() {
       const companies: CompanyListRow[] = await fetchCompanyList();
 
       let allBuildings: BuildingFull[] = [];
-      if (['buildings', 'units', 'occupants'].includes(activeTab)) {
+      if (['buildings', 'units', 'occupants', 'equipment'].includes(activeTab)) {
         allBuildings = await fetchAllPages<BuildingFull>((from, to) =>
           supabase.from('buildings')
             .select('id, company_id, name, address_line1, address_line2, city, state, zip, gate_code, onsite_contact_name, onsite_contact_phone, water_shutoff_location, gas_shutoff_location, access_notes')
