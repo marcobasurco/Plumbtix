@@ -457,7 +457,7 @@ export function BuildingDetail() {
                         {expandedSpace === s.id && (
                           <tr>
                             <td colSpan={canWrite ? 3 : 2} className="px-4 py-3 bg-muted/30 border-t border-border">
-                              <OccupantList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} canWrite={canWrite} />
+                              <SpaceEquipmentList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} />
                             </td>
                           </tr>
                         )}
