@@ -82,7 +82,7 @@ const TABS: ImportTab[] = [
     description: 'Sync units for existing buildings',
     matchKey: 'Matched by building + unit number',
     requiredColumns: ['building_address', 'unit_number'],
-    optionalColumns: ['floor', 'bedrooms', 'bathrooms'],
+    optionalColumns: ['company_name', 'floor', 'bedrooms', 'bathrooms'],
   },
   {
     key: 'occupants',
@@ -91,7 +91,7 @@ const TABS: ImportTab[] = [
     description: 'Sync tenants & homeowners (name, phone, etc.)',
     matchKey: 'Matched by building + unit + email',
     requiredColumns: ['building_address', 'unit_number', 'name', 'email'],
-    optionalColumns: ['phone', 'type'],
+    optionalColumns: ['company_name', 'phone', 'type'],
   },
   {
     key: 'users',
@@ -354,6 +354,14 @@ export function ImportPage() {
         const rowNum = i + 2;
         setProgress(Math.round(((i + 1) / rawRows.length) * 100));
 
+        // Rows with no data in any recognized column (e.g. legend/annotation
+        // rows living in unheadered columns) are silently skipped.
+        if (!Object.entries(row).some(([k, v]) => !k.startsWith('__') && v)) {
+          rowResults.push({ row: rowNum, status: 'skipped', message: 'Empty row' });
+          setResults([...rowResults]);
+          continue;
+        }
+
         try {
           switch (activeTab) {
 
@@ -421,7 +429,19 @@ export function ImportPage() {
                 if (diff.length === 0) {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `${row.address} — no changes` });
                 } else {
-                  await updateBuilding(existing.id, form);
+                  // Blank cells preserve in-app-entered values (gate codes,
+                  // contacts) instead of nulling them on unrelated updates.
+                  const mergedForm: BuildingFormData = { ...form,
+                    name: form.name || (existing.name ?? ''),
+                    address_line2: form.address_line2 || (existing.address_line2 ?? ''),
+                    gate_code: form.gate_code || (existing.gate_code ?? ''),
+                    onsite_contact_name: form.onsite_contact_name || (existing.onsite_contact_name ?? ''),
+                    onsite_contact_phone: form.onsite_contact_phone || (existing.onsite_contact_phone ?? ''),
+                    water_shutoff_location: form.water_shutoff_location || (existing.water_shutoff_location ?? ''),
+                    gas_shutoff_location: form.gas_shutoff_location || (existing.gas_shutoff_location ?? ''),
+                    access_notes: form.access_notes || (existing.access_notes ?? ''),
+                  };
+                  await updateBuilding(existing.id, mergedForm);
                   rowResults.push({ row: rowNum, status: 'updated', message: `Updated ${diff.join(', ')}` });
                 }
               } else {
@@ -459,7 +479,11 @@ export function ImportPage() {
                 if (diff.length === 0) {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `Unit ${row.unit_number} — no changes` });
                 } else {
-                  await updateSpace(existing.id, form);
+                  await updateSpace(existing.id, { ...form,
+                    floor: form.floor || String(existing.floor ?? ''),
+                    bedrooms: form.bedrooms || String(existing.bedrooms ?? ''),
+                    bathrooms: form.bathrooms || String(existing.bathrooms ?? ''),
+                  });
                   rowResults.push({ row: rowNum, status: 'updated', message: `Unit ${row.unit_number}: updated ${diff.join(', ')}` });
                 }
               } else {
@@ -496,22 +520,24 @@ export function ImportPage() {
               if (existing) {
                 const diff = changedFields(
                   existing as unknown as Record<string, unknown>,
-                  { name: row.name, phone: formatPhone(row.phone) || null, occupant_type: (row.type === 'homeowner' ? 'homeowner' : 'tenant') } as unknown as Record<string, unknown>,
+                  { name: row.name, phone: formatPhone(row.phone) || null, occupant_type: row.type ? (row.type === 'homeowner' ? 'homeowner' : 'tenant') : (existing as unknown as Record<string, unknown>).occupant_type } as unknown as Record<string, unknown>,
                   ['name', 'phone', 'occupant_type'],
                 );
                 if (diff.length === 0) {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `${row.name} — no changes` });
                 } else {
+                  const newType = row.type ? (row.type === 'homeowner' ? 'homeowner' : 'tenant')
+                    : ((existing as unknown as Record<string, unknown>).occupant_type as string);
                   const { error: upErr } = await supabase.from('occupants').update({
                     name: row.name,
-                    phone: formatPhone(row.phone) || null,
-                    occupant_type: row.type === 'homeowner' ? 'homeowner' : 'tenant',
+                    phone: formatPhone(row.phone) || existing.phone || null,
+                    occupant_type: newType,
                   }).eq('id', existing.id);
                   if (upErr) throw new Error(upErr.message);
                   // Update cache
                   existing.name = row.name;
-                  existing.phone = formatPhone(row.phone) || null;
-                  (existing as unknown as Record<string, unknown>).occupant_type = row.type === 'homeowner' ? 'homeowner' : 'tenant';
+                  existing.phone = formatPhone(row.phone) || existing.phone || null;
+                  (existing as unknown as Record<string, unknown>).occupant_type = newType;
                   rowResults.push({ row: rowNum, status: 'updated', message: `${row.name}: updated ${diff.join(', ')}` });
                 }
               } else {
@@ -535,6 +561,18 @@ export function ImportPage() {
               const existing = allUsers.find((u) => looseMatch(u.email, row.email));
               const role = row.role?.toLowerCase() === 'pm_admin' ? 'pm_admin' : 'pm_user';
 
+              // Isolation guard: an email already belonging to a different
+              // company — or to a non-PM account (resident, Pro Roto admin) —
+              // must never be renamed/re-roled by another company's sheet.
+              if (existing && existing.company_id !== company.id) {
+                rowResults.push({ row: rowNum, status: 'error', message: `${row.email} already belongs to a different company — cannot modify via import` });
+                break;
+              }
+              if (existing && existing.role !== 'pm_admin' && existing.role !== 'pm_user') {
+                rowResults.push({ row: rowNum, status: 'error', message: `${row.email} is a ${existing.role} account — cannot modify via import` });
+                break;
+              }
+
               if (existing) {
                 const diff = changedFields(
                   { full_name: existing.full_name, phone: existing.phone ?? '', role: existing.role },
@@ -545,11 +583,11 @@ export function ImportPage() {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `${row.email} — no changes` });
                 } else {
                   const { error: upErr } = await supabase.from('users')
-                    .update({ full_name: row.name, phone: formatPhone(row.phone) || null, role })
+                    .update({ full_name: row.name, phone: formatPhone(row.phone) || existing.phone || null, role })
                     .eq('id', existing.id);
                   if (upErr) throw new Error(upErr.message);
                   existing.full_name = row.name;
-                  existing.phone = formatPhone(row.phone) || null;
+                  existing.phone = formatPhone(row.phone) || existing.phone || null;
                   existing.role = role;
                   rowResults.push({ row: rowNum, status: 'updated', message: `${row.email}: updated ${diff.join(', ')}` });
                 }
