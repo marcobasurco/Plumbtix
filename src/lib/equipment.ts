@@ -69,3 +69,14 @@ export async function updateEquipment(id: string, patch: Partial<EquipmentFormDa
   const { error } = await supabase.from('equipment').update(body).eq('id', id);
   if (error) throw new Error(error.message);
 }
+
+// Equipment belonging to a single space (common-area asset list)
+export async function fetchSpaceEquipment(spaceId: string): Promise<EquipmentSyncRow[]> {
+  const { data, error } = await supabase
+    .from('equipment')
+    .select('id, space_id, category, name, manufacturer, model, serial_number, spec, notes')
+    .eq('space_id', spaceId)
+    .order('name');
+  if (error) { console.error('[equipment] fetchSpace:', error.message); return []; }
+  return (data ?? []) as EquipmentSyncRow[];
+}

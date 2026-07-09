@@ -20,6 +20,7 @@ import { COMMON_AREA_LABELS } from '@shared/types/enums';
 import { useAuth } from '@/lib/auth';
 import { SpaceForm } from './SpaceForm';
 import { BuildingFormDialog } from './BuildingFormDialog';
+import { SpaceEquipmentList } from './SpaceEquipmentList';
 import { OccupantList } from './OccupantList';
 import { EntitlementManager } from './EntitlementManager';
 import { ErrorBanner } from '@/components/ErrorBanner';
@@ -405,7 +406,7 @@ export function BuildingDetail() {
                       </div>
                       {expandedSpace === s.id && (
                         <div className="mt-3 pt-3 border-t border-border">
-                          <OccupantList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} canWrite={canWrite} />
+                          <SpaceEquipmentList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} />
                         </div>
                       )}
                     </div>
