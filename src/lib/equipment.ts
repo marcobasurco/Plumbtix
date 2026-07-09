@@ -16,3 +16,49 @@ export async function fetchBuildingEquipment(buildingId: string): Promise<Equipm
   if (error) { console.error('[equipment]', error.message); return []; }
   return (data ?? []) as unknown as EquipmentRow[];
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Import support: fetch all equipment for a set of buildings (for sync dedup)
+// ─────────────────────────────────────────────────────────────────────────
+export interface EquipmentSyncRow {
+  id: string; space_id: string; category: string; name: string;
+  manufacturer: string | null; model: string | null; serial_number: string | null;
+  spec: string | null; notes: string | null;
+}
+
+export async function fetchAllEquipment(): Promise<EquipmentSyncRow[]> {
+  const { data, error } = await supabase
+    .from('equipment')
+    .select('id, space_id, category, name, manufacturer, model, serial_number, spec, notes');
+  if (error) { console.error('[equipment] fetchAll:', error.message); return []; }
+  return (data ?? []) as EquipmentSyncRow[];
+}
+
+export interface EquipmentFormData {
+  space_id: string; category: string; name: string;
+  manufacturer?: string; model?: string; serial_number?: string; spec?: string; notes?: string;
+}
+
+export async function createEquipment(form: EquipmentFormData) {
+  const { error } = await supabase.from('equipment').insert({
+    space_id: form.space_id, category: form.category.trim(), name: form.name.trim(),
+    manufacturer: form.manufacturer?.trim() || null, model: form.model?.trim() || null,
+    serial_number: form.serial_number?.trim() || null, spec: form.spec?.trim() || null,
+    notes: form.notes?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function updateEquipment(id: string, patch: Partial<EquipmentFormData>) {
+  const body: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.category !== undefined) body.category = patch.category.trim();
+  if (patch.name !== undefined) body.name = patch.name.trim();
+  if (patch.manufacturer !== undefined) body.manufacturer = patch.manufacturer.trim() || null;
+  if (patch.model !== undefined) body.model = patch.model.trim() || null;
+  if (patch.serial_number !== undefined) body.serial_number = patch.serial_number.trim() || null;
+  if (patch.spec !== undefined) body.spec = patch.spec.trim() || null;
+  if (patch.notes !== undefined) body.notes = patch.notes.trim() || null;
+  const { error } = await supabase.from('equipment').update(body).eq('id', id);
+  if (error) throw new Error(error.message);
+}

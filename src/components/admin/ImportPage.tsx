@@ -21,6 +21,8 @@ import { createCompany, updateCompany, fetchCompanyList, type CompanyListRow } f
 import { createBuilding, updateBuilding, createSpace, updateSpace, fetchBuildingOccupants, createOccupant } from '@/lib/buildings';
 import type { BuildingFormData, SpaceFormData, OccupantFormData } from '@/lib/buildings';
 import { sendInvitation } from '@/lib/api';
+import { fetchAllEquipment, createEquipment, updateEquipment, type EquipmentSyncRow } from '@/lib/equipment';
+import type { CommonAreaType } from '@shared/types/enums';
 import { PageTransition } from '@/components/PageTransition';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
@@ -31,14 +33,14 @@ import { COMPLETE_TEMPLATE_B64 } from '@/lib/complete-template';
 import {
   Upload, FileSpreadsheet, Download, ChevronLeft, Loader2,
   CheckCircle2, XCircle, AlertTriangle, Building2, Users2,
-  Briefcase, Home, RefreshCw, UserRound,
+  Briefcase, Home, RefreshCw, UserRound, Wrench,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type ImportType = 'companies' | 'buildings' | 'units' | 'occupants' | 'users';
+type ImportType = 'companies' | 'buildings' | 'units' | 'occupants' | 'users' | 'equipment';
 
 interface ImportTab {
   key: ImportType;
@@ -82,7 +84,7 @@ const TABS: ImportTab[] = [
     description: 'Sync units for existing buildings',
     matchKey: 'Matched by building + unit number',
     requiredColumns: ['building_address', 'unit_number'],
-    optionalColumns: ['company_name', 'floor', 'bedrooms', 'bathrooms'],
+    optionalColumns: ['company_name', 'space_type', 'common_area_type', 'label', 'floor', 'bedrooms', 'bathrooms'],
   },
   {
     key: 'occupants',
@@ -101,6 +103,15 @@ const TABS: ImportTab[] = [
     matchKey: 'Matched by email',
     requiredColumns: ['company_name', 'name', 'email', 'role'],
     optionalColumns: ['phone'],
+  },
+  {
+    key: 'equipment',
+    label: 'Equipment',
+    icon: <Wrench className="h-4 w-4" />,
+    description: 'Sync equipment inside units & common areas (boilers, pumps…)',
+    matchKey: 'Matched by space + equipment name',
+    requiredColumns: ['building_address', 'space', 'category', 'name'],
+    optionalColumns: ['company_name', 'manufacturer', 'model', 'serial_number', 'spec', 'notes'],
   },
 ];
 
@@ -151,6 +162,9 @@ async function generateTemplate(type: ImportType) {
     users: [
       { company_name: 'Acme Property Management', name: 'Jane Smith', email: 'jane@acme.com', role: 'pm_admin', phone: '(415) 555-2000' },
       { company_name: 'Acme Property Management', name: 'Bob Jones', email: 'bob@acme.com', role: 'pm_user', phone: '' },
+    ],
+    equipment: [
+      { building_address: '123 Main St', space: 'Boiler Room', category: 'boiler', name: 'Main Boiler', company_name: 'Acme Property Management', manufacturer: 'Weil-McLain', model: 'EG-45', serial_number: 'SN-001234', spec: '400k BTU', notes: 'Honeywell L8148E aquastat. Bring 3/4in circulator gasket.' },
     ],
   };
 
@@ -230,8 +244,8 @@ type BuildingFull = {
 
 type SpaceFull = {
   id: string; building_id: string; space_type: string;
-  unit_number: string | null; floor: number | null;
-  bedrooms: number | null; bathrooms: number | null;
+  unit_number: string | null; common_area_type: string | null; label: string | null;
+  floor: number | null; bedrooms: number | null; bathrooms: number | null;
 };
 
 type UserFull = {
@@ -331,11 +345,18 @@ export function ImportPage() {
       }
 
       let allSpaces: SpaceFull[] = [];
-      if (['units', 'occupants'].includes(activeTab)) {
+      if (['units', 'occupants', 'equipment'].includes(activeTab)) {
+        // Load ALL spaces (units AND common areas) — occupants attach only to
+        // units, but equipment and common-area upserts need the full set.
         const { data } = await supabase.from('spaces')
-          .select('id, building_id, space_type, unit_number, floor, bedrooms, bathrooms')
-          .eq('space_type', 'unit').order('unit_number');
+          .select('id, building_id, space_type, unit_number, common_area_type, label, floor, bedrooms, bathrooms')
+          .order('unit_number');
         allSpaces = (data ?? []) as SpaceFull[];
+      }
+
+      let allEquipment: EquipmentSyncRow[] = [];
+      if (activeTab === 'equipment') {
+        allEquipment = await fetchAllEquipment();
       }
 
       let allUsers: UserFull[] = [];
@@ -348,14 +369,38 @@ export function ImportPage() {
       // Cache occupants per building to avoid refetching
       const occupantCache = new Map<string, Awaited<ReturnType<typeof fetchBuildingOccupants>>>();
 
+      // Company-scoped building resolver shared by units/occupants/equipment.
+      // Multi-company safety: the same address/name can exist under several PM
+      // companies. When the row supplies company_name we scope to it; without
+      // it, an ambiguous match is an ERROR (never a silent misfile).
+      const resolveBuilding = (
+        r: Record<string, string>,
+        blds: BuildingFull[],
+        cos: CompanyListRow[],
+      ): { building?: BuildingFull; error?: string } => {
+        let cands = blds.filter((b) =>
+          looseMatch(b.address_line1, r.building_address) || looseMatch(b.name, r.building_address)
+        );
+        if (r.company_name) {
+          const co = cos.find((c) => looseMatch(c.name, r.company_name));
+          if (!co) return { error: `Company "${r.company_name}" not found` };
+          cands = cands.filter((b) => b.company_id === co.id);
+        }
+        if (cands.length > 1) {
+          return { error: `Building "${r.building_address}" exists under multiple companies — add a company_name column to disambiguate` };
+        }
+        if (cands.length === 0) return { error: `Building "${r.building_address}" not found` };
+        return { building: cands[0] };
+      };
+
       // ─── Row-by-row sync ───
       for (let i = 0; i < rawRows.length; i++) {
         const row = rawRows[i];
         const rowNum = i + 2;
         setProgress(Math.round(((i + 1) / rawRows.length) * 100));
 
-        // Rows with no data in any recognized column (e.g. legend/annotation
-        // rows living in unheadered columns) are silently skipped.
+        // Skip rows with no data in any recognized column (legend/annotation
+        // rows that live in unheadered columns import as garbage otherwise).
         if (!Object.entries(row).some(([k, v]) => !k.startsWith('__') && v)) {
           rowResults.push({ row: rowNum, status: 'skipped', message: 'Empty row' });
           setResults([...rowResults]);
@@ -430,8 +475,8 @@ export function ImportPage() {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `${row.address} — no changes` });
                 } else {
                   // Blank cells preserve in-app-entered values (gate codes,
-                  // contacts) instead of nulling them on unrelated updates.
-                  const mergedForm: BuildingFormData = { ...form,
+                  // contacts, shutoffs) instead of nulling them on partial edits.
+                  await updateBuilding(existing.id, { ...form,
                     name: form.name || (existing.name ?? ''),
                     address_line2: form.address_line2 || (existing.address_line2 ?? ''),
                     gate_code: form.gate_code || (existing.gate_code ?? ''),
@@ -440,8 +485,7 @@ export function ImportPage() {
                     water_shutoff_location: form.water_shutoff_location || (existing.water_shutoff_location ?? ''),
                     gas_shutoff_location: form.gas_shutoff_location || (existing.gas_shutoff_location ?? ''),
                     access_notes: form.access_notes || (existing.access_notes ?? ''),
-                  };
-                  await updateBuilding(existing.id, mergedForm);
+                  });
                   rowResults.push({ row: rowNum, status: 'updated', message: `Updated ${diff.join(', ')}` });
                 }
               } else {
@@ -454,36 +498,59 @@ export function ImportPage() {
 
             // ─── UNITS: match by building + unit_number ───
             case 'units': {
-              // Multi-company safety: the same address/name can exist under
-              // several PM companies. company_name (optional column) scopes
-              // the lookup; ambiguous matches error instead of silently
-              // attaching data to the wrong company's building.
-              let candidates = allBuildings.filter((b) =>
-                looseMatch(b.address_line1, row.building_address) || looseMatch(b.name, row.building_address)
-              );
-              if (row.company_name) {
-                const co = companies.find((c) => looseMatch(c.name, row.company_name));
-                if (!co) { rowResults.push({ row: rowNum, status: 'error', message: `Company "${row.company_name}" not found` }); break; }
-                candidates = candidates.filter((b) => b.company_id === co.id);
-              }
-              if (candidates.length > 1) {
-                rowResults.push({ row: rowNum, status: 'error', message: `Building "${row.building_address}" exists under multiple companies — add a company_name column to disambiguate` });
+              // Company-scoped, ambiguity-safe building resolution.
+              const bres = resolveBuilding(row, allBuildings, companies);
+              if (bres.error) { rowResults.push({ row: rowNum, status: 'error', message: bres.error }); break; }
+              const building = bres.building!;
+
+              // This sheet handles BOTH units and common areas. space_type
+              // defaults to 'unit'; 'common_area' rows use common_area_type+label.
+              const isCommon = (row.space_type || '').toLowerCase().replace(/\s/g, '_') === 'common_area';
+
+              if (isCommon) {
+                const cat = (row.common_area_type || '').toLowerCase().replace(/\s/g, '_');
+                if (!cat) { rowResults.push({ row: rowNum, status: 'error', message: 'common_area rows need a common_area_type' }); break; }
+                const label = row.label || '';
+                // Match a common area by (type + label) within the building
+                const existing = allSpaces.find((sp) =>
+                  sp.building_id === building.id && sp.space_type === 'common_area' &&
+                  looseMatch(sp.common_area_type, cat) && looseMatch(sp.label ?? '', label)
+                );
+                const form: SpaceFormData = {
+                  space_type: 'common_area', unit_number: '',
+                  common_area_type: cat as CommonAreaType,
+                  label, floor: row.floor || '', bedrooms: '', bathrooms: '',
+                };
+                const areaName = label || cat.replace(/_/g, ' ');
+                if (existing) {
+                  const diff = changedFields(
+                    { floor: String(existing.floor ?? ''), label: existing.label ?? '' },
+                    { floor: form.floor, label },
+                    ['floor', 'label'],
+                  );
+                  if (diff.length === 0) {
+                    rowResults.push({ row: rowNum, status: 'unchanged', message: `${areaName} — no changes` });
+                  } else {
+                    await updateSpace(existing.id, { ...form, floor: form.floor || String(existing.floor ?? '') });
+                    rowResults.push({ row: rowNum, status: 'updated', message: `${areaName}: updated ${diff.join(', ')}` });
+                  }
+                } else {
+                  const created = await createSpace(building.id, form);
+                  allSpaces.push(created as unknown as SpaceFull);
+                  rowResults.push({ row: rowNum, status: 'created', message: `Created common area: ${areaName}` });
+                }
                 break;
               }
-              const building = candidates[0];
-              if (!building) { rowResults.push({ row: rowNum, status: 'error', message: `Building "${row.building_address}" not found` }); break; }
+
+              // ─── Unit path ───
               if (!row.unit_number) { rowResults.push({ row: rowNum, status: 'skipped', message: 'Empty unit number' }); break; }
-
-              const existing = allSpaces.find((s) =>
-                s.building_id === building.id && looseMatch(s.unit_number, row.unit_number)
+              const existing = allSpaces.find((sp) =>
+                sp.building_id === building.id && sp.space_type === 'unit' && looseMatch(sp.unit_number, row.unit_number)
               );
-
               const form: SpaceFormData = {
-                space_type: 'unit', unit_number: row.unit_number,
-                common_area_type: '',
+                space_type: 'unit', unit_number: row.unit_number, common_area_type: '', label: '',
                 floor: row.floor || '', bedrooms: row.bedrooms || '', bathrooms: row.bathrooms || '',
               };
-
               if (existing) {
                 const diff = changedFields(
                   { floor: String(existing.floor ?? ''), bedrooms: String(existing.bedrooms ?? ''), bathrooms: String(existing.bathrooms ?? '') },
@@ -493,6 +560,7 @@ export function ImportPage() {
                 if (diff.length === 0) {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `Unit ${row.unit_number} — no changes` });
                 } else {
+                  // Blank cells preserve existing values (don't null on partial edits)
                   await updateSpace(existing.id, { ...form,
                     floor: form.floor || String(existing.floor ?? ''),
                     bedrooms: form.bedrooms || String(existing.bedrooms ?? ''),
@@ -510,32 +578,17 @@ export function ImportPage() {
 
             // ─── OCCUPANTS: match by building + unit + email ───
             case 'occupants': {
-              // Multi-company safety: the same address/name can exist under
-              // several PM companies. company_name (optional column) scopes
-              // the lookup; ambiguous matches error instead of silently
-              // attaching data to the wrong company's building.
-              let candidates = allBuildings.filter((b) =>
-                looseMatch(b.address_line1, row.building_address) || looseMatch(b.name, row.building_address)
-              );
-              if (row.company_name) {
-                const co = companies.find((c) => looseMatch(c.name, row.company_name));
-                if (!co) { rowResults.push({ row: rowNum, status: 'error', message: `Company "${row.company_name}" not found` }); break; }
-                candidates = candidates.filter((b) => b.company_id === co.id);
-              }
-              if (candidates.length > 1) {
-                rowResults.push({ row: rowNum, status: 'error', message: `Building "${row.building_address}" exists under multiple companies — add a company_name column to disambiguate` });
-                break;
-              }
-              const building = candidates[0];
-              if (!building) { rowResults.push({ row: rowNum, status: 'error', message: `Building "${row.building_address}" not found` }); break; }
+              const bres = resolveBuilding(row, allBuildings, companies);
+              if (bres.error) { rowResults.push({ row: rowNum, status: 'error', message: bres.error }); break; }
+              const building = bres.building!;
 
-              const space = allSpaces.find((s) =>
-                s.building_id === building.id && looseMatch(s.unit_number, row.unit_number)
+              // Occupants attach to UNITS only — never to common areas.
+              const space = allSpaces.find((sp) =>
+                sp.building_id === building.id && sp.space_type === 'unit' && looseMatch(sp.unit_number, row.unit_number)
               );
               if (!space) { rowResults.push({ row: rowNum, status: 'error', message: `Unit "${row.unit_number}" not found in ${row.building_address}` }); break; }
               if (!row.email || !row.name) { rowResults.push({ row: rowNum, status: 'skipped', message: 'Missing name or email' }); break; }
 
-              // Fetch + cache occupants per building
               if (!occupantCache.has(building.id)) {
                 occupantCache.set(building.id, await fetchBuildingOccupants(building.id));
               }
@@ -546,23 +599,23 @@ export function ImportPage() {
               );
 
               if (existing) {
+                // Blank type must NOT flip an existing homeowner back to tenant.
+                const existingType = (existing as unknown as Record<string, unknown>).occupant_type as string;
+                const newType = row.type ? (row.type === 'homeowner' ? 'homeowner' : 'tenant') : existingType;
                 const diff = changedFields(
                   existing as unknown as Record<string, unknown>,
-                  { name: row.name, phone: formatPhone(row.phone) || null, occupant_type: row.type ? (row.type === 'homeowner' ? 'homeowner' : 'tenant') : (existing as unknown as Record<string, unknown>).occupant_type } as unknown as Record<string, unknown>,
+                  { name: row.name, phone: formatPhone(row.phone) || existing.phone || null, occupant_type: newType } as unknown as Record<string, unknown>,
                   ['name', 'phone', 'occupant_type'],
                 );
                 if (diff.length === 0) {
                   rowResults.push({ row: rowNum, status: 'unchanged', message: `${row.name} — no changes` });
                 } else {
-                  const newType = row.type ? (row.type === 'homeowner' ? 'homeowner' : 'tenant')
-                    : ((existing as unknown as Record<string, unknown>).occupant_type as string);
                   const { error: upErr } = await supabase.from('occupants').update({
                     name: row.name,
                     phone: formatPhone(row.phone) || existing.phone || null,
                     occupant_type: newType,
                   }).eq('id', existing.id);
                   if (upErr) throw new Error(upErr.message);
-                  // Update cache
                   existing.name = row.name;
                   existing.phone = formatPhone(row.phone) || existing.phone || null;
                   (existing as unknown as Record<string, unknown>).occupant_type = newType;
@@ -574,8 +627,71 @@ export function ImportPage() {
                   name: row.name, email: row.email, phone: formatPhone(row.phone),
                 };
                 const created = await createOccupant(space.id, form);
-                occupants.push(created); // update cache
+                occupants.push(created);
                 rowResults.push({ row: rowNum, status: 'created', message: `Added ${row.name} to unit ${row.unit_number}` });
+              }
+              break;
+            }
+
+            // ─── EQUIPMENT: match by space + equipment name ───
+            case 'equipment': {
+              const bres = resolveBuilding(row, allBuildings, companies);
+              if (bres.error) { rowResults.push({ row: rowNum, status: 'error', message: bres.error }); break; }
+              const building = bres.building!;
+              if (!row.category || !row.name) { rowResults.push({ row: rowNum, status: 'skipped', message: 'Missing category or name' }); break; }
+
+              // 'space' column resolves to a unit_number OR a common-area label.
+              const spaceKey = (row.space || '').trim();
+              if (!spaceKey) { rowResults.push({ row: rowNum, status: 'error', message: 'Missing space (unit number or common-area label)' }); break; }
+              const space = allSpaces.find((sp) =>
+                sp.building_id === building.id &&
+                (looseMatch(sp.unit_number, spaceKey) || looseMatch(sp.label ?? '', spaceKey) || looseMatch(sp.common_area_type ?? '', spaceKey.toLowerCase().replace(/\s/g, '_')))
+              );
+              if (!space) { rowResults.push({ row: rowNum, status: 'error', message: `Space "${spaceKey}" not found in ${row.building_address}` }); break; }
+
+              const existing = allEquipment.find((e) =>
+                e.space_id === space.id && looseMatch(e.name, row.name)
+              );
+              const incoming = {
+                category: row.category, name: row.name,
+                manufacturer: row.manufacturer || null, model: row.model || null,
+                serial_number: row.serial_number || null, spec: row.spec || null, notes: row.notes || null,
+              };
+
+              if (existing) {
+                const diff = changedFields(
+                  existing as unknown as Record<string, unknown>,
+                  incoming as unknown as Record<string, unknown>,
+                  ['category', 'name', 'manufacturer', 'model', 'serial_number', 'spec', 'notes'],
+                );
+                if (diff.length === 0) {
+                  rowResults.push({ row: rowNum, status: 'unchanged', message: `${row.name} — no changes` });
+                } else {
+                  // Blank cells preserve existing values.
+                  await updateEquipment(existing.id, {
+                    category: row.category || existing.category,
+                    manufacturer: row.manufacturer || existing.manufacturer || '',
+                    model: row.model || existing.model || '',
+                    serial_number: row.serial_number || existing.serial_number || '',
+                    spec: row.spec || existing.spec || '',
+                    notes: row.notes || existing.notes || '',
+                  });
+                  existing.category = row.category || existing.category;
+                  existing.manufacturer = row.manufacturer || existing.manufacturer;
+                  existing.model = row.model || existing.model;
+                  existing.serial_number = row.serial_number || existing.serial_number;
+                  existing.spec = row.spec || existing.spec;
+                  existing.notes = row.notes || existing.notes;
+                  rowResults.push({ row: rowNum, status: 'updated', message: `${row.name}: updated ${diff.join(', ')}` });
+                }
+              } else {
+                await createEquipment({
+                  space_id: space.id, category: row.category, name: row.name,
+                  manufacturer: row.manufacturer, model: row.model,
+                  serial_number: row.serial_number, spec: row.spec, notes: row.notes,
+                });
+                allEquipment.push({ id: crypto.randomUUID(), space_id: space.id, ...incoming });
+                rowResults.push({ row: rowNum, status: 'created', message: `Added ${row.name}` });
               }
               break;
             }
@@ -589,9 +705,9 @@ export function ImportPage() {
               const existing = allUsers.find((u) => looseMatch(u.email, row.email));
               const role = row.role?.toLowerCase() === 'pm_admin' ? 'pm_admin' : 'pm_user';
 
-              // Isolation guard: an email already belonging to a different
-              // company — or to a non-PM account (resident, Pro Roto admin) —
-              // must never be renamed/re-roled by another company's sheet.
+              // Isolation guard: an email already belonging to a DIFFERENT
+              // company — or to a non-PM account (resident / Pro Roto admin) —
+              // must never be renamed or re-roled by another company's sheet.
               if (existing && existing.company_id !== company.id) {
                 rowResults.push({ row: rowNum, status: 'error', message: `${row.email} already belongs to a different company — cannot modify via import` });
                 break;
