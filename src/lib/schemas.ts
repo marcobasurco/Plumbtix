@@ -16,6 +16,7 @@
 // =============================================================================
 
 import { z } from 'zod';
+import { COMMON_AREA_TYPES } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
 // Building
@@ -99,16 +100,10 @@ export const SpaceSchema = z
         });
       }
     } else {
-      const validTypes = [
-        'boiler_room',
-        'pool',
-        'garage',
-        'roof',
-        'crawlspace',
-        'laundry',
-        'water_room',
-        'other',
-      ];
+      // Single source of truth: the shared enum (which mirrors the DB enum).
+      // A private hardcoded copy here once silently rejected newly added
+      // categories (gym, restroom) — never duplicate this list again.
+      const validTypes: readonly string[] = COMMON_AREA_TYPES;
       if (!validTypes.includes(data.common_area_type)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
