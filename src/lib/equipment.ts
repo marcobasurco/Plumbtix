@@ -28,11 +28,18 @@ export interface EquipmentSyncRow {
 }
 
 export async function fetchAllEquipment(): Promise<EquipmentSyncRow[]> {
-  const { data, error } = await supabase
-    .from('equipment')
-    .select('id, space_id, category, name, manufacturer, model, serial_number, spec, notes');
-  if (error) { console.error('[equipment] fetchAll:', error.message); return []; }
-  return (data ?? []) as EquipmentSyncRow[];
+  const PAGE = 1000;
+  const out: EquipmentSyncRow[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('equipment')
+      .select('id, space_id, category, name, manufacturer, model, serial_number, spec, notes')
+      .order('id').range(from, from + PAGE - 1);
+    if (error) { console.error('[equipment] fetchAll:', error.message); break; }
+    out.push(...(data ?? []));
+    if ((data ?? []).length < PAGE) break;
+  }
+  return out;
 }
 
 export interface EquipmentFormData {

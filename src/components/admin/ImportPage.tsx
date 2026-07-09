@@ -228,6 +228,25 @@ function formatPhone(raw: string | null | undefined): string {
   return String(raw).trim();
 }
 
+
+// Supabase caps a single select at 1000 rows — at load-test scale (3000+
+// spaces) an unpaginated prefetch silently truncates, making the sync engine
+// blind to existing records (duplicates + false "already exists" errors).
+async function fetchAllPages<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const PAGE = 1000;
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const batch = data ?? [];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Lookup types
 // ---------------------------------------------------------------------------
@@ -338,20 +357,20 @@ export function ImportPage() {
 
       let allBuildings: BuildingFull[] = [];
       if (['buildings', 'units', 'occupants'].includes(activeTab)) {
-        const { data } = await supabase.from('buildings')
-          .select('id, company_id, name, address_line1, address_line2, city, state, zip, gate_code, onsite_contact_name, onsite_contact_phone, water_shutoff_location, gas_shutoff_location, access_notes')
-          .order('address_line1');
-        allBuildings = (data ?? []) as BuildingFull[];
+        allBuildings = await fetchAllPages<BuildingFull>((from, to) =>
+          supabase.from('buildings')
+            .select('id, company_id, name, address_line1, address_line2, city, state, zip, gate_code, onsite_contact_name, onsite_contact_phone, water_shutoff_location, gas_shutoff_location, access_notes')
+            .order('address_line1').range(from, to));
       }
 
       let allSpaces: SpaceFull[] = [];
       if (['units', 'occupants', 'equipment'].includes(activeTab)) {
         // Load ALL spaces (units AND common areas) — occupants attach only to
         // units, but equipment and common-area upserts need the full set.
-        const { data } = await supabase.from('spaces')
-          .select('id, building_id, space_type, unit_number, common_area_type, label, floor, bedrooms, bathrooms')
-          .order('unit_number');
-        allSpaces = (data ?? []) as SpaceFull[];
+        allSpaces = await fetchAllPages<SpaceFull>((from, to) =>
+          supabase.from('spaces')
+            .select('id, building_id, space_type, unit_number, common_area_type, label, floor, bedrooms, bathrooms')
+            .order('id').range(from, to));
       }
 
       let allEquipment: EquipmentSyncRow[] = [];
@@ -361,9 +380,10 @@ export function ImportPage() {
 
       let allUsers: UserFull[] = [];
       if (activeTab === 'users') {
-        const { data } = await supabase.from('users')
-          .select('id, email, full_name, phone, role, company_id');
-        allUsers = (data ?? []) as UserFull[];
+        allUsers = await fetchAllPages<UserFull>((from, to) =>
+          supabase.from('users')
+            .select('id, email, full_name, phone, role, company_id')
+            .order('id').range(from, to));
       }
 
       // Cache occupants per building to avoid refetching
