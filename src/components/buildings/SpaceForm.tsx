@@ -277,7 +277,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
               <div className="space-y-1.5 mt-3">
                 <Label htmlFor="caLabel">Name / Label</Label>
                 <Input id="caLabel" placeholder='e.g. "Pool Restroom", "Main Boiler"'
-                  value={form.label ?? ''} onChange={(e) => setForm({ ...form, label: e.target.value })} />
+                  {...register('label')} />
               </div>
               {errors.common_area_type && (
                 <p className="text-xs text-destructive">

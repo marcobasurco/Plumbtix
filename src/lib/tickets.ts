@@ -361,13 +361,14 @@ export interface SpaceOption {
   space_type: string;
   unit_number: string | null;
   common_area_type: string | null;
+  label: string | null;
   floor: number | null;
 }
 
 export async function fetchSpacesForBuilding(buildingId: string) {
   const { data, error } = await supabase
     .from('spaces')
-    .select('id, space_type, unit_number, common_area_type, floor')
+    .select('id, space_type, unit_number, common_area_type, label, floor')
     .eq('building_id', buildingId)
     .order('unit_number', { ascending: true, nullsFirst: false });
 
