@@ -528,3 +528,16 @@
   .rpt-doc { max-width: none; padding: 0; font-size: 10.5px; border: 0; box-shadow: none; }
   .content-main { padding: 0 !important; max-width: none !important; }
 }
+
+/* rpt print hardening */
+@media print {
+  html, body { overflow: visible !important; width: auto !important; }
+  .app-shell { display: block !important; }
+  .content-area { margin: 0 !important; width: auto !important; min-width: 0 !important; }
+  .content-main { padding: 0 !important; margin: 0 !important; max-width: none !important; width: auto !important; }
+  .rpt-doc { width: auto !important; max-width: 100% !important; margin: 0 !important; overflow: visible; }
+  .rpt-header-row { flex-wrap: wrap; }
+  .rpt-meta { min-width: 0; max-width: 60%; }
+  .rpt-title { font-size: 18px; }
+  .rpt-meta-line, .rpt-title { overflow-wrap: anywhere; }
+}
