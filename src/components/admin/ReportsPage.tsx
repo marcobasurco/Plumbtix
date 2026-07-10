@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { ReportingDashboard } from './ReportingDashboard';
 import { EquipmentRegister } from './EquipmentRegister';
-import { BarChart3, Wrench } from 'lucide-react';
+import { TicketReportDocument } from './TicketReportDocument';
+import { BarChart3, FileText, Wrench } from 'lucide-react';
 
 const TABS = [
-  { key: 'tickets', label: 'Ticket Reports', icon: <BarChart3 className="h-4 w-4" /> },
+  { key: 'dashboard', label: 'Ticket Dashboard', icon: <BarChart3 className="h-4 w-4" /> },
+  { key: 'ticket-doc', label: 'Ticket Report (Print)', icon: <FileText className="h-4 w-4" /> },
   { key: 'equipment', label: 'Equipment Register', icon: <Wrench className="h-4 w-4" /> },
 ] as const;
 
 export function ReportsPage() {
-  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('tickets');
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('dashboard');
   return (
     <div className="space-y-5">
       <div className="company-tabs print:hidden">
@@ -20,7 +22,9 @@ export function ReportsPage() {
           </button>
         ))}
       </div>
-      {tab === 'tickets' ? <ReportingDashboard /> : <EquipmentRegister />}
+      {tab === 'dashboard' && <ReportingDashboard />}
+      {tab === 'ticket-doc' && <TicketReportDocument />}
+      {tab === 'equipment' && <EquipmentRegister />}
     </div>
   );
 }
