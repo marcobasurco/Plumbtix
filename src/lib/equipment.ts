@@ -80,3 +80,8 @@ export async function fetchSpaceEquipment(spaceId: string): Promise<EquipmentSyn
   if (error) { console.error('[equipment] fetchSpace:', error.message); return []; }
   return (data ?? []) as EquipmentSyncRow[];
 }
+
+export async function deleteEquipment(id: string) {
+  const { error } = await supabase.from('equipment').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}

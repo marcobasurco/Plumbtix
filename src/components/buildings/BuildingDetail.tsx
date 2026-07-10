@@ -406,7 +406,7 @@ export function BuildingDetail() {
                       </div>
                       {expandedSpace === s.id && (
                         <div className="mt-3 pt-3 border-t border-border">
-                          <SpaceEquipmentList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} />
+                          <SpaceEquipmentList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} canWrite={canWrite} />
                         </div>
                       )}
                     </div>
@@ -457,7 +457,7 @@ export function BuildingDetail() {
                         {expandedSpace === s.id && (
                           <tr>
                             <td colSpan={canWrite ? 3 : 2} className="px-4 py-3 bg-muted/30 border-t border-border">
-                              <SpaceEquipmentList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} />
+                              <SpaceEquipmentList spaceId={s.id} spaceLabel={areaLabel ?? 'Common Area'} canWrite={canWrite} />
                             </td>
                           </tr>
                         )}
