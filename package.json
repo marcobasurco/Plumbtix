@@ -1,8 +1,9 @@
 {
   "name": "work-orders",
   "version": "0.9.0",
+  "type": "module",
   "private": true,
-  "description": "PlumbTix — Work Order Management by Pro Roto Inc.",
+  "description": "PlumbTix \u2014 Work Order Management by Pro Roto Inc.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

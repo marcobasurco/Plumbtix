@@ -70,7 +70,7 @@ export function EquipmentRegister() {
     setRows(out);
     setReportId(makeReportId('ER'));
   };
-  useEffect(() => { void load(); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, []);
 
   const companies = useMemo(() => {
     const m = new Map<string, string>();
