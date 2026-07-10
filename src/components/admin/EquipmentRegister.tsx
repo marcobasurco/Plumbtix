@@ -1,12 +1,18 @@
 // =============================================================================
-// Equipment Register — assets grouped by company → building → space, with
-// counts at every level. Filters, CSV export, and print (window.print; the
-// app's @media print CSS hides nav/sidebar so the report prints clean).
+// Equipment Register — professional service document (report spec compliant).
+// Data: paginated equipment query (space → building → company joins).
+// Output: on-screen preview mirroring Chrome print-to-PDF; CSV export.
 // =============================================================================
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Button } from '@/components/ui/button';
-import { Printer, Download, Loader2, Wrench, Building2 } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
+import { Loader2 } from 'lucide-react';
+import { ReportHeader } from '@/components/reports/ReportHeader';
+import { PropertySummary } from '@/components/reports/PropertySummary';
+import { ReportSection } from '@/components/reports/ReportSection';
+import { EquipmentItem } from '@/components/reports/EquipmentItem';
+import { PrintActions } from '@/components/reports/PrintActions';
+import { makeReportId } from '@/components/reports/format';
 
 interface Row {
   id: string; category: string; name: string;
@@ -17,6 +23,8 @@ interface Row {
     common_area_type: string | null; label: string | null;
     building: {
       id: string; name: string | null; address_line1: string;
+      city: string | null; state: string | null;
+      onsite_contact_name: string | null;
       company: { id: string; name: string } | null;
     };
   };
@@ -37,29 +45,32 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
 }
 
 export function EquipmentRegister() {
+  const { profile } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState('');
   const [buildingId, setBuildingId] = useState('');
+  const [reportId, setReportId] = useState(() => makeReportId('ER'));
 
-  useEffect(() => {
-    (async () => {
-      const PAGE = 1000; const out: Row[] = [];
-      for (let from = 0; ; from += PAGE) {
-        const { data, error: err } = await supabase
-          .from('equipment')
-          .select(`id, category, name, manufacturer, model, serial_number, spec, notes,
-            space:spaces!inner(id, space_type, unit_number, common_area_type, label,
-              building:buildings!inner(id, name, address_line1,
-                company:companies(id, name)))`)
-          .order('id').range(from, from + PAGE - 1);
-        if (err) { setError(err.message); return; }
-        out.push(...((data ?? []) as unknown as Row[]));
-        if ((data ?? []).length < PAGE) break;
-      }
-      setRows(out);
-    })();
-  }, []);
+  const load = async () => {
+    setRows(null); setError(null);
+    const PAGE = 1000; const out: Row[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error: err } = await supabase
+        .from('equipment')
+        .select(`id, category, name, manufacturer, model, serial_number, spec, notes,
+          space:spaces!inner(id, space_type, unit_number, common_area_type, label,
+            building:buildings!inner(id, name, address_line1, city, state, onsite_contact_name,
+              company:companies(id, name)))`)
+        .order('id').range(from, from + PAGE - 1);
+      if (err) { setError(err.message); return; }
+      out.push(...((data ?? []) as unknown as Row[]));
+      if ((data ?? []).length < PAGE) break;
+    }
+    setRows(out);
+    setReportId(makeReportId('ER'));
+  };
+  useEffect(() => { void load(); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const companies = useMemo(() => {
     const m = new Map<string, string>();
@@ -81,22 +92,22 @@ export function EquipmentRegister() {
     (!companyId || r.space.building.company?.id === companyId) &&
     (!buildingId || r.space.building.id === buildingId)), [rows, companyId, buildingId]);
 
-  // group: building → space → items
   const grouped = useMemo(() => {
-    const byB = new Map<string, { label: string; addr: string; company: string;
+    const byB = new Map<string, { b: Row['space']['building'];
       spaces: Map<string, { label: string; items: Row[] }> }>();
     for (const r of filtered) {
       const b = r.space.building;
-      if (!byB.has(b.id)) byB.set(b.id, {
-        label: b.name || b.address_line1, addr: b.address_line1,
-        company: b.company?.name ?? '—', spaces: new Map() });
-      const bg = byB.get(b.id)!;
-      const sk = r.space.id;
-      if (!bg.spaces.has(sk)) bg.spaces.set(sk, { label: spaceName(r.space), items: [] });
-      bg.spaces.get(sk)!.items.push(r);
+      if (!byB.has(b.id)) byB.set(b.id, { b, spaces: new Map() });
+      const g = byB.get(b.id)!;
+      if (!g.spaces.has(r.space.id)) g.spaces.set(r.space.id, { label: spaceName(r.space), items: [] });
+      g.spaces.get(r.space.id)!.items.push(r);
     }
-    return [...byB.values()].sort((a, b) => a.label.localeCompare(b.label));
+    return [...byB.values()].sort((a, z) =>
+      (a.b.name || a.b.address_line1).localeCompare(z.b.name || z.b.address_line1));
   }, [filtered]);
+
+  const totalLocations = useMemo(
+    () => grouped.reduce((n, g) => n + g.spaces.size, 0), [grouped]);
 
   const exportCsv = () => downloadCsv('equipment-register.csv',
     ['Company','Building','Address','Space','Name','Category','Manufacturer','Model','Serial','Spec','Notes'],
@@ -111,8 +122,9 @@ export function EquipmentRegister() {
     </div>);
 
   return (
-    <div className="space-y-5">
-      {/* Controls — hidden when printing */}
+    <div className="space-y-4">
+      {/* Screen-only controls */}
+      <PrintActions onRegenerate={() => void load()} />
       <div className="flex flex-wrap items-center gap-3 print:hidden">
         <select value={companyId} onChange={e => { setCompanyId(e.target.value); setBuildingId(''); }}
           className="h-9 rounded-md border border-border bg-background px-3 text-sm">
@@ -124,58 +136,42 @@ export function EquipmentRegister() {
           <option value="">All buildings</option>
           {buildings.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
         </select>
-        <div className="ml-auto flex gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCsv}>
-            <Download className="h-3.5 w-3.5" /> CSV
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => window.print()}>
-            <Printer className="h-3.5 w-3.5" /> Print
-          </Button>
+        <button onClick={exportCsv}
+          className="ml-auto h-9 rounded-md border border-border bg-background px-3 text-sm hover:bg-muted/60">
+          Export CSV
+        </button>
+      </div>
+
+      {/* The document */}
+      <div className="rpt-doc">
+        <ReportHeader title="Equipment Register" reportId={reportId}
+          generatedBy={profile?.full_name ?? null} />
+
+        <div className="rpt-summary">
+          <div><b>{grouped.length}</b> Properties</div>
+          <div><b>{totalLocations}</b> Locations</div>
+          <div><b>{filtered.length}</b> Equipment Items</div>
         </div>
-      </div>
 
-      {/* Print header */}
-      <div className="hidden print:block">
-        <h1 className="text-xl font-bold">Equipment Register</h1>
-        <div className="text-sm text-muted-foreground">
-          Generated {new Date().toLocaleDateString()} · {filtered.length} items
-        </div>
-      </div>
+        {grouped.length === 0 && (
+          <p className="rpt-empty">No equipment matches the current filters.</p>
+        )}
 
-      <div className="text-sm text-muted-foreground print:hidden">
-        {filtered.length} items · {grouped.length} buildings
-      </div>
-
-      {grouped.map(b => (
-        <div key={b.label + b.addr} className="rounded-xl border border-border bg-card overflow-hidden break-inside-avoid">
-          <div className="px-4 py-3 bg-muted/50 flex items-baseline justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2 font-semibold">
-              <Building2 className="h-4 w-4 text-muted-foreground print:hidden" />
-              {b.label}
-              <span className="text-sm font-normal text-muted-foreground">— {b.addr} · {b.company}</span>
-            </div>
-            <span className="text-sm text-muted-foreground">
-              {[...b.spaces.values()].reduce((n, s) => n + s.items.length, 0)} items
-            </span>
+        {grouped.map((g, gi) => (
+          <div key={g.b.id} className={gi > 0 ? 'rpt-property-break' : undefined}>
+            <PropertySummary
+              name={g.b.name || g.b.address_line1}
+              address={[g.b.address_line1, g.b.city, g.b.state].filter(Boolean).join(', ')}
+              company={g.b.company?.name}
+              contact={g.b.onsite_contact_name} />
+            {[...g.spaces.values()].sort((a, z) => a.label.localeCompare(z.label)).map(sp => (
+              <ReportSection key={sp.label} title={sp.label}>
+                {sp.items.map(e => <EquipmentItem key={e.id} e={e} />)}
+              </ReportSection>
+            ))}
           </div>
-          {[...b.spaces.values()].sort((a, z) => a.label.localeCompare(z.label)).map(sp => (
-            <div key={sp.label} className="px-4 py-3 border-t border-border">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Wrench className="h-3.5 w-3.5 print:hidden" /> {sp.label}
-                <span className="normal-case font-normal">· {sp.items.length}</span>
-              </div>
-              {sp.items.map(e => (
-                <div key={e.id} className="py-1.5 text-sm border-t border-border/40 first:border-0">
-                  <span className="font-medium">{e.name}</span>
-                  <span className="text-muted-foreground"> ({e.category}) — {[e.manufacturer, e.model, e.serial_number && `SN ${e.serial_number}`, e.spec].filter(Boolean).join(' · ') || '—'}</span>
-                  {e.notes && <div className="text-xs italic text-muted-foreground">{e.notes}</div>}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      ))}
-      {grouped.length === 0 && <div className="text-sm text-muted-foreground p-6">No equipment matches the current filters.</div>}
+        ))}
+      </div>
     </div>
   );
 }
