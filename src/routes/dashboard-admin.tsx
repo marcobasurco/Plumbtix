@@ -14,7 +14,7 @@ import { DispatchBoard } from '@/components/admin/DispatchBoard';
 import { TechniciansPage } from '@/components/admin/TechniciansPage';
 import { AnalyticsPage } from '@/components/admin/AnalyticsPage';
 import { ImportPage } from '@/components/admin/ImportPage';
-import { ReportingDashboard } from '@/components/admin/ReportingDashboard';
+import { ReportsPage } from '@/components/admin/ReportsPage';
 import { SettingsPage } from '@/components/SettingsPage';
 
 export function AdminDashboard() {
@@ -38,7 +38,7 @@ export function AdminDashboard() {
         <Route path="technicians" element={<TechniciansPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="import" element={<ImportPage />} />
-        <Route path="reports" element={<ReportingDashboard />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Routes>
     </DashboardLayout>
