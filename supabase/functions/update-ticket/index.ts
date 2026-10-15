@@ -32,6 +32,7 @@ import { ok, err, unauthorized, forbidden, notFound, serverError } from '../_sha
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 import { getCallerRole, isProRotoAdmin } from '../_shared/auth.ts';
 import type { UserRole } from '../_shared/auth.ts';
+import { runInBackground } from '../_shared/background.ts';
 
 
 // ─── Transition matrix (MUST match transitions.ts and migration 00005) ───
@@ -262,9 +263,9 @@ Deno.serve(async (req: Request) => {
       targetStatus ?? '(unchanged)',
     );
 
-    // ─── 10. Send status change notification (fire-and-forget) ───
+    // ─── 10. Send status change notification (kept alive via EdgeRuntime.waitUntil) ───
     if (targetStatus && targetStatus !== ticket.status) {
-      (async () => {
+      runInBackground((async () => {
         try {
           const svc = createServiceClient();
           const [buildingRes, spaceRes, creatorRes] = await Promise.all([
@@ -295,7 +296,7 @@ Deno.serve(async (req: Request) => {
         } catch (emailErr) {
           console.error('[update-ticket] Email notification error (non-blocking):', emailErr);
         }
-      })();
+      })());
     }
 
     return ok({ ticket: updated });

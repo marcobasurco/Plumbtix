@@ -13,6 +13,7 @@ import { handleCors } from '../_shared/cors.ts';
 import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { runInBackground } from '../_shared/background.ts';
 
 const UpdateOccupantSchema = z.object({
   occupant_id: z.string().regex(UUID_REGEX, 'Invalid occupant_id'),
@@ -97,9 +98,9 @@ Deno.serve(async (req: Request) => {
       occupant_id, existing.email, updates.email ?? existing.email, shouldResendInvite, userId,
     );
 
-    // Send claim email if needed (fire-and-forget)
+    // Send claim email if needed (kept alive via EdgeRuntime.waitUntil)
     if (shouldResendInvite && updated.invite_token) {
-      (async () => {
+      runInBackground((async () => {
         try {
           const { data: space } = await svc
             .from('spaces')
@@ -121,7 +122,7 @@ Deno.serve(async (req: Request) => {
         } catch (emailErr) {
           console.error('[update-occupant] Email error (non-blocking):', emailErr);
         }
-      })();
+      })());
     }
 
     return ok({ occupant: updated });

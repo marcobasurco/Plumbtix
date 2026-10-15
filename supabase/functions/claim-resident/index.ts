@@ -25,12 +25,12 @@
 import { handleCors } from '../_shared/cors.ts';
 import { createServiceClient } from '../_shared/supabase.ts';
 import { ok, err, conflict, notFound, serverError } from '../_shared/response.ts';
-import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { z, parseBody, UUID_REGEX, PasswordSchema } from '../_shared/validation.ts';
 
 const ClaimResidentSchema = z.object({
   invite_token: z.string().regex(UUID_REGEX, 'Invalid token format'),
   email: z.string().email('Invalid email'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: PasswordSchema,
 });
 
 Deno.serve(async (req: Request) => {

@@ -29,6 +29,7 @@ import {
 import { ok, err, unauthorized, forbidden, notFound, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
 import { getCallerRole, isProRotoAdmin } from '../_shared/auth.ts';
+import { runInBackground } from '../_shared/background.ts';
 
 
 const CreateCommentSchema = z.object({
@@ -111,8 +112,8 @@ Deno.serve(async (req: Request) => {
       comment.id, ticket_id, userId, role, is_internal,
     );
 
-    // ─── 7. Send comment notification (fire-and-forget) ───
-    (async () => {
+    // ─── 7. Send comment notification (kept alive via EdgeRuntime.waitUntil) ───
+    runInBackground((async () => {
       try {
         const [ticketRes, authorRes] = await Promise.all([
           svc.from('tickets').select('ticket_number, building_id, buildings(name, address_line1, company_id)').eq('id', ticket_id).single(),
@@ -137,7 +138,7 @@ Deno.serve(async (req: Request) => {
       } catch (emailErr) {
         console.error('[create-comment] Email notification error (non-blocking):', emailErr);
       }
-    })();
+    })());
 
     return ok({ comment }, 201);
   } catch (e) {
