@@ -133,9 +133,6 @@ verify_jwt = false
 [functions.resend-invitation]
 verify_jwt = false
 
-[functions.resend-test]
-verify_jwt = false
-
 [functions.send-invitation]
 verify_jwt = false
 
