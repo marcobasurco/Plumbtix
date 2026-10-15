@@ -81,3 +81,11 @@ The database is the authorization layer. Edge functions validate first for frien
 Phase 1: Auth SMTP via Resend (password resets), tenant-isolation (RLS) test suite in CI, staging Supabase project, MFA/SSO scoping with Stanford IT, CORS allowlist, rate-limiter client IP.
 Phase 2 (healthcare fit): facility model (floor/wing/room, facility type, department, cost center, access/ICRA flags), SLA acknowledgment + escalation, PO/NTE/approval records, technician mobile role, per-site reporting.
 Full assessment: see the "production-readiness-assessment" doc in the ProRoto ticket system Project on claude.ai.
+
+## Claude Code setup in this repo
+
+- `.claude/settings.json` — permissions (safe git/npm/supabase reads pre-approved; `.env*` unreadable), hooks, stable update channel.
+- `.claude/hooks/` — `guard-bash.mjs` blocks destructive shell/SQL commands; `guard-edits.mjs` blocks edits to applied migrations and secrets; `lint-file.mjs` runs ESLint --fix after each TypeScript edit.
+- `.claude/agents/` — `security-reviewer`, `code-reviewer`, `migration-author` subagents.
+- `.claude/skills/` — slash commands `/new-migration`, `/deploy`, `/security-review`, `/new-edge-function`, `/check-matrix`.
+- `.mcp.json` — Supabase MCP server (hosted, OAuth), scoped to this project and read-only: use it to inspect production schema, policies and logs; never to change data. Authenticate once with `/mcp` → supabase → Authenticate.
