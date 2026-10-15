@@ -53,8 +53,15 @@ INSERT INTO public.companies (id, name, slug, settings)
 VALUES ('00000000-0000-0000-0000-000000000001', 'Pro Roto, Inc', 'pro-roto', '{}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
--- 4) Storage metadata (safety net — the buckets should already be empty, see header).
-DELETE FROM storage.objects WHERE bucket_id IN ('ticket-attachments', 'company-logos');
+-- 4) Storage: NOT deletable from SQL (Supabase blocks it with storage.protect_delete
+--    to avoid orphaned files). Empty the buckets through the Storage API instead:
+--      Dashboard → Storage → bucket → select the folder → Delete
+--    or, from your own machine with the service role key (never in the frontend):
+--      curl -X POST "$SUPABASE_URL/storage/v1/bucket/ticket-attachments/empty" \
+--        -H "Authorization: Bearer $SERVICE_ROLE_KEY" -H "apikey: $SERVICE_ROLE_KEY"
+--      curl -X POST "$SUPABASE_URL/storage/v1/bucket/company-logos/empty" \
+--        -H "Authorization: Bearer $SERVICE_ROLE_KEY" -H "apikey: $SERVICE_ROLE_KEY"
+--    Verify (reads are allowed):  SELECT bucket_id, count(*) FROM storage.objects GROUP BY 1;
 
 COMMIT;
 
