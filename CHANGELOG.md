@@ -1,5 +1,40 @@
 # Work Orders Changelog
 
+## [0.10.0] — Tenant-Boundary Hardening (October 2026)
+
+Fixes from the October 2026 production-readiness review. No UI changes; all
+authorization fixes are at the database layer so they cannot be bypassed by
+calling PostgREST or Storage directly.
+
+### Security — Database (migration 00027)
+- **Users**: `role`, `company_id`, `email` and `id` can no longer be changed from an end-user session (trigger `trg_protect_user_identity`). Previously any user could promote themselves to `proroto_admin` or move to another company with one PATCH. `pm_admin` may still move *other* staff between `pm_admin`/`pm_user` within their company (Import page). `INSERT`/`DELETE` on `users` revoked from `authenticated`.
+- **Tickets**: `DELETE` revoked from `authenticated`; `ticket_audit_log` FK changed to `ON DELETE RESTRICT` so history cannot be cascaded away. New trigger `trg_protect_ticket_columns` mirrors `update-ticket`'s rules (financial fields = Pro Roto only; technician/scheduling = admin roles only; identity fields immutable). New trigger `trg_tickets_space_in_building` rejects a ticket whose space is in a different building.
+- **Storage**: `ticket-attachments` policies are now scoped to tickets the caller can see (any role, via the caller's own tickets RLS). Previously any authenticated account — of any company — could list, download and delete every file in the bucket. `company-logos` end-user policies removed until a scoped upload feature exists; bucket limited to 2 MB PNG/JPEG/WebP.
+- **Analytics view**: `v_company_analytics` now runs with `security_invoker` and is revoked from `anon`. It previously exposed every company's name, volumes and subscription to any API key.
+- **Equipment**: `pm_user` read access is now entitlement-scoped (was company-wide); policies use the recursion-safe helpers; `updated_at` trigger added.
+- **Helpers**: `get_company_building_ids()` / `fn_snapshot_company_usage()` refuse other companies for end-user sessions; `fn_track_ticket_usage`, `fn_auto_create_subscription` get a fixed `search_path`.
+- **Notifications**: UPDATE policy gains `WITH CHECK` so a notification cannot be reassigned.
+
+### Schema — Capture production drift (migration 00026)
+- `equipment` table (+ index, RLS, policies), `spaces.label`, and `common_area_type` values `gym`/`restroom` were created by hand in production in July 2026 and never committed. Now recorded so `supabase db reset`, CI and staging match production.
+
+### Security — Edge functions
+- Notification work (email/SMS) is kept alive after the response with `EdgeRuntime.waitUntil` (`_shared/background.ts`). Previously fire-and-forget promises could be cut off when the isolate shut down — an emergency alert could silently never send.
+- All user-controlled values in email templates are HTML-escaped (names, building/company names, technician, invoice number, comment preview). A comment could previously inject live HTML into notification emails.
+- Password policy enforced server-side in `accept-invitation` / `claim-resident`: 12+ characters with upper, lower, digit and symbol — matching the Supabase Auth settings. Same rules client-side in accept-invite, claim-account and reset-password.
+- Sentry Deno SDK pinned to `8.39.0` (was unpinned — pulled latest at every cold start).
+- Removed the `resend-test` hello-world function (deployed without auth).
+
+### Auth settings (dashboard, applied 2026-10-14)
+- Public self-signup disabled; minimum password length 12 with complexity; leaked-password protection on; secure password change on. `config.toml` mirrors these for local development.
+
+### Fixed
+- Notification bell marked items read via a `read` column that does not exist (`read_at`); unread counts came back on every reload.
+
+### Operations
+- `scripts/reset-database.sql`: full data reset for the SQL editor (keeps admin logins and schema).
+- README migration section rewritten; the "LOCKED sections" rule is retired (applied migrations are immutable; new migrations may replace earlier policies).
+
 ## [0.9.0] — Token-Based Public Sharing + Local QR Generation (July 2026)
 
 ### Security — Public Ticket Access Overhaul

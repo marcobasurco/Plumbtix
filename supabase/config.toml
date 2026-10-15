@@ -39,9 +39,16 @@ api_url = "http://127.0.0.1"
 enabled = true
 site_url = "http://localhost:5173"
 additional_redirect_urls = ["https://workorders.proroto.com", "https://workorders.proroto.com/reset-password"]
+# Mirrors production (Dashboard → Authentication → Sign In / Providers → Email).
+# Keep in sync with supabase/functions/_shared/validation.ts and src/lib/password.ts.
+minimum_password_length = 12
+password_requirements = "lower_upper_letters_digits_symbols"
 
 [auth.email]
-enable_signup = true
+# Self-signup is OFF, locally and in production. Every account is created by
+# accept-invitation / claim-resident through the Auth admin API, or by hand in
+# Studio for the first admin (scripts/bootstrap-first-admin.sql).
+enable_signup = false
 double_confirm_changes = true
 enable_confirmations = false
 

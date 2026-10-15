@@ -16,7 +16,8 @@ interface Notification {
   title: string;
   body: string | null;
   ticket_id: string | null;
-  read: boolean;
+  /** Timestamp when the user opened/dismissed it; null = unread (column: read_at) */
+  read_at: string | null;
   created_at: string;
 }
 
@@ -43,7 +44,7 @@ export function NotificationBell() {
   const [items, setItems] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
 
-  const unreadCount = items.filter((n) => !n.read).length;
+  const unreadCount = items.filter((n) => !n.read_at).length;
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -70,15 +71,17 @@ export function NotificationBell() {
   }, [session, load]);
 
   const markAsRead = async (id: string) => {
-    await supabase.from('notifications').update({ read: true }).eq('id', id);
-    setItems((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+    const now = new Date().toISOString();
+    await supabase.from('notifications').update({ read_at: now }).eq('id', id);
+    setItems((prev) => prev.map((n) => n.id === id ? { ...n, read_at: now } : n));
   };
 
   const markAllAsRead = async () => {
-    const unread = items.filter((n) => !n.read).map((n) => n.id);
+    const unread = items.filter((n) => !n.read_at).map((n) => n.id);
     if (unread.length === 0) return;
-    await supabase.from('notifications').update({ read: true }).in('id', unread);
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    const now = new Date().toISOString();
+    await supabase.from('notifications').update({ read_at: now }).in('id', unread);
+    setItems((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? now })));
   };
 
   const handleClick = (n: Notification) => {
@@ -122,14 +125,14 @@ export function NotificationBell() {
                 onClick={() => handleClick(n)}
                 className={cn(
                   'flex w-full items-start gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent',
-                  !n.read && 'bg-accent/50',
+                  !n.read_at && 'bg-accent/50',
                 )}
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Ticket className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className={cn('text-sm leading-tight', !n.read && 'font-medium')}>
+                  <p className={cn('text-sm leading-tight', !n.read_at && 'font-medium')}>
                     {n.title}
                   </p>
                   {n.body && (
@@ -137,7 +140,7 @@ export function NotificationBell() {
                   )}
                   <p className="mt-1 text-[10px] text-muted-foreground">{timeAgo(n.created_at)}</p>
                 </div>
-                {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                {!n.read_at && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />}
               </button>
             ))
           )}

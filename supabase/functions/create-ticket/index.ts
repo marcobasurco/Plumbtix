@@ -5,6 +5,7 @@ import { handleCors } from '../_shared/cors.ts';
 import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { runInBackground } from '../_shared/background.ts';
 
 const ISSUE_TYPES = [
   'active_leak', 'sewer_backup', 'drain_clog', 'water_heater',
@@ -128,37 +129,40 @@ Deno.serve(async (req: Request) => {
 
     console.log('[create-ticket] Created: ticket=%s, number=%d', ticket.id, ticket.ticket_number);
 
-    // Email notification — dynamic import so it never crashes the function
-    try {
-      const { notifyNewTicket } = await import('../_shared/notifications.ts');
-      const svc = createServiceClient();
-      const [buildingRes, spaceRes, creatorRes] = await Promise.all([
-        svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
-        svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
-        svc.from('users').select('id, full_name, email').eq('id', userId).single(),
-      ]);
+    // Email + SMS notifications. Kept alive after the response is sent via
+    // EdgeRuntime.waitUntil — an emergency alert must not die with the isolate.
+    runInBackground((async () => {
+      try {
+        const { notifyNewTicket } = await import('../_shared/notifications.ts');
+        const svc = createServiceClient();
+        const [buildingRes, spaceRes, creatorRes] = await Promise.all([
+          svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
+          svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
+          svc.from('users').select('id, full_name, email').eq('id', userId).single(),
+        ]);
 
-      if (buildingRes.data && spaceRes.data && creatorRes.data) {
-        notifyNewTicket(svc, {
-          ticket_number: ticket.ticket_number,
-          id: ticket.id,
-          issue_type,
-          severity: finalSeverity,
-          status: 'new',
-          description,
-          assigned_technician: null,
-          scheduled_date: null,
-          scheduled_time_window: null,
-          quote_amount: null,
-          invoice_number: null,
-          building: buildingRes.data,
-          space: spaceRes.data,
-          created_by: creatorRes.data,
-        });
+        if (buildingRes.data && spaceRes.data && creatorRes.data) {
+          await notifyNewTicket(svc, {
+            ticket_number: ticket.ticket_number,
+            id: ticket.id,
+            issue_type,
+            severity: finalSeverity,
+            status: 'new',
+            description,
+            assigned_technician: null,
+            scheduled_date: null,
+            scheduled_time_window: null,
+            quote_amount: null,
+            invoice_number: null,
+            building: buildingRes.data,
+            space: spaceRes.data,
+            created_by: creatorRes.data,
+          });
+        }
+      } catch (emailErr) {
+        console.error('[create-ticket] Email error (non-blocking):', emailErr);
       }
-    } catch (emailErr) {
-      console.error('[create-ticket] Email error (non-blocking):', emailErr);
-    }
+    })());
 
     return ok({ ticket, severity_escalated: severityEscalated }, 201);
   } catch (e) {

@@ -16,6 +16,7 @@ import {
 } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, forbidden, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { runInBackground } from '../_shared/background.ts';
 import { getCallerRole, getCallerCompanyId } from '../_shared/auth.ts';
 
 const EXPIRY_DAYS = 7;
@@ -132,8 +133,8 @@ Deno.serve(async (req: Request) => {
       new_name: newName,
     }, 1);
 
-    // Send invitation email (fire-and-forget)
-    (async () => {
+    // Send invitation email (kept alive via EdgeRuntime.waitUntil)
+    runInBackground((async () => {
       try {
         const { data: inviter } = await svc
           .from('users')
@@ -164,7 +165,7 @@ Deno.serve(async (req: Request) => {
       } catch (emailErr) {
         console.error('[resend-invitation] Email error (non-blocking):', emailErr);
       }
-    })();
+    })());
 
     return ok({ invitation: updated });
   } catch (e) {

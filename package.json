@@ -1,6 +1,6 @@
 {
   "name": "work-orders",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "private": true,
   "description": "PlumbTix \u2014 Work Order Management by Pro Roto Inc.",

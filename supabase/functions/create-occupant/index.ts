@@ -10,6 +10,7 @@ import { handleCors } from '../_shared/cors.ts';
 import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { runInBackground } from '../_shared/background.ts';
 
 
 const CreateOccupantSchema = z.object({
@@ -78,8 +79,8 @@ Deno.serve(async (req: Request) => {
 
     console.log('[create-occupant] Created: occupant=%s space=%s user=%s', occupant.id, space_id, userId);
 
-    // ─── Send resident claim email (fire-and-forget) ───
-    (async () => {
+    // ─── Send resident claim email (kept alive via EdgeRuntime.waitUntil) ───
+    runInBackground((async () => {
       try {
         const svc = createServiceClient();
         const { data: space } = await svc
@@ -108,7 +109,7 @@ Deno.serve(async (req: Request) => {
       } catch (emailErr) {
         console.error('[create-occupant] Email notification error (non-blocking):', emailErr);
       }
-    })();
+    })());
 
     return ok(occupant, 201);
   } catch (e) {

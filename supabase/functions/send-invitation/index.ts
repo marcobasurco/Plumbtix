@@ -18,7 +18,7 @@
 //   5. INSERT invitation via user JWT (RLS validates company access)
 //   6. Return invitation record
 //
-// Email delivery: Sent via Resend (fire-and-forget, non-blocking).
+// Email delivery: Sent via Resend (background, kept alive via EdgeRuntime.waitUntil).
 // Expiry: 7 days from creation.
 // =============================================================================
 
@@ -30,6 +30,7 @@ import {
 } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, forbidden, conflict, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { runInBackground } from '../_shared/background.ts';
 import { getCallerRole, getCallerCompanyId } from '../_shared/auth.ts';
 
 
@@ -155,8 +156,8 @@ Deno.serve(async (req: Request) => {
       role: inviteRole,
     }, 1);
 
-    // ─── 9. Send invitation email via Resend (fire-and-forget) ───
-    (async () => {
+    // ─── 9. Send invitation email via Resend (kept alive via EdgeRuntime.waitUntil) ───
+    runInBackground((async () => {
       try {
         const { data: inviter } = await svc
           .from('users')
@@ -187,7 +188,7 @@ Deno.serve(async (req: Request) => {
       } catch (emailErr) {
         console.error('[send-invitation] Email notification error (non-blocking):', emailErr);
       }
-    })();
+    })());
 
     return ok({ invitation }, 201);
   } catch (e) {

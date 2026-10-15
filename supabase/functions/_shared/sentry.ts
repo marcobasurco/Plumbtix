@@ -19,7 +19,7 @@
 // =============================================================================
 
 // deno-lint-ignore-file no-explicit-any
-import * as Sentry from 'https://deno.land/x/sentry/index.mjs';
+import * as Sentry from 'https://deno.land/x/sentry@8.39.0/index.mjs';
 
 const dsn = Deno.env.get('SENTRY_DSN');
 let enabled = false;

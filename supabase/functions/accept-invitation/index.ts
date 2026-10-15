@@ -25,12 +25,12 @@
 import { handleCors } from '../_shared/cors.ts';
 import { createServiceClient } from '../_shared/supabase.ts';
 import { ok, err, conflict, notFound, serverError } from '../_shared/response.ts';
-import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { z, parseBody, UUID_REGEX, PasswordSchema } from '../_shared/validation.ts';
 
 const AcceptInvitationSchema = z.object({
   token: z.string().regex(UUID_REGEX, 'Invalid token format'),
   email: z.string().email('Invalid email'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: PasswordSchema,
   full_name: z.string().min(1, 'Name is required').max(255),
   phone: z.string().max(20).optional(),
 });

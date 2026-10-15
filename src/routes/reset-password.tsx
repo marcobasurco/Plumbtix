@@ -1,6 +1,7 @@
 import { useState, type FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
+import { validatePassword, PASSWORD_MIN_LENGTH, PASSWORD_RULES_TEXT } from '@/lib/password';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -103,8 +104,9 @@ export function ResetPasswordPage() {
       setError('Passwords do not match');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
     setSubmitting(true);
@@ -183,13 +185,15 @@ export function ResetPasswordPage() {
                     <Label htmlFor="password">New Password</Label>
                     <Input id="password" type="password" value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      required minLength={8} autoFocus placeholder="••••••••" />
+                      required minLength={PASSWORD_MIN_LENGTH} autoFocus placeholder="••••••••"
+                      aria-describedby="password-rules" />
+                    <p id="password-rules" className="text-xs text-muted-foreground">{PASSWORD_RULES_TEXT}</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm">Confirm Password</Label>
                     <Input id="confirm" type="password" value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
-                      required minLength={8} placeholder="••••••••" />
+                      required minLength={PASSWORD_MIN_LENGTH} placeholder="••••••••" />
                   </div>
                   <Button type="submit" className="w-full" disabled={submitting || !password || !confirm}>
                     {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Updating…</> : 'Update Password'}
