@@ -22,3 +22,6 @@ playwright-report/
 mobile*.png
 preview-*.png
 *.b64
+
+# Claude Code UX screenshots (contain real data)
+.claude/ux-shots/

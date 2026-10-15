@@ -1,6 +1,8 @@
 {
   "autoUpdatesChannel": "stable",
-  "enabledMcpjsonServers": ["supabase"],
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
   "permissions": {
     "allow": [
       "Bash(git status*)",
@@ -17,7 +19,9 @@
       "Bash(npx eslint*)",
       "Bash(npx tsc*)",
       "Bash(supabase migration list*)",
-      "Bash(npx supabase@latest migration list*)"
+      "Bash(npx supabase@latest migration list*)",
+      "Bash(node scripts/ux-shots.mjs*)",
+      "Bash(npx playwright install chromium*)"
     ],
     "deny": [
       "Read(./.env)",
