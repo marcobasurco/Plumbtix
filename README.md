@@ -77,15 +77,23 @@ One-time setup after initial deployment:
 
 ## Migration Pipeline
 
-| File | Source | Status |
-|------|--------|--------|
-| `00001_section4_schema.sql` | Section 4 | 🔒 LOCKED |
-| `00002_section5_security.sql` | Section 5 | 🔒 LOCKED |
-| `00003_section6_storage.sql` | Section 6 | 🔒 LOCKED |
-| `00004_section7_seed.sql` | Section 7 | 🔒 LOCKED |
-| `00005_additive_transition_trigger.sql` | New | ✅ ADDITIVE |
+All schema changes live in `supabase/migrations/` and are applied in order
+(`supabase db push` against production, `supabase db reset` locally).
 
-**Rules:** Never modify 00001–00004. New migrations are numbered 00006+, additive only.
+| Range | What it covers |
+|-------|----------------|
+| `00001`–`00004` | Base schema, RLS, storage bucket, seed company |
+| `00005`–`00025` | Status-transition trigger, comment lockdown, RLS recursion fix, usage/subscriptions, realtime, storage policy rework, notifications (email / in-app / SMS), audit tables, full-text search, company logo, PM transitions, public sharing + column lock, technicians, ticket audit trail, rate limiting |
+| `00026` | Captures objects that were created by hand in production (equipment, `spaces.label`, enum values) so a fresh database matches production |
+| `00027` | Tenant-boundary hardening: identity-column protection on `users`, ticket delete/column rules, ticket-scoped storage policies, `security_invoker` analytics view, entitlement-aware equipment policies, helper-function guards |
+
+**Rules**
+
+1. Applied migrations are immutable — never edit a file that has reached production. Fix forward with a new file.
+2. New migrations may replace earlier policies, triggers and functions freely (`DROP … IF EXISTS` + `CREATE`). The old "LOCKED sections" rule is retired; it produced workarounds instead of fixes.
+3. Never change the schema in the dashboard. If it happens, run `supabase db diff` and commit the result before anything else.
+4. The database is the authorization layer. Edge functions validate for friendly errors; RLS, grants and triggers enforce.
+5. `scripts/verify-migrations.sql` only covers `00001`–`00005`; the verification queries at the end of each later migration file are the current checks.
 
 ---
 

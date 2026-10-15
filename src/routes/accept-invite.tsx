@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { acceptInvitation } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
+import { validatePassword, PASSWORD_MIN_LENGTH, PASSWORD_RULES_TEXT } from '@/lib/password';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
@@ -22,6 +23,13 @@ export function AcceptInvitePage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -167,9 +175,11 @@ export function AcceptInvitePage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="new-password"
-              minLength={8}
-              placeholder="Minimum 8 characters"
+              minLength={PASSWORD_MIN_LENGTH}
+              placeholder={`Minimum ${PASSWORD_MIN_LENGTH} characters`}
+              aria-describedby="password-rules"
             />
+            <p id="password-rules" className="text-xs text-muted-foreground mt-1">{PASSWORD_RULES_TEXT}</p>
           </div>
 
           <Button
