@@ -128,6 +128,11 @@ export interface Ticket {
   description: string | null;          // TEXT
   access_instructions: string | null;  // TEXT
   location_note: string | null;        // VARCHAR(300) — migration 00029, "Somewhere else" free text
+  acknowledged_at: string | null;          // migration 00030 — emergency taken by a Pro Roto admin
+  acknowledged_by_user_id: string | null;  // migration 00030
+  escalation_step: number;                 // migration 00030 — pages sent so far
+  next_escalation_at: string | null;       // migration 00030 — NULL = not armed / acknowledged / closed
+  escalation_exhausted_at: string | null;  // migration 00030 — roster paged through with no response
   scheduling_preference: SchedulingPreference | null; // JSONB
   assigned_technician: string | null;  // VARCHAR(255)
   scheduled_date: string | null;       // DATE

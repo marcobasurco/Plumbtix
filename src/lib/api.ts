@@ -302,6 +302,25 @@ export function resendInvitation(body: ResendInvitationRequest) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Emergencies
+// ---------------------------------------------------------------------------
+
+export interface AcknowledgeEmergencyResponse {
+  ticket_id: string;
+  already: boolean;
+  acknowledged_at: string | null;
+  acknowledged_by?: string | null;
+}
+
+/** "I'm on it" — proroto_admin only. Stops on-call paging and tells the reporter. */
+export function acknowledgeEmergency(ticketId: string) {
+  return callEdge<AcknowledgeEmergencyResponse>('acknowledge-emergency', {
+    method: 'POST',
+    body: { ticket_id: ticketId },
+  });
+}
+
 export function deleteInvitation(invitationId: string) {
   return callEdge<{ deleted: boolean }>('delete-invitation', {
     method: 'POST',

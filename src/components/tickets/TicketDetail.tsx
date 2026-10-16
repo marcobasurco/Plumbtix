@@ -19,6 +19,7 @@ import { ActionPanel } from './ActionPanel';
 import { SharingCard } from './SharingCard';
 import { AuditTrail } from './AuditTrail';
 import { EquipmentCard } from './EquipmentCard';
+import { EmergencyBanner } from './EmergencyBanner';
 import { PageTransition } from '@/components/PageTransition';
 import { ErrorBanner, friendlyError } from '@/components/ErrorBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -282,6 +283,20 @@ export function TicketDetail() {
           )}
         </div>
       </header>
+
+      {ticket.severity === 'emergency' && (
+        <EmergencyBanner
+          ticketId={ticket.id}
+          status={ticket.status}
+          acknowledgedAt={ticket.acknowledged_at}
+          acknowledgedByName={ticket.acknowledged_by?.full_name ?? null}
+          escalationStep={ticket.escalation_step ?? 0}
+          nextEscalationAt={ticket.next_escalation_at}
+          exhaustedAt={ticket.escalation_exhausted_at}
+          createdAt={ticket.created_at}
+          onChanged={handleUpdated}
+        />
+      )}
 
       {/* Two-column layout — stacks on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">

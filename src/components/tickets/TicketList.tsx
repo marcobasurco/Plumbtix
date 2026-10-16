@@ -4,6 +4,17 @@ import { fetchTicketList, formatTicketLocation, TICKET_PAGE_SIZE, type TicketLis
 import { ISSUE_TYPE_LABELS, SEVERITY_LABELS, STATUS_LABELS } from '@shared/types/enums';
 import { StatusBadge } from './StatusBadge';
 import { SeverityBadge } from './SeverityBadge';
+
+/** Emergency that no one at Pro Roto has taken yet (migration 00030). */
+function UnacknowledgedBadge({ ticket }: { ticket: Pick<TicketListRow, 'severity' | 'status' | 'acknowledged_at' | 'escalation_exhausted_at'> }) {
+  if (ticket.severity !== 'emergency' || ticket.acknowledged_at) return null;
+  if (['completed', 'invoiced', 'cancelled'].includes(ticket.status)) return null;
+  return (
+    <span className="inline-flex items-center rounded-full border border-destructive/50 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+      {ticket.escalation_exhausted_at ? 'No response' : 'Unacknowledged'}
+    </span>
+  );
+}
 import { TicketFilters } from './TicketFilters';
 import { ErrorBanner, friendlyError } from '@/components/ErrorBanner';
 import { PageTransition } from '@/components/PageTransition';
@@ -70,6 +81,7 @@ function TicketCard({ ticket, onClick }: { ticket: TicketListRow; onClick: () =>
         <div className="ticket-card-badges">
           <SeverityBadge severity={ticket.severity} />
           <StatusBadge status={ticket.status} />
+          <UnacknowledgedBadge ticket={ticket} />
         </div>
       </div>
 
@@ -130,7 +142,7 @@ function TicketTable({ tickets, onRowClick }: { tickets: TicketListRow[]; onRowC
                 </Link>
               </td>
               <td className="px-4 py-3 border-t border-border"><StatusBadge status={t.status} /></td>
-              <td className="px-4 py-3 border-t border-border"><SeverityBadge severity={t.severity} /></td>
+              <td className="px-4 py-3 border-t border-border"><span className="inline-flex gap-1.5 items-center"><SeverityBadge severity={t.severity} /><UnacknowledgedBadge ticket={t} /></span></td>
               <td className="px-4 py-3 border-t border-border max-w-[200px]">
                 <div className="font-medium">
                   {ISSUE_TYPE_LABELS[t.issue_type as keyof typeof ISSUE_TYPE_LABELS] ?? t.issue_type}

@@ -434,3 +434,49 @@ export function passwordResetEmail(data: PasswordResetEmailData): { subject: str
     }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Template: Emergency escalation (on-call page / exhausted)
+// ---------------------------------------------------------------------------
+
+export interface EscalationEmailData {
+  ticketNumber: number;
+  ticketId: string;
+  buildingName: string;
+  location: string;
+  description: string;
+  createdByName: string;
+  minutesOpen: number;
+  /** 0 = nobody left to page */
+  step: number;
+  pagedName?: string;
+  exhausted: boolean;
+}
+
+export function escalationEmail(data: EscalationEmailData): { subject: string; html: string } {
+  const link = `${getAppUrl()}/t/${data.ticketId}`;
+  const head = data.exhausted
+    ? `Nobody has acknowledged emergency work order #${data.ticketNumber}`
+    : `Emergency #${data.ticketNumber} still unacknowledged — paging ${data.pagedName ?? 'on-call'}`;
+  return {
+    subject: `${data.exhausted ? '🚨 NO RESPONSE' : '🚨 UNACKNOWLEDGED'} — Work order #${data.ticketNumber} at ${data.buildingName}`,
+    html: layout({
+      preheader: head,
+      title: head,
+      body: `
+        <p style="margin:0 0 12px">Opened ${esc(String(data.minutesOpen))} minutes ago by ${esc(data.createdByName)} and <strong>no one at Pro Roto has acknowledged it</strong>.</p>
+        ${data.exhausted
+          ? `<p style="margin:0 0 12px">The on-call roster has been paged ${esc(String(data.step))} times by text and phone with no response. Someone needs to pick this up now.</p>`
+          : `<p style="margin:0 0 12px">Page ${esc(String(data.step))}: ${esc(data.pagedName ?? 'on-call')} has been texted and called. If they don't acknowledge, the next person on the roster is paged.</p>`}
+        ${detailTable([
+          ['Building', esc(data.buildingName)],
+          ['Location', esc(data.location)],
+          ['Problem', escMultiline(data.description)],
+        ])}
+      `,
+      ctaUrl: link,
+      ctaLabel: "Open and acknowledge",
+      footer: 'Acknowledging in the app stops the paging and tells the reporter someone is on it.',
+    }),
+  };
+}

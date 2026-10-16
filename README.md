@@ -88,6 +88,7 @@ All schema changes live in `supabase/migrations/` and are applied in order
 | `00027` | Tenant-boundary hardening: identity-column protection on `users`, ticket delete/column rules, ticket-scoped storage policies, `security_invoker` analytics view, entitlement-aware equipment policies, helper-function guards |
 | `00028` | Only Pro Roto dispatches: technician/scheduling columns `proroto_admin`-only; PM transitions reduced to information triage (approvals by phone) |
 | `00029` | "Somewhere else" location: `tickets.location_note` + an "Other / not listed" catch-all space per building (trigger + backfill) |
+| `00030` | Emergency acknowledgement + on-call escalation: `on_call_roster`, `ticket_escalation_log`, acknowledgement/escalation columns and triggers on `tickets`, pg_cron job calling `escalate-emergencies` every minute (URL + secret from Vault) |
 
 **Rules**
 
