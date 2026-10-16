@@ -19,6 +19,7 @@ import {
   type InvitationRow,
 } from '@/lib/admin';
 import { sendInvitation } from '@/lib/api';
+import { formatPhone, telHref } from '@shared/phone';
 import { ROLE_LABELS, INVITATION_ROLES } from '@shared/types/enums';
 import type { InvitationRole } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
@@ -118,7 +119,7 @@ function UserCard({ user }: { user: UserListRow }) {
       </div>
       {user.phone && (
         <div className="text-xs text-muted-foreground mt-2 pl-12">
-          📱 <a href={`tel:${user.phone}`} className="text-primary hover:underline">{user.phone}</a>
+          📱 <a href={telHref(user.phone) ?? undefined} className="text-primary hover:underline">{formatPhone(user.phone)}</a>
         </div>
       )}
       <div className="text-xs text-muted-foreground/60 mt-1 pl-12">

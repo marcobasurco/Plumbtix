@@ -18,8 +18,11 @@
 
 import type { SupabaseClient } from './supabase.ts';
 
-/** E.164 phone number regex: + followed by 1–15 digits */
-const E164_REGEX = /^\+[1-9]\d{1,14}$/;
+import { E164_REGEX, normalizePhone } from './phone.ts';
+
+// Phone parsing lives in ./phone.ts (one standard for the whole product);
+// re-exported here so existing imports keep working.
+export { normalizePhone };
 
 export interface SMSResult {
   ok: boolean;
@@ -44,34 +47,9 @@ function isSandboxMode(): boolean {
   return sandbox === 'true' || sandbox === '1';
 }
 
-/**
- * Validate that a phone number is in E.164 format.
- */
+/** Validate that a phone number is in E.164 format. */
 export function isE164(phone: string): boolean {
   return E164_REGEX.test(phone);
-}
-
-/**
- * Normalize a phone string to E.164. Handles common cases:
- * - Already E.164 → pass through
- * - 10-digit US number → prepend +1
- * - 11-digit starting with 1 → prepend +
- * Returns null if cannot normalize.
- */
-export function normalizePhone(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, '');
-
-  // Already E.164
-  if (isE164(phone)) return phone;
-
-  // 10-digit US number
-  if (digits.length === 10) return `+1${digits}`;
-
-  // 11-digit starting with 1 (US with country code)
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-
-  return null;
 }
 
 /**

@@ -101,6 +101,24 @@ functions that import `_shared/email-templates.ts` (`create-ticket`,
   while production keeps the strict policy. Also corrects the stale
   "report-only" comment — the policy has been enforced since 0.10.0.
 
+### Phone numbers — one standard (migration 00031)
+- **Stored** as E.164 (`+16505551234`) in every phone column (`users`,
+  `technicians`, `buildings.onsite_contact_phone`, `occupants`): existing
+  values were normalized (changes logged to `phone_cleanup_log`), a trigger
+  normalizes every write and rejects text that isn't a number, and a CHECK
+  constraint is the seatbelt. The Import page used to store "(415) 555-0100".
+- **Shown** as `(650) 555-1234` everywhere — work order, PDF, buildings,
+  technicians, team, on-call, company users, residents. International numbers
+  stay as `+44…`. `tel:` links always dial E.164.
+- **Typed** into one `PhoneInput` (formats as you type, phone keypad on
+  mobile, saved-number autofill) on Settings, Users, Technicians, Buildings,
+  Residents and the invitation page; the same message everywhere when a
+  number can't be read. Edge functions validate with a shared `PhoneSchema`;
+  Import rows with a bad phone are reported instead of silently dropped.
+- One implementation: `shared/phone.ts` (browser) mirrored by
+  `supabase/functions/_shared/phone.ts` (Deno), with a unit test that keeps
+  the two identical.
+
 ### Mobile bottom tab bar
 - On phones: Overview · Work orders · **Report** (raised, one tap from
   anywhere) · Buildings (Dispatch for Pro Roto) · Menu. Hidden on the report

@@ -9,6 +9,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchTicketDetail, formatTicketLocation, type TicketDetailRow } from '@/lib/tickets';
+import { formatPhone, telHref } from '@shared/phone';
 import { useAuth } from '@/lib/auth';
 import { StatusBadge } from './StatusBadge';
 import { SeverityBadge } from './SeverityBadge';
@@ -393,7 +394,7 @@ export function TicketDetail() {
                     <>
                       {bld.onsite_contact_name}
                       {bld.onsite_contact_phone && (
-                        <> — <a href={`tel:${bld.onsite_contact_phone}`} className="text-primary hover:underline">{bld.onsite_contact_phone}</a></>
+                        <> — <a href={telHref(bld.onsite_contact_phone) ?? undefined} className="text-primary hover:underline">{formatPhone(bld.onsite_contact_phone)}</a></>
                       )}
                     </>
                   }
@@ -455,7 +456,7 @@ export function TicketDetail() {
                   <InfoRow
                     icon={<Phone className="h-4 w-4" />}
                     label="Phone"
-                    value={<a href={`tel:${ticket.created_by.phone}`} className="text-primary hover:underline">{ticket.created_by.phone}</a>}
+                    value={<a href={telHref(ticket.created_by.phone) ?? undefined} className="text-primary hover:underline">{formatPhone(ticket.created_by.phone)}</a>}
                   />
                 )}
               </CardContent>

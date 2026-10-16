@@ -11,48 +11,14 @@ import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabaseClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Save, Smartphone, Shield, Info } from 'lucide-react';
 import { ROLE_LABELS } from '@shared/types/enums';
-
-// E.164 validation: + followed by 1–15 digits
-const E164_REGEX = /^\+[1-9]\d{1,14}$/;
-
-/**
- * Normalize common US phone formats to E.164.
- * Returns the input as-is if already E.164, or attempts US normalization.
- */
-function normalizePhoneInput(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return '';
-
-  // Already E.164
-  if (E164_REGEX.test(trimmed)) return trimmed;
-
-  // Strip non-digits
-  const digits = trimmed.replace(/\D/g, '');
-
-  // 10-digit US
-  if (digits.length === 10) return `+1${digits}`;
-
-  // 11-digit starting with 1
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-
-  // Anything else: return as-is and let validation catch it
-  return trimmed;
-}
-
-function formatPhoneDisplay(e164: string): string {
-  if (!e164) return '';
-  // Format +1XXXXXXXXXX as (XXX) XXX-XXXX
-  const match = e164.match(/^\+1(\d{3})(\d{3})(\d{4})$/);
-  if (match) return `+1 (${match[1]}) ${match[2]}-${match[3]}`;
-  return e164;
-}
+import { normalizePhone, formatPhone, isValidPhone, PHONE_ERROR } from '@shared/phone';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 export function SettingsPage() {
   const { profile, role, refreshProfile } = useAuth();
@@ -65,7 +31,7 @@ export function SettingsPage() {
   // Sync from profile
   useEffect(() => {
     if (profile) {
-      setPhone(profile.phone || '');
+      setPhone(formatPhone(profile.phone));
       setSmsEnabled(profile.sms_notifications_enabled ?? false);
     }
   }, [profile]);
@@ -88,9 +54,8 @@ export function SettingsPage() {
       setPhoneError('');
       return true; // Phone is optional
     }
-    const normalized = normalizePhoneInput(value);
-    if (!E164_REGEX.test(normalized)) {
-      setPhoneError('Enter a valid phone number (e.g. +16505551234 or (650) 555-1234)');
+    if (!isValidPhone(value)) {
+      setPhoneError(PHONE_ERROR);
       return false;
     }
     setPhoneError('');
@@ -100,13 +65,11 @@ export function SettingsPage() {
   const handleSave = async () => {
     if (!profile) return;
 
-    const normalizedPhone = phone.trim() ? normalizePhoneInput(phone) : null;
-
-    // Validate if phone is provided
-    if (normalizedPhone && !E164_REGEX.test(normalizedPhone)) {
-      setPhoneError('Enter a valid phone number (e.g. +16505551234 or (650) 555-1234)');
+    if (!isValidPhone(phone)) {
+      setPhoneError(PHONE_ERROR);
       return;
     }
+    const normalizedPhone = normalizePhone(phone);
 
     // Force SMS off if no phone
     const effectiveSmsEnabled = normalizedPhone ? smsEnabled : false;
@@ -128,7 +91,7 @@ export function SettingsPage() {
       }
 
       // Sync local state to what was actually saved
-      setPhone(normalizedPhone ?? '');
+      setPhone(formatPhone(normalizedPhone));
       setSmsEnabled(effectiveSmsEnabled);
 
       toast.success('Settings saved');
@@ -143,7 +106,7 @@ export function SettingsPage() {
 
   // Check if anything changed
   const hasChanges =
-    (phone.trim() ? normalizePhoneInput(phone) : null) !== (profile?.phone || null) ||
+    normalizePhone(phone) !== (profile?.phone || null) ||
     smsEnabled !== (profile?.sms_notifications_enabled ?? false);
 
   return (
@@ -187,15 +150,13 @@ export function SettingsPage() {
         <CardContent className="space-y-5">
           {/* Phone Number */}
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Mobile number</Label>
             <div className="flex gap-2 items-start">
               <div className="flex-1">
-                <Input
+                <PhoneInput
                   id="phone"
-                  type="tel"
-                  placeholder="+1 (650) 555-1234"
                   value={phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  onChange={handlePhoneChange}
                   onBlur={() => validatePhone(phone)}
                   className={phoneError ? 'border-destructive' : ''}
                 />
@@ -204,9 +165,9 @@ export function SettingsPage() {
                 )}
               </div>
             </div>
-            {phone && !phoneError && E164_REGEX.test(normalizePhoneInput(phone)) && (
+            {phone && !phoneError && normalizePhone(phone) && (
               <p className="text-xs text-muted-foreground">
-                Stored as: {formatPhoneDisplay(normalizePhoneInput(phone))}
+                Texts and calls go to {formatPhone(phone)}.
               </p>
             )}
           </div>

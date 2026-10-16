@@ -89,6 +89,12 @@ All schema changes live in `supabase/migrations/` and are applied in order
 | `00028` | Only Pro Roto dispatches: technician/scheduling columns `proroto_admin`-only; PM transitions reduced to information triage (approvals by phone) |
 | `00029` | "Somewhere else" location: `tickets.location_note` + an "Other / not listed" catch-all space per building (trigger + backfill) |
 | `00030` | Emergency acknowledgement + on-call escalation: `on_call_roster`, `ticket_escalation_log`, acknowledgement/escalation columns and triggers on `tickets`, pg_cron job calling `escalate-emergencies` every minute (URL + secret from Vault) |
+| `00031` | Phone standard: `normalize_phone()`, cleanup to E.164 with `phone_cleanup_log`, normalizing triggers + CHECK constraints on every phone column |
+
+**Phone numbers** are stored as E.164 (`+16505551234`) everywhere and shown as
+`(650) 555-1234`. Use `normalizePhone` / `formatPhone` / `telHref` from
+`shared/phone.ts` (browser) or `_shared/phone.ts` (edge) and the `PhoneInput`
+component; never write a phone column from raw text.
 
 **Rules**
 

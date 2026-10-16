@@ -16,6 +16,7 @@ import {
 import type { TicketDetailRow, StatusLogRow } from '@/lib/tickets';
 import type { UserRole, TicketStatus, IssueType } from '@shared/types/enums';
 import { STATUS_LABELS, ISSUE_TYPE_LABELS, SEVERITY_LABELS, formatTicketLocation } from '@shared/types/enums';
+import { formatPhone } from '@shared/phone';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,13 +67,6 @@ function fmtCurrency(amount: number | null): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
-function fmtPhone(raw: string | null): string {
-  if (!raw) return '';
-  const d = raw.replace(/\D/g, '');
-  if (d.length === 11 && d[0] === '1') return `(${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`;
-  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-  return raw;
-}
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -341,7 +335,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
               <Text style={s.label}>Onsite Contact</Text>
               <Text style={s.value}>
                 {bld.onsite_contact_name}
-                {bld.onsite_contact_phone ? ` \u2014 ${fmtPhone(bld.onsite_contact_phone)}` : ''}
+                {bld.onsite_contact_phone ? ` \u2014 ${formatPhone(bld.onsite_contact_phone)}` : ''}
               </Text>
             </View>
           )}
@@ -401,7 +395,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
             {ticket.created_by.phone && (
               <View style={s.row}>
                 <Text style={s.label}>Phone</Text>
-                <Text style={s.value}>{fmtPhone(ticket.created_by.phone)}</Text>
+                <Text style={s.value}>{formatPhone(ticket.created_by.phone)}</Text>
               </View>
             )}
           </View>

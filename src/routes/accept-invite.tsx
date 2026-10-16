@@ -6,6 +6,8 @@ import { validatePassword, PASSWORD_MIN_LENGTH, PASSWORD_RULES_TEXT } from '@/li
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { normalizePhone, isValidPhone, PHONE_ERROR } from '@shared/phone';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 export function AcceptInvitePage() {
   const [searchParams] = useSearchParams();
@@ -30,6 +32,11 @@ export function AcceptInvitePage() {
       return;
     }
 
+    if (!isValidPhone(phone)) {
+      setError(PHONE_ERROR);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -38,7 +45,7 @@ export function AcceptInvitePage() {
         email: email.trim(),
         password,
         full_name: fullName.trim(),
-        phone: phone.trim() || undefined,
+        phone: normalizePhone(phone) ?? undefined,
       });
 
       if (!result.ok) {
@@ -154,15 +161,8 @@ export function AcceptInvitePage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="phone">Phone (optional)</label>
-            <input
-              id="phone"
-              type="tel"
-              className="form-input"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="(555) 123-4567"
-            />
+            <label className="form-label" htmlFor="phone">Mobile (optional — for emergency texts)</label>
+            <PhoneInput id="phone" variant="form" value={phone} onChange={setPhone} showError />
           </div>
 
           <div className="form-group">

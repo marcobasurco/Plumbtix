@@ -10,6 +10,7 @@
 // =============================================================================
 
 import { supabase } from './supabaseClient';
+import { normalizePhone } from '@shared/phone';
 import type { CommonAreaType } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
@@ -204,7 +205,7 @@ export async function createBuilding(companyId: string, form: BuildingFormData) 
     water_shutoff_location: form.water_shutoff_location.trim() || null,
     gas_shutoff_location: form.gas_shutoff_location.trim() || null,
     onsite_contact_name: form.onsite_contact_name.trim() || null,
-    onsite_contact_phone: form.onsite_contact_phone.trim() || null,
+    onsite_contact_phone: normalizePhone(form.onsite_contact_phone),
     access_notes: form.access_notes.trim() || null,
   });
 }
@@ -222,7 +223,7 @@ export async function updateBuilding(id: string, form: BuildingFormData) {
     water_shutoff_location: form.water_shutoff_location.trim() || null,
     gas_shutoff_location: form.gas_shutoff_location.trim() || null,
     onsite_contact_name: form.onsite_contact_name.trim() || null,
-    onsite_contact_phone: form.onsite_contact_phone.trim() || null,
+    onsite_contact_phone: normalizePhone(form.onsite_contact_phone),
     access_notes: form.access_notes.trim() || null,
   });
 }
@@ -391,7 +392,7 @@ export async function createOccupant(spaceId: string, form: OccupantFormData): P
     occupant_type: form.occupant_type,
     name: form.name.trim(),
     email: form.email.trim().toLowerCase(),
-    phone: form.phone.trim() || null,
+    phone: normalizePhone(form.phone),
   });
 }
 

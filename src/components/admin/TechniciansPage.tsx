@@ -23,6 +23,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Plus, Loader2, HardHat, Phone, Mail, Pencil, X } from 'lucide-react';
+import { formatPhone, isValidPhone, PHONE_ERROR } from '@shared/phone';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 export function TechniciansPage() {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -59,6 +61,7 @@ export function TechniciansPage() {
 
   const handleAdd = async () => {
     if (!name.trim()) { toast.error('Name is required'); return; }
+    if (!isValidPhone(phone)) { toast.error(PHONE_ERROR); return; }
     setSaving(true);
     try {
       await createTechnician({ name, phone, email });
@@ -75,13 +78,14 @@ export function TechniciansPage() {
   const startEdit = (t: Technician) => {
     setEditingId(t.id);
     setEditName(t.name);
-    setEditPhone(t.phone ?? '');
+    setEditPhone(formatPhone(t.phone));
     setEditEmail(t.email ?? '');
   };
 
   const handleEditSave = async () => {
     if (!editingId) return;
     if (!editName.trim()) { toast.error('Name is required'); return; }
+    if (!isValidPhone(editPhone)) { toast.error(PHONE_ERROR); return; }
     setSaving(true);
     try {
       await updateTechnician(editingId, { name: editName, phone: editPhone, email: editEmail });
@@ -141,9 +145,8 @@ export function TechniciansPage() {
                   value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="techPhone">Phone</Label>
-                <Input id="techPhone" className={inputCls} placeholder="(650) 555-0100"
-                  value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Label htmlFor="techPhone">Mobile</Label>
+                <PhoneInput id="techPhone" className={inputCls} value={phone} onChange={setPhone} showError />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="techEmail">Email</Label>
@@ -179,7 +182,7 @@ export function TechniciansPage() {
                 <div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" />
-                    <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Phone" />
+                    <PhoneInput value={editPhone} onChange={setEditPhone} aria-label="Mobile" showError />
                     <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="Email" type="email" />
                   </div>
                   <div className="flex gap-2 mt-3">
@@ -197,7 +200,7 @@ export function TechniciansPage() {
                       {!t.active && <Badge variant="outline">Inactive</Badge>}
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
-                      {t.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{t.phone}</span>}
+                      {t.phone && <a href={`tel:${t.phone}`} className="flex items-center gap-1 hover:text-foreground"><Phone className="h-3 w-3" aria-hidden="true" />{formatPhone(t.phone)}</a>}
                       {t.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{t.email}</span>}
                       {!t.phone && !t.email && <span>No contact info</span>}
                     </div>

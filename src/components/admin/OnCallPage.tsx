@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Siren, ArrowUp, ArrowDown, X, UserPlus, PhoneOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatPhone } from '@shared/phone';
 
 type Admin = { id: string; full_name: string; email: string; phone: string | null };
 type Unacked = Awaited<ReturnType<typeof fetchUnacknowledgedEmergencies>>[number];
@@ -143,7 +144,7 @@ export function OnCallPage() {
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-sm truncate">{r.user?.full_name ?? 'Unknown'}</div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {r.user?.phone ? r.user.phone : <span className="text-destructive font-medium">No phone on file — can't be called</span>}
+                          {r.user?.phone ? formatPhone(r.user.phone) : <span className="text-destructive font-medium">No phone on file — can't be called</span>}
                         </div>
                       </div>
                       <label className="flex items-center gap-2 text-sm">
