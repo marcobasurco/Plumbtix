@@ -13,8 +13,9 @@ import { ROLE_LABELS, INVITATION_ROLES } from '@shared/types/enums';
 import type { InvitationRole } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { normalizePhone, formatPhone, isValidPhone, PHONE_ERROR } from '@shared/phone';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,25 +40,6 @@ function roleBadgeVariant(role: string): 'default' | 'secondary' | 'info' | 'war
 }
 
 // ─── Phone helpers ───────────────────────────────────────────────────────────
-
-const E164_REGEX = /^\+[1-9]\d{1,14}$/;
-
-function normalizePhoneInput(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return '';
-  if (E164_REGEX.test(trimmed)) return trimmed;
-  const digits = trimmed.replace(/\D/g, '');
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  return trimmed;
-}
-
-function formatPhone(e164: string | null): string {
-  if (!e164) return '—';
-  const m = e164.match(/^\+1(\d{3})(\d{3})(\d{4})$/);
-  if (m) return `(${m[1]}) ${m[2]}-${m[3]}`;
-  return e164;
-}
 
 export function UsersPage() {
   const [users, setUsers] = useState<UserListRow[]>([]);
@@ -119,7 +101,7 @@ export function UsersPage() {
   // ─── User editing ────────────────────────────────────────────────────
   const startEditingUser = (u: UserListRow) => {
     setEditingUserId(u.id);
-    setEditPhone(u.phone || '');
+    setEditPhone(formatPhone(u.phone));
     setEditSmsEnabled(false); // We don't have this in UserListRow, default to current
     setEditPhoneError('');
     // Fetch current sms_notifications_enabled for this user
@@ -138,9 +120,8 @@ export function UsersPage() {
 
   const validateEditPhone = (value: string): boolean => {
     if (!value.trim()) { setEditPhoneError(''); return true; }
-    const normalized = normalizePhoneInput(value);
-    if (!E164_REGEX.test(normalized)) {
-      setEditPhoneError('Invalid format (e.g. (650) 555-1234)');
+    if (!isValidPhone(value)) {
+      setEditPhoneError(PHONE_ERROR);
       return false;
     }
     setEditPhoneError('');
@@ -149,11 +130,11 @@ export function UsersPage() {
 
   const handleSaveUser = async () => {
     if (!editingUserId) return;
-    const normalizedPhone = editPhone.trim() ? normalizePhoneInput(editPhone) : null;
-    if (normalizedPhone && !E164_REGEX.test(normalizedPhone)) {
-      setEditPhoneError('Invalid format (e.g. (650) 555-1234)');
+    if (!isValidPhone(editPhone)) {
+      setEditPhoneError(PHONE_ERROR);
       return;
     }
+    const normalizedPhone = normalizePhone(editPhone);
     const effectiveSms = normalizedPhone ? editSmsEnabled : false;
 
     setSavingUser(true);
@@ -348,7 +329,7 @@ export function UsersPage() {
                           <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                           <div className="flex justify-between items-center mt-1">
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Phone className="h-3 w-3" /> {formatPhone(u.phone)}
+                              <Phone className="h-3 w-3" /> {formatPhone(u.phone, '—')}
                             </span>
                             <span className="text-[10px] text-muted-foreground">{u.company?.name ?? '—'}</span>
                           </div>
@@ -356,15 +337,15 @@ export function UsersPage() {
                             <div className="mt-3 pt-3 border-t border-border space-y-3">
                               <div>
                                 <Label className="text-xs">Phone Number</Label>
-                                <Input type="tel" placeholder="(650) 555-1234" value={editPhone}
-                                  onChange={(e) => { setEditPhone(e.target.value); if (editPhoneError) validateEditPhone(e.target.value); }}
+                                <PhoneInput value={editPhone}
+                                  onChange={(v) => { setEditPhone(v); if (editPhoneError) validateEditPhone(v); }}
                                   onBlur={() => validateEditPhone(editPhone)}
                                   className={editPhoneError ? 'border-destructive mt-1' : 'mt-1'} />
                                 {editPhoneError && <p className="text-xs text-destructive mt-1">{editPhoneError}</p>}
                               </div>
                               {(u.role === 'resident') && (
                                 <div className="flex items-center justify-between">
-                                  <Label className="text-xs">SMS updates for tickets</Label>
+                                  <Label className="text-xs">SMS updates for work orders</Label>
                                   <Switch checked={editSmsEnabled} onCheckedChange={setEditSmsEnabled} disabled={!editPhone.trim()} />
                                 </div>
                               )}
@@ -407,8 +388,8 @@ export function UsersPage() {
                                 <div className="flex items-end gap-4 flex-wrap">
                                   <div className="w-56">
                                     <Label className="text-xs">Phone Number</Label>
-                                    <Input type="tel" placeholder="(650) 555-1234" value={editPhone}
-                                      onChange={(e) => { setEditPhone(e.target.value); if (editPhoneError) validateEditPhone(e.target.value); }}
+                                    <PhoneInput value={editPhone}
+                                      onChange={(v) => { setEditPhone(v); if (editPhoneError) validateEditPhone(v); }}
                                       onBlur={() => validateEditPhone(editPhone)}
                                       className={`mt-1 h-8 text-sm ${editPhoneError ? 'border-destructive' : ''}`} />
                                     {editPhoneError && <p className="text-xs text-destructive mt-1">{editPhoneError}</p>}
@@ -417,7 +398,7 @@ export function UsersPage() {
                                     <div className="flex items-center gap-2 pb-1">
                                       <Switch checked={editSmsEnabled} onCheckedChange={setEditSmsEnabled}
                                         disabled={!editPhone.trim()} id={`sms-${u.id}`} />
-                                      <Label htmlFor={`sms-${u.id}`} className="text-xs">SMS ticket updates</Label>
+                                      <Label htmlFor={`sms-${u.id}`} className="text-xs">SMS work order updates</Label>
                                     </div>
                                   )}
                                   {(u.role === 'pm_admin' || u.role === 'pm_user' || u.role === 'proroto_admin') && editPhone.trim() && (
@@ -436,7 +417,7 @@ export function UsersPage() {
                             <tr key={u.id} className="border-b border-border">
                               <td className="py-2.5 px-3 font-semibold">{u.full_name}</td>
                               <td className="py-2.5 px-3">{u.email}</td>
-                              <td className="py-2.5 px-2 text-muted-foreground">{formatPhone(u.phone)}</td>
+                              <td className="py-2.5 px-2 text-muted-foreground">{formatPhone(u.phone, '—')}</td>
                               <td className="py-2.5 px-2"><Badge variant={roleBadgeVariant(u.role)} className="text-[11px]">{ROLE_LABELS[u.role]}</Badge></td>
                               <td className="py-2.5 px-2 text-muted-foreground">{u.company?.name ?? '—'}</td>
                               <td className="py-2.5 px-2">

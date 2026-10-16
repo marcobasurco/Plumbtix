@@ -287,7 +287,7 @@ export function AnalyticsPage() {
 
       {/* KPI Row */}
       <div className="analytics-kpi-grid">
-        <KPICard label="Open Tickets" value={summary.open_tickets}
+        <KPICard label="Open work orders" value={summary.open_tickets}
           subtext={`${summary.total_tickets} total`}
           icon={<Ticket className="h-4 w-4" />} color="#f59e0b" />
         <KPICard label="This Month" value={summary.tickets_this_month}
@@ -307,7 +307,7 @@ export function AnalyticsPage() {
           <CardContent className="p-3 sm:p-4">
             <div className="text-sm font-semibold mb-3 flex items-center gap-2">
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-              Ticket Volume (6 Months)
+              Work orders (6 months)
             </div>
             {summary.ticket_trend.length > 0 ? (
               <ResponsiveContainer width="100%" height={200}>

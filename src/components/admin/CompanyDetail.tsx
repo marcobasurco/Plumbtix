@@ -19,6 +19,7 @@ import {
   type InvitationRow,
 } from '@/lib/admin';
 import { sendInvitation } from '@/lib/api';
+import { formatPhone, telHref } from '@shared/phone';
 import { ROLE_LABELS, INVITATION_ROLES } from '@shared/types/enums';
 import type { InvitationRole } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
@@ -57,8 +58,8 @@ const ROLE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | '
 };
 
 const INVITE_ROLE_LABELS: Record<string, string> = {
-  pm_admin: 'PM Admin',
-  pm_user: 'PM Staff',
+  pm_admin: 'Admin',
+  pm_user: 'Staff',
 };
 
 // ---------------------------------------------------------------------------
@@ -105,7 +106,7 @@ function UserCard({ user }: { user: UserListRow }) {
   return (
     <div className="ticket-card" style={{ cursor: 'default' }}>
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+        <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0">
           {user.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
@@ -118,7 +119,7 @@ function UserCard({ user }: { user: UserListRow }) {
       </div>
       {user.phone && (
         <div className="text-xs text-muted-foreground mt-2 pl-12">
-          📱 <a href={`tel:${user.phone}`} className="text-primary hover:underline">{user.phone}</a>
+          📱 <a href={telHref(user.phone) ?? undefined} className="text-primary hover:underline">{formatPhone(user.phone)}</a>
         </div>
       )}
       <div className="text-xs text-muted-foreground/60 mt-1 pl-12">
@@ -565,7 +566,7 @@ export function CompanyDetail() {
                   ))}
                 </select>
                 <p className="text-xs text-muted-foreground">
-                  PM Admin can manage buildings & invite others. PM Staff can create tickets and view data.
+                  Admins manage buildings and invite others. Staff can report problems and view work orders for their buildings.
                 </p>
               </div>
             </div>

@@ -13,7 +13,7 @@
 //   4. User JWT → UPDATE ticket (RLS scopes access, trigger 00005 = DB seatbelt)
 //
 // Restricted fields:
-//   - assigned_technician, scheduled_date, scheduled_time_window: proroto_admin + pm_admin
+//   - assigned_technician, technician_id, scheduled_date, scheduled_time_window: proroto_admin ONLY (00028)
 //   - quote_amount, invoice_number: proroto_admin ONLY
 //
 // Transition matrix enforcement:
@@ -44,13 +44,13 @@ const TICKET_STATUSES = [
 type TicketStatus = typeof TICKET_STATUSES[number];
 
 const TRANSITION_MATRIX: Record<string, Partial<Record<UserRole, readonly string[]>>> = {
-  new:              { proroto_admin: ['needs_info', 'scheduled', 'cancelled'], pm_admin: ['needs_info', 'scheduled'] },
-  needs_info:       { proroto_admin: ['new', 'scheduled', 'cancelled'], pm_admin: ['new', 'scheduled'] },
-  scheduled:        { proroto_admin: ['dispatched', 'needs_info', 'cancelled'], pm_admin: ['needs_info'] },
+  new:              { proroto_admin: ['needs_info', 'scheduled', 'cancelled'], pm_admin: ['needs_info'] },
+  needs_info:       { proroto_admin: ['new', 'scheduled', 'cancelled'], pm_admin: ['new'], pm_user: ['new'] },
+  scheduled:        { proroto_admin: ['dispatched', 'needs_info', 'cancelled'] },
   dispatched:       { proroto_admin: ['on_site', 'scheduled', 'cancelled'] },
   on_site:          { proroto_admin: ['in_progress', 'cancelled'] },
   in_progress:      { proroto_admin: ['waiting_approval', 'completed', 'cancelled'] },
-  waiting_approval: { proroto_admin: ['scheduled', 'in_progress', 'cancelled'], pm_admin: ['scheduled'], pm_user: ['scheduled'] },
+  waiting_approval: { proroto_admin: ['scheduled', 'in_progress', 'cancelled'] },
   completed:        { proroto_admin: ['invoiced'] },
   invoiced:         {},
   cancelled:        {},
@@ -147,7 +147,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ─── 6. Check restricted fields ───
-    // Scheduling fields: proroto_admin + pm_admin
+    // Scheduling fields: proroto_admin ONLY (only Pro Roto dispatches, 00028)
     // Financial fields: proroto_admin ONLY
     const schedulingFields: string[] = [];
     const financialFields: string[] = [];
@@ -166,10 +166,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Scheduling fields: proroto_admin or pm_admin
-    if (schedulingFields.length > 0 && role !== 'proroto_admin' && role !== 'pm_admin') {
+    // Scheduling fields: proroto_admin only — only Pro Roto dispatches
+    if (schedulingFields.length > 0 && !isProRotoAdmin(role)) {
       return forbidden(
-        `Only admin roles can modify: ${schedulingFields.join(', ')}`,
+        `Only Pro Roto can modify: ${schedulingFields.join(', ')}`,
       );
     }
 
@@ -270,7 +270,7 @@ Deno.serve(async (req: Request) => {
           const svc = createServiceClient();
           const [buildingRes, spaceRes, creatorRes] = await Promise.all([
             svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', ticket.building_id).single(),
-            svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', ticket.space_id).single(),
+            svc.from('spaces').select('space_type, unit_number, common_area_type, label').eq('id', ticket.space_id).single(),
             svc.from('users').select('id, full_name, email').eq('id', ticket.created_by_user_id).single(),
           ]);
 
@@ -290,6 +290,7 @@ Deno.serve(async (req: Request) => {
               invoice_number: updated.invoice_number ?? ticket.invoice_number,
               building: buildingRes.data,
               space: spaceRes.data,
+              location_note: ticket.location_note ?? null,
               created_by: creatorRes.data,
             }, ticket.status, targetStatus, role);
           }

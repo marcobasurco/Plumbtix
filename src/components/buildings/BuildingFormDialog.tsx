@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { BuildingSchema, type BuildingFormValues } from '@/lib/schemas';
 import {
@@ -38,6 +38,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Loader2, MapPin, Lock } from 'lucide-react';
+import { formatPhone } from '@shared/phone';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -120,6 +122,7 @@ export function BuildingFormDialog({
   // react-hook-form
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting, isValid },
@@ -183,7 +186,7 @@ export function BuildingFormDialog({
           water_shutoff_location: b.water_shutoff_location ?? '',
           gas_shutoff_location: b.gas_shutoff_location ?? '',
           onsite_contact_name: b.onsite_contact_name ?? '',
-          onsite_contact_phone: b.onsite_contact_phone ?? '',
+          onsite_contact_phone: formatPhone(b.onsite_contact_phone),
           access_notes: b.access_notes ?? '',
         });
       })
@@ -442,16 +445,18 @@ export function BuildingFormDialog({
                     label="Onsite Contact Phone"
                     error={errors.onsite_contact_phone?.message}
                   >
-                    <Input
-                      id="onsite_contact_phone"
-                      type="tel"
-                      placeholder="(555) 123-4567"
-                      className={
-                        errors.onsite_contact_phone
-                          ? 'border-destructive'
-                          : ''
-                      }
-                      {...register('onsite_contact_phone')}
+                    <Controller
+                      control={control}
+                      name="onsite_contact_phone"
+                      render={({ field }) => (
+                        <PhoneInput
+                          id="onsite_contact_phone"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          className={errors.onsite_contact_phone ? 'border-destructive' : ''}
+                        />
+                      )}
                     />
                   </FormField>
                 </div>

@@ -1,11 +1,22 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { fetchTicketList, TICKET_PAGE_SIZE, type TicketListRow, type TicketListFilters } from '@/lib/tickets';
-import { ISSUE_TYPE_LABELS } from '@shared/types/enums';
+import { fetchTicketList, formatTicketLocation, TICKET_PAGE_SIZE, type TicketListRow, type TicketListFilters } from '@/lib/tickets';
+import { ISSUE_TYPE_LABELS, SEVERITY_LABELS, STATUS_LABELS } from '@shared/types/enums';
 import { StatusBadge } from './StatusBadge';
 import { SeverityBadge } from './SeverityBadge';
+
+/** Emergency that no one at Pro Roto has taken yet (migration 00030). */
+function UnacknowledgedBadge({ ticket }: { ticket: Pick<TicketListRow, 'severity' | 'status' | 'acknowledged_at' | 'escalation_exhausted_at'> }) {
+  if (ticket.severity !== 'emergency' || ticket.acknowledged_at) return null;
+  if (['completed', 'invoiced', 'cancelled'].includes(ticket.status)) return null;
+  return (
+    <span className="inline-flex items-center rounded-full border border-destructive/50 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+      {ticket.escalation_exhausted_at ? 'No response' : 'Unacknowledged'}
+    </span>
+  );
+}
 import { TicketFilters } from './TicketFilters';
-import { ErrorBanner } from '@/components/ErrorBanner';
+import { ErrorBanner, friendlyError } from '@/components/ErrorBanner';
 import { PageTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,12 +29,6 @@ function formatDate(iso: string): string {
 
 function formatDateShort(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function spaceLabel(space: TicketListRow['space']): string {
-  if (space.space_type === 'unit' && space.unit_number) return `Unit ${space.unit_number}`;
-  if (space.common_area_type) return space.common_area_type.replace(/_/g, ' ');
-  return space.space_type;
 }
 
 function CardSkeleton() {
@@ -68,13 +73,15 @@ function TicketCard({ ticket, onClick }: { ticket: TicketListRow; onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className="ticket-card"
+      className={`ticket-card${ticket.severity === 'emergency' ? ' is-emergency' : ''}`}
+      aria-label={`Work order #${ticket.ticket_number}, ${SEVERITY_LABELS[ticket.severity]}, ${STATUS_LABELS[ticket.status]}, ${ISSUE_TYPE_LABELS[ticket.issue_type as keyof typeof ISSUE_TYPE_LABELS] ?? ticket.issue_type}`}
     >
       <div className="ticket-card-header">
         <span className="ticket-card-number">#{ticket.ticket_number}</span>
         <div className="ticket-card-badges">
           <SeverityBadge severity={ticket.severity} />
           <StatusBadge status={ticket.status} />
+          <UnacknowledgedBadge ticket={ticket} />
         </div>
       </div>
 
@@ -88,12 +95,12 @@ function TicketCard({ ticket, onClick }: { ticket: TicketListRow; onClick: () =>
 
       <div className="ticket-card-footer">
         <span className="ticket-card-location">
-          {ticket.building.name || ticket.building.address_line1} · {spaceLabel(ticket.space)}
+          {ticket.building.name || ticket.building.address_line1} · {formatTicketLocation(ticket)}
         </span>
         <span className="ticket-card-date">{formatDateShort(ticket.created_at)}</span>
       </div>
 
-      <ChevronRight className="ticket-card-chevron" />
+      <ChevronRight className="ticket-card-chevron" aria-hidden="true" />
     </button>
   );
 }
@@ -112,8 +119,8 @@ function TicketTable({ tickets, onRowClick }: { tickets: TicketListRow[]; onRowC
             <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Severity</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Issue</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Building</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Space</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Created By</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reported by</th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Created</th>
           </tr>
         </thead>
@@ -122,13 +129,20 @@ function TicketTable({ tickets, onRowClick }: { tickets: TicketListRow[]; onRowC
             <tr
               key={t.id}
               onClick={() => onRowClick(t.id)}
-              className="cursor-pointer transition-colors hover:bg-muted/50"
+              className={`ticket-row cursor-pointer transition-colors hover:bg-muted/50${t.severity === 'emergency' ? ' is-emergency' : ''}`}
             >
               <td className="px-4 py-3 border-t border-border">
-                <strong className="font-mono">{t.ticket_number}</strong>
+                <Link
+                  to={t.id}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-mono font-bold text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                  aria-label={`Open work order #${t.ticket_number}`}
+                >
+                  {t.ticket_number}
+                </Link>
               </td>
               <td className="px-4 py-3 border-t border-border"><StatusBadge status={t.status} /></td>
-              <td className="px-4 py-3 border-t border-border"><SeverityBadge severity={t.severity} /></td>
+              <td className="px-4 py-3 border-t border-border"><span className="inline-flex gap-1.5 items-center"><SeverityBadge severity={t.severity} /><UnacknowledgedBadge ticket={t} /></span></td>
               <td className="px-4 py-3 border-t border-border max-w-[200px]">
                 <div className="font-medium">
                   {ISSUE_TYPE_LABELS[t.issue_type as keyof typeof ISSUE_TYPE_LABELS] ?? t.issue_type}
@@ -138,7 +152,7 @@ function TicketTable({ tickets, onRowClick }: { tickets: TicketListRow[]; onRowC
                 )}
               </td>
               <td className="px-4 py-3 border-t border-border">{t.building.name || t.building.address_line1}</td>
-              <td className="px-4 py-3 border-t border-border">{spaceLabel(t.space)}</td>
+              <td className="px-4 py-3 border-t border-border">{formatTicketLocation(t)}</td>
               <td className="px-4 py-3 border-t border-border">{t.created_by?.full_name ?? 'Unknown'}</td>
               <td className="px-4 py-3 border-t border-border text-muted-foreground">{formatDate(t.created_at)}</td>
             </tr>
@@ -167,7 +181,7 @@ export function TicketList() {
     const status = searchParams.get('status');
     const severity = searchParams.get('severity');
     const building_id = searchParams.get('building_id');
-    if (status) initial.status = status as TicketListFilters['status'];
+    initial.status = (status as TicketListFilters['status']) || 'open';
     if (severity) initial.severity = severity as TicketListFilters['severity'];
     if (building_id) initial.building_id = building_id;
     return initial;
@@ -175,7 +189,7 @@ export function TicketList() {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+    if (filters.status && filters.status !== 'open') params.set('status', filters.status); // 'open' is the default
     if (filters.severity && filters.severity !== 'all') params.set('severity', filters.severity);
     if (filters.building_id) params.set('building_id', filters.building_id);
     setSearchParams(params, { replace: true });
@@ -195,7 +209,8 @@ export function TicketList() {
         setTickets(rows);
         setTotalCount(count);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load tickets');
+        console.error('[tickets] load failed:', e);
+        setError(friendlyError(e, "Couldn't load work orders."));
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -222,6 +237,9 @@ export function TicketList() {
   }, [loadWindow, visibleLimit]);
   useRealtimeTickets(refresh, !loading);
 
+  const isDefaultView = (filters.status ?? 'open') === 'open'
+    && (!filters.severity || filters.severity === 'all')
+    && !filters.search && !filters.building_id && !filters.date_from && !filters.date_to;
   const hasMore = tickets.length < totalCount;
   const remaining = totalCount - tickets.length;
 
@@ -229,19 +247,19 @@ export function TicketList() {
     <PageTransition>
       <div className="flex items-start justify-between gap-3 mb-4 sm:mb-6">
         <div className="min-w-0">
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Tickets</h2>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">Work orders</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {totalCount} ticket{totalCount !== 1 ? 's' : ''}
+            {totalCount} {(filters.status ?? 'open') === 'open' ? 'open ' : ''}work order{totalCount !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button asChild>
-          <Link to="new"><Plus className="h-4 w-4" /> New Ticket</Link>
+        <Button asChild size="lg">
+          <Link to="new"><Plus className="h-5 w-5" aria-hidden="true" /> Report a problem</Link>
         </Button>
       </div>
 
       <TicketFilters filters={filters} onChange={setFilters} />
 
-      <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      <ErrorBanner message={error} onRetry={() => loadWindow(visibleLimit, 'initial')} onDismiss={() => setError(null)} />
 
       {loading ? (
         <>
@@ -250,11 +268,20 @@ export function TicketList() {
         </>
       ) : tickets.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-center py-16 px-4">
-          <Ticket className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <div className="text-base font-semibold mb-1">No tickets found</div>
-          <div className="text-sm text-muted-foreground max-w-sm">
-            {Object.keys(filters).length > 0 ? 'Try adjusting your filters.' : 'Tickets will appear here once created.'}
+          <Ticket className="h-12 w-12 text-muted-foreground/30 mb-4" aria-hidden="true" />
+          <div className="text-base font-semibold mb-1">
+            {isDefaultView
+              ? 'No open work orders'
+              : 'No work orders match these filters'}
           </div>
+          <div className="text-sm text-muted-foreground max-w-sm mb-4">
+            {isDefaultView
+              ? 'Everything is taken care of. Report a problem when something comes up.'
+              : 'Try "All" or clear the filters to see completed and cancelled work orders too.'}
+          </div>
+          <Button asChild variant="outline">
+            <Link to="new"><Plus className="h-4 w-4" aria-hidden="true" /> Report a problem</Link>
+          </Button>
         </div>
       ) : (
         <>

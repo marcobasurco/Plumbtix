@@ -92,7 +92,7 @@ export function EntitlementManager({ buildingId, companyId }: EntitlementManager
       {entitlements.length === 0 && !showForm && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
           <Shield className="h-4 w-4" />
-          No PM Users assigned. Only PM Admins can see this building.
+          No staff assigned. Only admins can see this building.
         </div>
       )}
 
@@ -131,7 +131,7 @@ export function EntitlementManager({ buildingId, companyId }: EntitlementManager
             className="p-0 h-auto mt-2 text-xs"
             onClick={() => setShowForm(true)}
           >
-            <UserPlus className="h-3 w-3" /> Assign PM User
+            <UserPlus className="h-3 w-3" /> Assign staff
           </Button>
         )
       ) : (
@@ -141,14 +141,14 @@ export function EntitlementManager({ buildingId, companyId }: EntitlementManager
         >
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="block text-xs font-semibold mb-1">PM User</label>
+              <label className="block text-xs font-semibold mb-1">Staff member</label>
               <select
                 value={selectedUser}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedUser(e.target.value)}
                 required
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <option value="">Select a PM User…</option>
+                <option value="">Select a staff member…</option>
                 {availableUsers.map((u) => (
                   <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
                 ))}
@@ -165,17 +165,17 @@ export function EntitlementManager({ buildingId, companyId }: EntitlementManager
       )}
 
       {availableUsers.length === 0 && companyUsers.length > 0 && !showForm && entitlements.length > 0 && (
-        <p className="text-xs text-muted-foreground mt-1.5">All PM Users are already assigned.</p>
+        <p className="text-xs text-muted-foreground mt-1.5">Everyone is already assigned.</p>
       )}
       {companyUsers.length === 0 && (
-        <p className="text-xs text-muted-foreground mt-1.5">No PM Users exist in this company yet. Invite one first.</p>
+        <p className="text-xs text-muted-foreground mt-1.5">No staff in this company yet. Invite someone first.</p>
       )}
 
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open: boolean) => { if (!open) setDeleteTarget(null); }}
         title="Remove Access"
-        description={`Remove access for "${userMap.get(deleteTarget?.user_id ?? '')?.full_name ?? 'this user'}"? They will no longer see tickets for this building.`}
+        description={`Remove access for "${userMap.get(deleteTarget?.user_id ?? '')?.full_name ?? 'this user'}"? They will no longer see work orders for this building.`}
         confirmLabel="Remove"
         onConfirm={handleRemove}
         loading={deleting}

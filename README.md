@@ -86,6 +86,15 @@ All schema changes live in `supabase/migrations/` and are applied in order
 | `00005`–`00025` | Status-transition trigger, comment lockdown, RLS recursion fix, usage/subscriptions, realtime, storage policy rework, notifications (email / in-app / SMS), audit tables, full-text search, company logo, PM transitions, public sharing + column lock, technicians, ticket audit trail, rate limiting |
 | `00026` | Captures objects that were created by hand in production (equipment, `spaces.label`, enum values) so a fresh database matches production |
 | `00027` | Tenant-boundary hardening: identity-column protection on `users`, ticket delete/column rules, ticket-scoped storage policies, `security_invoker` analytics view, entitlement-aware equipment policies, helper-function guards |
+| `00028` | Only Pro Roto dispatches: technician/scheduling columns `proroto_admin`-only; PM transitions reduced to information triage (approvals by phone) |
+| `00029` | "Somewhere else" location: `tickets.location_note` + an "Other / not listed" catch-all space per building (trigger + backfill) |
+| `00030` | Emergency acknowledgement + on-call escalation: `on_call_roster`, `ticket_escalation_log`, acknowledgement/escalation columns and triggers on `tickets`, pg_cron job calling `escalate-emergencies` every minute (URL + secret from Vault) |
+| `00031` | Phone standard: `normalize_phone()`, cleanup to E.164 with `phone_cleanup_log`, normalizing triggers + CHECK constraints on every phone column |
+
+**Phone numbers** are stored as E.164 (`+16505551234`) everywhere and shown as
+`(650) 555-1234`. Use `normalizePhone` / `formatPhone` / `telHref` from
+`shared/phone.ts` (browser) or `_shared/phone.ts` (edge) and the `PhoneInput`
+component; never write a phone column from raw text.
 
 **Rules**
 
@@ -155,9 +164,9 @@ work-orders/
 
 | Role | Scope | Ticket Transitions |
 |------|-------|-------------------|
-| `proroto_admin` | All companies | Full lifecycle |
-| `pm_admin` | Own company | Cancel (early stages), approve/decline (waiting_approval) |
-| `pm_user` | Entitled buildings | Same as pm_admin |
+| `proroto_admin` | All companies | Full lifecycle; only role that schedules, assigns technicians, cancels, records quote approvals (taken by phone), and sets quote/invoice |
+| `pm_admin` | Own company | `new → needs_info`, `needs_info → new` only. No scheduling, assignment, approval or cancel — only Pro Roto dispatches (migration 00028). Invites Admins/Staff and sets Staff building access from the Team page |
+| `pm_user` | Entitled buildings | `needs_info → new` ("I've added the info") only |
 | `resident` | Own space | None (create + comment only) |
 
 ---

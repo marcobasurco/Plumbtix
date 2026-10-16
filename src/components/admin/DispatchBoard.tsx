@@ -339,7 +339,7 @@ export function DispatchBoard() {
         <div className="min-w-0">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">Dispatch</h2>
           <p className="text-xs text-muted-foreground">
-            {filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''}
+            {filteredTickets.length} work order{filteredTickets.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex gap-2">
@@ -416,7 +416,7 @@ export function DispatchBoard() {
                   {isOpen && (
                     <div className="dispatch-section-body">
                       {col.length === 0 ? (
-                        <div className="text-center py-4 text-xs text-muted-foreground">No tickets</div>
+                        <div className="text-center py-4 text-xs text-muted-foreground">No work orders</div>
                       ) : col.map((ticket) => (
                         <MobileTicketCard key={ticket.id} ticket={ticket}
                           isUpdating={updating === ticket.id}
@@ -447,7 +447,7 @@ export function DispatchBoard() {
                   </div>
                   <div className="kanban-col-body">
                     {col.length === 0 ? (
-                      <div className="text-center py-4 px-2 text-muted-foreground text-xs">No tickets</div>
+                      <div className="text-center py-4 px-2 text-muted-foreground text-xs">No work orders</div>
                     ) : col.map((ticket) => (
                       <KanbanCard key={ticket.id} ticket={ticket}
                         isUpdating={updating === ticket.id}

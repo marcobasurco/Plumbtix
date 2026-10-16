@@ -5,10 +5,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Wrench, Ticket, Building2, Bell } from 'lucide-react';
 
 const STEPS = [
-  { icon: Wrench, title: 'Welcome to PlumbTix', body: 'Manage work orders, track tickets, and keep your buildings maintained — all in one place.' },
-  { icon: Ticket, title: 'Create Tickets', body: 'Submit work orders quickly with our step-by-step wizard. Add photos, set severity, and track progress.' },
-  { icon: Building2, title: 'Manage Buildings', body: 'View your properties, units, and common areas. Everything is organized by building.' },
-  { icon: Bell, title: 'Stay Notified', body: 'Get real-time notifications when tickets are updated. Never miss an important change.' },
+  { icon: Wrench, title: 'Welcome to PlumbTix', body: 'Report plumbing problems, follow the work, and keep your buildings running — all in one place.' },
+  { icon: Ticket, title: 'Report a problem', body: 'Tap "Report a problem", pick the building and location, add a photo, and send. Pro Roto is paged right away for emergencies.' },
+  { icon: Building2, title: 'Your buildings', body: 'See your properties, units, and common areas. Every work order is organized by building.' },
+  { icon: Bell, title: 'Stay in the loop', body: "You'll get a notification when a work order is scheduled, a tech is on the way, or the work is done. Quotes are confirmed with you by phone." },
 ];
 
 export function WelcomeTour() {

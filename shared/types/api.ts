@@ -53,6 +53,8 @@ export interface CreateTicketRequest {
   severity: TicketSeverity;
   description: string;
   access_instructions?: string;
+  /** Where exactly, when space_id is the building's "Other / not listed" catch-all (00029) */
+  location_note?: string;
   scheduling_preference?: SchedulingPreference;
 }
 export interface CreateTicketResponse {

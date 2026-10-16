@@ -60,3 +60,22 @@ export async function parseBody<T>(
     return { success: false, message: 'Validation failed' };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Phone field — accepts what people type, yields E.164 or null. One standard
+// for the whole product (see _shared/phone.ts / shared/phone.ts).
+// ---------------------------------------------------------------------------
+import { normalizePhone, PHONE_ERROR } from './phone.ts';
+
+/** Optional phone: '' / null / undefined → null; text that isn't a number → validation error. */
+export const PhoneSchema = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((v, ctx) => {
+    if (v == null || !String(v).trim()) return null;
+    const e164 = normalizePhone(v);
+    if (!e164) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: PHONE_ERROR });
+      return z.NEVER;
+    }
+    return e164;
+  });

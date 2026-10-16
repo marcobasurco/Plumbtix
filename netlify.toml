@@ -58,16 +58,16 @@
     Referrer-Policy           = "strict-origin-when-cross-origin"
     Permissions-Policy        = "camera=(self), microphone=(), geolocation=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-    # CSP in REPORT-ONLY mode first. Watch the browser console on
-    # login → ticket detail → photo upload → video upload → Print/PDF →
-    # public /p/ page. If no CSP violations appear after a few days,
-    # rename this header to Content-Security-Policy to enforce.
+    # Content-Security-Policy is NOT set here: it is written to dist/_headers
+    # at build time by scripts/write-csp-headers.mjs, because it differs by
+    # deploy context (deploy previews also allow Netlify's review toolbar in
+    # an iframe from app.netlify.com). The policy has been ENFORCED (not
+    # report-only) since v0.10.0 with no violations.
     #   • *.supabase.co + wss:  — PostgREST, Edge Functions, Storage, Realtime
     #   • unpkg.com             — @ffmpeg/core WASM (video compression)
     #   • blob: + wasm-unsafe-eval — ffmpeg worker + @react-pdf output tabs
     #   • data:                 — QR data URLs, inline logos
     #   • *.sentry.io           — error reporting
-    Content-Security-Policy = "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://unpkg.com https://*.sentry.io; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 # ---------------------------------------------------------------------------
 # Public ticket pages: never index. These are login-less, token-gated views —

@@ -11,6 +11,12 @@ import { supabase } from './supabaseClient';
 import type { TicketStatus, TicketSeverity } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
+// Display helpers
+// ---------------------------------------------------------------------------
+
+export { formatSpaceLabel, formatTicketLocation } from '@shared/types/enums';
+
+// ---------------------------------------------------------------------------
 // Ticket list
 // ---------------------------------------------------------------------------
 
@@ -31,6 +37,9 @@ export interface TicketListRow {
   severity: TicketSeverity;
   issue_type: string;
   description: string | null;
+  location_note: string | null;
+  acknowledged_at: string | null;
+  escalation_exhausted_at: string | null;
   created_at: string;
   updated_at: string;
   building: {
@@ -86,12 +95,18 @@ export async function fetchTicketList(
       severity,
       issue_type,
       description,
+      location_note,
+      acknowledged_at,
+      escalation_exhausted_at,
       created_at,
       updated_at,
       building:buildings!inner(id, name, address_line1, city),
       space:spaces!inner(id, space_type, unit_number, common_area_type, label),
       created_by:users!tickets_created_by_user_id_fkey(id, full_name)
     `, { count: 'exact' })
+    // Severity first: the ticket_severity enum is declared emergency → urgent →
+    // standard, so ascending enum order puts emergencies at the top. Then newest.
+    .order('severity', { ascending: true })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false }) // tiebreaker: stable order for equal timestamps
     .range(0, limit - 1);
@@ -155,7 +170,14 @@ export interface TicketDetailRow {
   issue_type: string;
   description: string | null;
   access_instructions: string | null;
+  location_note: string | null;
   scheduling_preference: Record<string, unknown> | null;
+  acknowledged_at: string | null;          // migration 00030
+  acknowledged_by_user_id: string | null;
+  escalation_step: number;
+  next_escalation_at: string | null;
+  escalation_exhausted_at: string | null;
+  acknowledged_by: { id: string; full_name: string } | null;
   assigned_technician: string | null;
   scheduled_date: string | null;
   scheduled_time_window: string | null;
@@ -211,7 +233,8 @@ export async function fetchTicketDetail(ticketId: string) {
         company:companies(id, name, logo_url)
       ),
       space:spaces!inner(id, space_type, unit_number, common_area_type, label, floor),
-      created_by:users!tickets_created_by_user_id_fkey(id, full_name, email, phone)
+      created_by:users!tickets_created_by_user_id_fkey(id, full_name, email, phone),
+      acknowledged_by:users!tickets_acknowledged_by_user_id_fkey(id, full_name)
     `)
     .eq('id', ticketId)
     .single();

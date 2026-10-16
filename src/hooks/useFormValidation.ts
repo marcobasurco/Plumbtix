@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { isValidPhone, PHONE_ERROR } from '@shared/phone';
 
 // ---------------------------------------------------------------------------
 // Validation rules matching DB constraints
@@ -22,9 +23,7 @@ export const VALIDATORS = {
 
   phone: (val: string) => {
     if (!val.trim()) return null; // phone is optional
-    const cleaned = val.replace(/[\s\-().+]/g, '');
-    if (!/^\+?\d{7,15}$/.test(cleaned)) return 'Invalid phone number format';
-    return null;
+    return isValidPhone(val) ? null : PHONE_ERROR;
   },
 
   email: (val: string) => {

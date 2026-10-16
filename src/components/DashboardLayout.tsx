@@ -26,7 +26,7 @@ import {
 import {
   LayoutDashboard, Ticket, Building2, Users2, Kanban,
   LogOut, Menu, Wrench, Briefcase, Moon, Sun, BarChart3,
-  FileSpreadsheet, ChevronRight, Settings,
+  FileSpreadsheet, ChevronRight, Settings, Plus, Siren,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 
@@ -42,9 +42,9 @@ function roleRoot(role: string | null): string {
 
 const ROLE_BADGE_VARIANT: Record<string, 'info' | 'urgent' | 'success' | 'secondary'> = {
   proroto_admin: 'info',
-  pm_admin: 'urgent',
-  pm_user: 'urgent',
-  resident: 'success',
+  pm_admin: 'secondary',
+  pm_user: 'secondary',
+  resident: 'secondary',
 };
 
 // ---------------------------------------------------------------------------
@@ -61,9 +61,14 @@ interface NavItem {
 
 const CORE_NAV: NavItem[] = [
   { label: 'Overview', path: '', matchSegment: '__home__', icon: <LayoutDashboard className="h-[18px] w-[18px]" />, section: 'Main' },
-  { label: 'Tickets', path: 'tickets', matchSegment: 'tickets', icon: <Ticket className="h-[18px] w-[18px]" />, section: 'Main' },
+  { label: 'Work orders', path: 'tickets', matchSegment: 'tickets', icon: <Ticket className="h-[18px] w-[18px]" aria-hidden="true" />, section: 'Main' },
   { label: 'Buildings', path: 'buildings', matchSegment: 'buildings', icon: <Building2 className="h-[18px] w-[18px]" />, section: 'Main' },
   { label: 'Analytics', path: 'analytics', matchSegment: 'analytics', icon: <BarChart3 className="h-[18px] w-[18px]" />, section: 'Main' },
+];
+
+// Property-company Admins manage their own people (invite, building access).
+const PM_ADMIN_EXTRA: NavItem[] = [
+  { label: 'Team', path: 'team', matchSegment: 'team', icon: <Users2 className="h-[18px] w-[18px]" aria-hidden="true" />, section: 'Main' },
 ];
 
 const ADMIN_EXTRA: NavItem[] = [
@@ -71,6 +76,7 @@ const ADMIN_EXTRA: NavItem[] = [
   { label: 'Users', path: 'users', matchSegment: 'users', icon: <Users2 className="h-[18px] w-[18px]" />, section: 'Management' },
   { label: 'Dispatch', path: 'dispatch', matchSegment: 'dispatch', icon: <Kanban className="h-[18px] w-[18px]" />, section: 'Management' },
   { label: 'Technicians', path: 'technicians', matchSegment: 'technicians', icon: <Wrench className="h-[18px] w-[18px]" />, section: 'Management' },
+  { label: 'On-call', path: 'on-call', matchSegment: 'on-call', icon: <Siren className="h-[18px] w-[18px]" aria-hidden="true" />, section: 'Management' },
   { label: 'Sync', path: 'import', matchSegment: 'import', icon: <FileSpreadsheet className="h-[18px] w-[18px]" />, section: 'Tools' },
   { label: 'Reports', path: 'reports', matchSegment: 'reports', icon: <BarChart3 className="h-[18px] w-[18px]" />, section: 'Tools' },
 ];
@@ -102,7 +108,9 @@ export function DashboardLayout({ title: _title, children }: Props) {
   }, [darkMode]);
 
   // Build nav
-  const nav = role === 'proroto_admin' ? [...CORE_NAV, ...ADMIN_EXTRA] : CORE_NAV;
+  const nav = role === 'proroto_admin' ? [...CORE_NAV, ...ADMIN_EXTRA]
+    : role === 'pm_admin' ? [...CORE_NAV, ...PM_ADMIN_EXTRA]
+    : CORE_NAV;
   const pathAfterRoot = location.pathname.replace(root, '').replace(/^\//, '');
   const firstSegment = pathAfterRoot.split('/')[0] || '';
 
@@ -112,6 +120,16 @@ export function DashboardLayout({ title: _title, children }: Props) {
   }
 
   const activeLabel = nav.find(isActive)?.label ?? 'Dashboard';
+
+  // Mobile bottom tab bar: the four places a person goes on a phone, with
+  // "Report" raised in the middle. Hidden on the report flow itself (it has
+  // its own sticky action bar) and on the sidebar, which covers it.
+  const onReportFlow = pathAfterRoot === 'tickets/new';
+  const tabs: NavItem[] = [
+    CORE_NAV[0],
+    CORE_NAV[1],
+    role === 'proroto_admin' ? ADMIN_EXTRA[2] : CORE_NAV[2],
+  ];
 
   // Group nav by section
   const sections = new Map<string, NavItem[]>();
@@ -147,7 +165,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
       <div className="sidebar-user">
         <div className="flex items-center gap-2.5">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-xs font-bold text-white">
+            <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -164,7 +182,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
       </div>
 
       {/* Nav links grouped by section */}
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" aria-label="Main">
         {Array.from(sections.entries()).map(([section, items], idx) => (
           <div key={section}>
             {idx > 0 && <div className="sidebar-section-label">{section}</div>}
@@ -173,6 +191,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                 key={item.label}
                 to={item.path ? `${root}/${item.path}` : root}
                 className={`sidebar-link ${isActive(item) ? 'active' : ''}`}
+                aria-current={isActive(item) ? 'page' : undefined}
                 onClick={closeMobile}
               >
                 {item.icon}
@@ -187,11 +206,11 @@ export function DashboardLayout({ title: _title, children }: Props) {
       <div className="sidebar-footer">
         <Button
           variant="ghost"
-          className="w-full justify-start text-muted-foreground/60 hover:text-foreground gap-2.5"
+          className="w-full justify-start min-h-[44px] text-muted-foreground hover:text-foreground gap-2.5"
           onClick={signOut}
         >
-          <LogOut className="h-[18px] w-[18px]" />
-          Sign Out
+          <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
+          Sign out
         </Button>
       </div>
     </>
@@ -205,6 +224,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
           <div
             className="fixed inset-0 bg-black/50 z-[39] md:hidden"
             onClick={closeMobile}
+            aria-hidden="true"
           />
         )}
 
@@ -221,17 +241,18 @@ export function DashboardLayout({ title: _title, children }: Props) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="mobile-menu-btn h-8 w-8"
+                className="mobile-menu-btn h-11 w-11 -ml-2"
                 onClick={() => setMobileOpen(true)}
-                aria-label="Menu"
+                aria-label="Open menu"
+                aria-expanded={mobileOpen}
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
 
               {/* Breadcrumb-style title */}
               <div className="flex items-center gap-1.5 text-sm">
                 <span className="text-muted-foreground font-medium hidden sm:inline">PlumbTix</span>
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 hidden sm:block" />
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 hidden sm:block" aria-hidden="true" />
                 <span className="content-header-title">{activeLabel}</span>
               </div>
             </div>
@@ -246,9 +267,10 @@ export function DashboardLayout({ title: _title, children }: Props) {
                     variant="ghost"
                     size="icon"
                     onClick={() => setDarkMode(!darkMode)}
-                    className="h-8 w-8"
+                    className="h-11 w-11 sm:h-9 sm:w-9"
+                    aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                   >
-                    {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    {darkMode ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{darkMode ? 'Light mode' : 'Dark mode'}</TooltipContent>
@@ -257,9 +279,9 @@ export function DashboardLayout({ title: _title, children }: Props) {
               {/* User dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 gap-2 px-2">
+                  <Button variant="ghost" className="h-11 sm:h-9 gap-2 px-2" aria-label="Account menu">
                     <Avatar className="h-6 w-6">
-                      <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-[10px] font-bold text-white">
+                      <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
@@ -275,7 +297,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate(`${root}/settings`)}>
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setDarkMode(!darkMode)}>
@@ -284,7 +306,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                     Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -295,6 +317,41 @@ export function DashboardLayout({ title: _title, children }: Props) {
           <main className="content-main">
             {children}
           </main>
+
+          {!onReportFlow && (
+            <nav className="tab-bar" aria-label="Primary">
+              {tabs.slice(0, 2).map((item) => (
+                <Link
+                  key={item.label}
+                  to={item.path ? `${root}/${item.path}` : root}
+                  className="tab-bar-item"
+                  aria-current={isActive(item) ? 'page' : undefined}
+                >
+                  <span className="tab-bar-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+              <Link to={`${root}/tickets/new`} className="tab-bar-item report" aria-label="Report a problem">
+                <span className="tab-bar-icon"><Plus className="h-6 w-6" aria-hidden="true" /></span>
+                <span>Report</span>
+              </Link>
+              {tabs.slice(2).map((item) => (
+                <Link
+                  key={item.label}
+                  to={item.path ? `${root}/${item.path}` : root}
+                  className="tab-bar-item"
+                  aria-current={isActive(item) ? 'page' : undefined}
+                >
+                  <span className="tab-bar-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+              <button type="button" className="tab-bar-item" onClick={() => setMobileOpen(true)} aria-label="Open menu" aria-expanded={mobileOpen}>
+                <span className="tab-bar-icon"><Menu className="h-[18px] w-[18px]" aria-hidden="true" /></span>
+                <span>Menu</span>
+              </button>
+            </nav>
+          )}
         </div>
       </div>
     </TooltipProvider>

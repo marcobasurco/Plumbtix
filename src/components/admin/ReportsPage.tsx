@@ -5,8 +5,8 @@ import { TicketReportDocument } from './TicketReportDocument';
 import { BarChart3, FileText, Wrench } from 'lucide-react';
 
 const TABS = [
-  { key: 'dashboard', label: 'Ticket Dashboard', icon: <BarChart3 className="h-4 w-4" /> },
-  { key: 'ticket-doc', label: 'Ticket Report (Print)', icon: <FileText className="h-4 w-4" /> },
+  { key: 'dashboard', label: 'Work order dashboard', icon: <BarChart3 className="h-4 w-4" /> },
+  { key: 'ticket-doc', label: 'Work order report (print)', icon: <FileText className="h-4 w-4" /> },
   { key: 'equipment', label: 'Equipment Register', icon: <Wrench className="h-4 w-4" /> },
 ] as const;
 

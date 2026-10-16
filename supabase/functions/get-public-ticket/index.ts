@@ -79,6 +79,7 @@ Deno.serve(async (req: Request) => {
         severity,
         issue_type,
         description,
+        location_note,
         assigned_technician,
         scheduled_date,
         scheduled_time_window,
@@ -89,7 +90,7 @@ Deno.serve(async (req: Request) => {
           id, name, address_line1, address_line2, city, state, zip,
           company:companies(id, name, logo_url)
         ),
-        space:spaces!inner(id, space_type, unit_number, common_area_type, floor),
+        space:spaces!inner(id, space_type, unit_number, common_area_type, label, floor),
         created_by:users!tickets_created_by_user_id_fkey(id, full_name)
       `)
       .eq('public_token', token)

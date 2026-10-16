@@ -9,7 +9,7 @@
 import { handleCors } from '../_shared/cors.ts';
 import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
-import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { z, parseBody, UUID_REGEX, PhoneSchema } from '../_shared/validation.ts';
 import { runInBackground } from '../_shared/background.ts';
 
 
@@ -25,7 +25,7 @@ const CreateOccupantSchema = z.object({
     .max(255)
     .email('Invalid email address')
     .transform((v) => v.trim().toLowerCase()),
-  phone: z.string().max(20).nullable().optional().transform((v) => v?.trim() || null),
+  phone: PhoneSchema,
 });
 
 Deno.serve(async (req: Request) => {
