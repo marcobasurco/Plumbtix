@@ -2,10 +2,23 @@
 
 ## [0.11.0] — Field-first UX, round 1 (October 2026)
 
-First of two UX rounds from the October 2026 PM-flow review. Everything here
-is visual/copy; no schema or authorization changes. Edge functions change only
-email wording (deploy `send-invitation`, `resend-invitation` and any function
-that imports `_shared/email-templates.ts`).
+First of two UX rounds from the October 2026 PM-flow review. Mostly visual/copy,
+plus one authorization change (below). Edge functions to redeploy:
+`update-ticket` (rules), `send-invitation`, `resend-invitation`, and the
+functions that import `_shared/email-templates.ts` (`create-ticket`,
+`add-comment`).
+
+### Authorization — Only Pro Roto dispatches (migration 00028)
+- Technician assignment, scheduled date/time window, quote and invoice are now
+  **proroto_admin-only** at the database trigger, the `update-ticket` edge
+  function and the UI. `pm_admin` could previously assign Pro Roto's
+  technicians and set schedules.
+- `pm_admin` transitions reduced to: `new → needs_info`, `needs_info → new`,
+  `waiting_approval → scheduled` (approve quote). Removed: `new → scheduled`,
+  `needs_info → scheduled`, `scheduled → needs_info`. `pm_user` unchanged
+  (approve quote only). `proroto_admin` unchanged.
+- The Actions panel for PM roles now shows only the actions they have; the
+  assigned technician and schedule remain visible in "Work details".
 
 ### Vocabulary
 - "Ticket" → **"work order"** everywhere a person reads it: navigation, list,
