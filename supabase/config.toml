@@ -14,8 +14,12 @@
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "storage"]
-extra_search_path = ["public"]
+# Only `public` is exposed through PostgREST. `storage` goes through the
+# Storage API (which applies the bucket policies), and GraphQL is unused.
+schemas = ["public"]
+# `extensions` so functions like gen_random_uuid()/uuid_generate_v4() resolve
+# for PostgREST callers — this is what production had before config push.
+extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
@@ -37,8 +41,11 @@ api_url = "http://127.0.0.1"
 
 [auth]
 enabled = true
-site_url = "http://localhost:5173"
-additional_redirect_urls = ["https://workorders.proroto.com", "https://workorders.proroto.com/reset-password"]
+# site_url is PRODUCTION: it is what `supabase config push` sets as the Auth
+# Site URL, the default redirect after password reset and {{ .SiteURL }} in
+# the auth emails. Local dev is listed under additional_redirect_urls.
+site_url = "https://workorders.proroto.com"
+additional_redirect_urls = ["https://workorders.proroto.com", "https://workorders.proroto.com/reset-password", "http://localhost:5173", "http://localhost:5173/reset-password"]
 # Mirrors production (Dashboard → Authentication → Sign In / Providers → Email).
 # Keep in sync with supabase/functions/_shared/validation.ts and src/lib/password.ts.
 minimum_password_length = 12
@@ -107,7 +114,9 @@ enabled = false
 
 [storage]
 enabled = true
-file_size_limit = "10MiB"
+# Global cap for uploads. Phone videos that fail client-side compression are
+# uploaded as-is; 50 MiB matches what production had before config push.
+file_size_limit = "50MiB"
 
 [realtime]
 enabled = true
