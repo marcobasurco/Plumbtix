@@ -262,7 +262,9 @@ export function CreateTicketWizard() {
 
   // ── Submit ─────────────────────────────────────────────────────────────
 
-  const handleSubmit = useCallback(async () => {
+  // Plain function on purpose: it is only ever called from handlers, and the
+  // React Compiler lint can't preserve a useCallback over derived values.
+  const handleSubmit = async () => {
     if (submitting || !whereDone || !whatDone) return;
     setSubmitting(true);
     setError(null);
@@ -354,7 +356,7 @@ export function CreateTicketWizard() {
           : "You'll get an email when it's scheduled.",
     });
     navigate(`../${ticketId}`, { replace: true, relative: 'path' });
-  }, [submitting, whereDone, whatDone, draft, isOther, validFiles, navigate]);
+  };
 
   // ── Screens ────────────────────────────────────────────────────────────
 
