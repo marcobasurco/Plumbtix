@@ -364,7 +364,7 @@ export function UsersPage() {
                               </div>
                               {(u.role === 'resident') && (
                                 <div className="flex items-center justify-between">
-                                  <Label className="text-xs">SMS updates for tickets</Label>
+                                  <Label className="text-xs">SMS updates for work orders</Label>
                                   <Switch checked={editSmsEnabled} onCheckedChange={setEditSmsEnabled} disabled={!editPhone.trim()} />
                                 </div>
                               )}
@@ -417,7 +417,7 @@ export function UsersPage() {
                                     <div className="flex items-center gap-2 pb-1">
                                       <Switch checked={editSmsEnabled} onCheckedChange={setEditSmsEnabled}
                                         disabled={!editPhone.trim()} id={`sms-${u.id}`} />
-                                      <Label htmlFor={`sms-${u.id}`} className="text-xs">SMS ticket updates</Label>
+                                      <Label htmlFor={`sms-${u.id}`} className="text-xs">SMS work order updates</Label>
                                     </div>
                                   )}
                                   {(u.role === 'pm_admin' || u.role === 'pm_user' || u.role === 'proroto_admin') && editPhone.trim() && (

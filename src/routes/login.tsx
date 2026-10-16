@@ -60,14 +60,14 @@ export function LoginPage() {
         <Card className="shadow-lg border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Sign in</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
+            <CardDescription>Use the email your invitation was sent to.</CardDescription>
           </CardHeader>
 
           <CardContent>
             {/* Error display */}
             {displayError && (
-              <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2.5 mb-4">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+              <div role="alert" className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2.5 mb-4">
+                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>{displayError}</span>
               </div>
             )}
@@ -104,7 +104,6 @@ export function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  minLength={8}
                   placeholder="••••••••"
                 />
               </div>
@@ -117,11 +116,11 @@ export function LoginPage() {
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                     Signing in…
                   </>
                 ) : (
-                  'Sign In'
+                  'Sign in'
                 )}
               </Button>
             </form>
@@ -133,13 +132,13 @@ export function LoginPage() {
               <p>
                 Have an invitation?{' '}
                 <Link to="/accept-invite" className="text-primary hover:underline font-medium">
-                  Accept PM Invite
+                  Accept your invitation
                 </Link>
               </p>
               <p>
-                Resident?{' '}
+                Live in one of the buildings?{' '}
                 <Link to="/claim-account" className="text-primary hover:underline font-medium">
-                  Claim Your Account
+                  Set up your resident account
                 </Link>
               </p>
             </div>

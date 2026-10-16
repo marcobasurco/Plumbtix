@@ -15,7 +15,7 @@ import {
 } from '@react-pdf/renderer';
 import type { TicketDetailRow, StatusLogRow } from '@/lib/tickets';
 import type { UserRole, TicketStatus, IssueType } from '@shared/types/enums';
-import { STATUS_LABELS, ISSUE_TYPE_LABELS, SEVERITY_LABELS } from '@shared/types/enums';
+import { STATUS_LABELS, ISSUE_TYPE_LABELS, SEVERITY_LABELS, formatSpaceLabel } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -210,9 +210,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
 
   const bld = ticket.building;
   const spc = ticket.space;
-  const spaceLabel = spc.space_type === 'unit' && spc.unit_number
-    ? `Unit ${spc.unit_number}`
-    : spc.common_area_type?.replace(/_/g, ' ') ?? spc.space_type;
+  const spaceLabel = formatSpaceLabel(spc);
 
   const sched = ticket.scheduling_preference as {
     type?: string; preferred_date?: string; preferred_time?: string;
@@ -515,7 +513,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
           <Text
             style={s.footerRight}
             render={({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) =>
-              `Ticket #${ticket.ticket_number}  \u00B7  Page ${pageNumber} / ${totalPages}`
+              `Work Order #${ticket.ticket_number}  \u00B7  Page ${pageNumber} / ${totalPages}`
             }
           />
         </View>

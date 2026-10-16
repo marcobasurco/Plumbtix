@@ -11,6 +11,12 @@ import { supabase } from './supabaseClient';
 import type { TicketStatus, TicketSeverity } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
+// Display helpers
+// ---------------------------------------------------------------------------
+
+export { formatSpaceLabel } from '@shared/types/enums';
+
+// ---------------------------------------------------------------------------
 // Ticket list
 // ---------------------------------------------------------------------------
 
@@ -92,6 +98,9 @@ export async function fetchTicketList(
       space:spaces!inner(id, space_type, unit_number, common_area_type, label),
       created_by:users!tickets_created_by_user_id_fkey(id, full_name)
     `, { count: 'exact' })
+    // Severity first: the ticket_severity enum is declared emergency → urgent →
+    // standard, so ascending enum order puts emergencies at the top. Then newest.
+    .order('severity', { ascending: true })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false }) // tiebreaker: stable order for equal timestamps
     .range(0, limit - 1);

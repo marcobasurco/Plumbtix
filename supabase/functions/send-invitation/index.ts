@@ -172,8 +172,8 @@ Deno.serve(async (req: Request) => {
           .single();
 
         const ROLE_LABELS: Record<string, string> = {
-          pm_admin: 'Property Manager Admin',
-          pm_user: 'Property Manager User',
+          pm_admin: 'Admin',
+          pm_user: 'Staff',
         };
 
         const { notifyInvitation } = await import('../_shared/notifications.ts');

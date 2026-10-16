@@ -63,7 +63,7 @@ export function SharingCard({ ticketId, publicToken, publicEnabled, onChanged }:
 
   const handleRegenerate = async () => {
     if (!window.confirm(
-      'Regenerate the public link?\n\nEvery previously shared link and printed QR code for this ticket will stop working.'
+      'Regenerate the public link?\n\nEvery previously shared link and printed QR code for this work order will stop working.'
     )) return;
     setRegenBusy(true);
     try {

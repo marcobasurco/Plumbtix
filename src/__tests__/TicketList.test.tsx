@@ -48,6 +48,7 @@ vi.mock('@/lib/tickets', () => ({
   fetchTicketList: vi.fn().mockResolvedValue({ rows: [], count: 0 }),
   TICKET_PAGE_SIZE: 50,
   fetchBuildingOptions: vi.fn().mockResolvedValue([]),
+  formatSpaceLabel: (s: { unit_number?: string | null }) => (s.unit_number ? `Unit ${s.unit_number}` : 'Common area'),
 }));
 
 describe('TicketList', () => {
@@ -55,17 +56,17 @@ describe('TicketList', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the tickets heading', async () => {
+  it('renders the work orders heading', async () => {
     const { TicketList } = await import('@/components/tickets/TicketList');
     render(
       <MemoryRouter>
         <TicketList />
       </MemoryRouter>
     );
-    expect(screen.getByText('Tickets')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Work orders' })).toBeDefined();
   });
 
-  it('shows empty state when no tickets', async () => {
+  it('shows empty state when there are no open work orders', async () => {
     const { TicketList } = await import('@/components/tickets/TicketList');
     render(
       <MemoryRouter>
@@ -73,7 +74,7 @@ describe('TicketList', () => {
       </MemoryRouter>
     );
     // Wait for loading to finish
-    await screen.findByText('No tickets found');
-    expect(screen.getByText('No tickets found')).toBeDefined();
+    await screen.findByText('No open work orders');
+    expect(screen.getByText('No open work orders')).toBeDefined();
   });
 });

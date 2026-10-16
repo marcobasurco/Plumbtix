@@ -140,7 +140,9 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
       <form onSubmit={handleSubmit} className="mt-2">
         <ErrorBanner message={postError} onDismiss={() => setPostError(null)} />
 
+        <label htmlFor="comment-text" className="sr-only">Add a comment</label>
         <textarea
+          id="comment-text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Add a comment…"

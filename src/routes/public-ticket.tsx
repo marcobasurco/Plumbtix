@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { STATUS_LABELS, SEVERITY_LABELS, ISSUE_TYPE_LABELS } from '@shared/types/enums';
+import { STATUS_LABELS, SEVERITY_LABELS, ISSUE_TYPE_LABELS, formatSpaceLabel } from '@shared/types/enums';
 import type { TicketStatus, TicketSeverity, IssueType } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
@@ -180,9 +180,7 @@ export function PublicTicketView() {
 
   const bld = ticket.building;
   const spc = ticket.space;
-  const spaceLabel = spc.space_type === 'unit' && spc.unit_number
-    ? `Unit ${spc.unit_number}`
-    : spc.common_area_type?.replace(/_/g, ' ') ?? spc.space_type;
+  const spaceLabel = formatSpaceLabel(spc);
 
   return (
     <div className="min-h-screen bg-background">

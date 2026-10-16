@@ -57,8 +57,8 @@ const ROLE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | '
 };
 
 const INVITE_ROLE_LABELS: Record<string, string> = {
-  pm_admin: 'PM Admin',
-  pm_user: 'PM Staff',
+  pm_admin: 'Admin',
+  pm_user: 'Staff',
 };
 
 // ---------------------------------------------------------------------------
@@ -565,7 +565,7 @@ export function CompanyDetail() {
                   ))}
                 </select>
                 <p className="text-xs text-muted-foreground">
-                  PM Admin can manage buildings & invite others. PM Staff can create tickets and view data.
+                  Admins manage buildings and invite others. Staff can report problems and view work orders for their buildings.
                 </p>
               </div>
             </div>

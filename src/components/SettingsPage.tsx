@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Save, Smartphone, Shield, Info } from 'lucide-react';
+import { ROLE_LABELS } from '@shared/types/enums';
 
 // E.164 validation: + followed by 1–15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -165,10 +166,7 @@ export function SettingsPage() {
             <span className="text-muted-foreground font-medium">Role</span>
             <span>
               <Badge variant="secondary" className="text-xs">
-                {role === 'proroto_admin' ? 'Pro Roto Admin' :
-                 role === 'pm_admin' ? 'Property Manager' :
-                 role === 'pm_user' ? 'PM User' :
-                 'Resident'}
+                {role ? ROLE_LABELS[role] : '—'}
               </Badge>
             </span>
           </div>
@@ -218,7 +216,7 @@ export function SettingsPage() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label htmlFor="sms-toggle" className="text-sm font-medium">
-                  Receive SMS updates for my tickets
+                  Text me when my work orders change
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   Get a text when your work order is completed or updated

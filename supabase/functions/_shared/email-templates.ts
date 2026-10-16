@@ -181,7 +181,7 @@ export function invitationEmail(data: InvitationEmailData): { subject: string; h
       title: 'You\'re Invited!',
       body: `
         <p style="margin:0 0 12px">Hi ${esc(data.recipientName)},</p>
-        <p style="margin:0 0 16px">${esc(data.invitedByName)} has invited you to join <strong>${esc(data.companyName)}</strong> on the Pro Roto Work Orders portal as a <strong>${esc(data.role)}</strong>.</p>
+        <p style="margin:0 0 16px">${esc(data.invitedByName)} has invited you to join <strong>${esc(data.companyName)}</strong> on the Pro Roto Work Orders portal. Your role: <strong>${esc(data.role)}</strong>.</p>
         <p style="margin:0 0 4px">This is where ${esc(data.companyName)} manages plumbing work orders, tracks maintenance requests, and coordinates with Pro Roto Inc.</p>
       `,
       ctaUrl: acceptUrl,
@@ -250,12 +250,12 @@ export function newTicketEmail(data: NewTicketEmailData): { subject: string; htm
   const issueLabelText = data.issueType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   return {
-    subject: `${prefix}New Ticket #${data.ticketNumber} — ${issueLabelText} at ${data.buildingName}`,
+    subject: `${prefix}New work order #${data.ticketNumber} — ${issueLabelText} at ${data.buildingName}`,
     html: layout({
       preheader: `${data.createdByName} submitted a ${data.severity} ${issueLabelText} request for ${data.buildingName}`,
       title: `${isEmergency ? '🚨 ' : ''}New Work Order #${data.ticketNumber}`,
       body: `
-        <p style="margin:0 0 16px">A new ticket has been submitted and needs your attention.</p>
+        <p style="margin:0 0 16px">A new work order has been submitted and needs your attention.</p>
         ${detailTable([
           ['Ticket', `#${esc(data.ticketNumber)}`],
           ['Issue Type', esc(issueLabelText)],
@@ -269,7 +269,7 @@ export function newTicketEmail(data: NewTicketEmailData): { subject: string; htm
         ${data.description ? `<div style="margin:16px 0;padding:12px 16px;background:${BG_COLOR};border-radius:8px;border-left:3px solid ${BRAND_COLOR};font-size:14px;line-height:1.5;color:${TEXT_COLOR}">${escMultiline(data.description)}</div>` : ''}
       `,
       ctaUrl: ticketUrl,
-      ctaLabel: isEmergency ? 'View Emergency Ticket' : 'View Ticket',
+      ctaLabel: isEmergency ? 'View emergency work order' : 'View work order',
     }),
   };
 }
@@ -342,7 +342,7 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
       message = 'This work order has been cancelled.';
       break;
     case 'needs_info':
-      message = 'Additional information is needed before we can proceed. Please check the ticket for details.';
+      message = 'Additional information is needed before we can proceed. Please check the work order for details.';
       break;
     default:
       message = `The status has been updated to ${esc(newLabelText)}.`;
@@ -351,10 +351,10 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
   const isApprovalNeeded = data.newStatus === 'waiting_approval';
 
   return {
-    subject: `Ticket #${data.ticketNumber} — ${newLabelText}${isApprovalNeeded ? ' — Approval Required' : ''}`,
+    subject: `Work order #${data.ticketNumber} — ${newLabelText}${isApprovalNeeded ? ' — Approval required' : ''}`,
     html: layout({
       preheader: `${issueLabelText} at ${data.buildingName} is now ${newLabelText}`,
-      title: `Ticket #${data.ticketNumber} Update`,
+      title: `Work order #${data.ticketNumber} update`,
       body: `
         <p style="margin:0 0 12px">Hi ${esc(data.recipientName)},</p>
         <p style="margin:0 0 16px">${message}</p>
@@ -367,7 +367,7 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
         ])}
       `,
       ctaUrl: ticketUrl,
-      ctaLabel: isApprovalNeeded ? 'Review & Approve' : 'View Ticket',
+      ctaLabel: isApprovalNeeded ? 'Review & approve' : 'View work order',
     }),
   };
 }
@@ -393,13 +393,13 @@ export function commentEmail(data: CommentEmailData): { subject: string; html: s
   const preview = `${data.commentText.slice(0, 80)}${data.commentText.length > 80 ? '...' : ''}`;
 
   return {
-    subject: `New comment on Ticket #${data.ticketNumber} — ${data.buildingName}`,
+    subject: `New comment on work order #${data.ticketNumber} — ${data.buildingName}`,
     html: layout({
       preheader: `${data.authorName} commented: "${preview}"`,
       title: `New Comment on #${data.ticketNumber}`,
       body: `
         <p style="margin:0 0 12px">Hi ${esc(data.recipientName)},</p>
-        <p style="margin:0 0 16px"><strong>${esc(data.authorName)}</strong> (${esc(data.authorRole)}) left a comment on ticket #${esc(data.ticketNumber)}:</p>
+        <p style="margin:0 0 16px"><strong>${esc(data.authorName)}</strong> (${esc(data.authorRole)}) left a comment on work order #${esc(data.ticketNumber)}:</p>
         <div style="margin:16px 0;padding:12px 16px;background:${data.isInternal ? '#fffbeb' : BG_COLOR};border-radius:8px;border-left:3px solid ${data.isInternal ? '#f59e0b' : BRAND_COLOR};font-size:14px;line-height:1.5;color:${TEXT_COLOR};white-space:pre-wrap">${escMultiline(data.commentText)}</div>
         ${data.isInternal ? `<p style="margin:0 0 4px;font-size:12px;color:#92400e;font-weight:600">⚠️ Internal Note — visible only to Pro Roto staff</p>` : ''}
       `,

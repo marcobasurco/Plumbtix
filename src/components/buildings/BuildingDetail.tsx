@@ -491,8 +491,8 @@ export function BuildingDetail() {
         <div className="mt-8">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <div className="text-base font-semibold">PM User Access</div>
-              <div className="text-xs text-muted-foreground mt-0.5">Assign PM Users who can view and manage tickets for this building</div>
+              <div className="text-base font-semibold">Staff access</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Choose which staff can see and report work orders for this building</div>
             </div>
           </div>
           <Card>
