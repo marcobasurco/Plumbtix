@@ -8,6 +8,11 @@ plus one authorization change (below). Edge functions to redeploy:
 functions that import `_shared/email-templates.ts` (`create-ticket`,
 `add-comment`).
 
+### Fix: email sign-in disabled by config push
+- `[auth.email] enable_signup` is the Email *provider* switch, not self-signup;
+  pushing it as `false` turned off email sign-in for everyone. Now `true`, with
+  self-signup disabled by the global `[auth] enable_signup = false`.
+
 ### config.toml aligned with production
 - `supabase config push` is now the way Auth/API/Storage settings reach
   production, so the file must describe production: Site URL is
