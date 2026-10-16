@@ -66,6 +66,11 @@ const CORE_NAV: NavItem[] = [
   { label: 'Analytics', path: 'analytics', matchSegment: 'analytics', icon: <BarChart3 className="h-[18px] w-[18px]" />, section: 'Main' },
 ];
 
+// Property-company Admins manage their own people (invite, building access).
+const PM_ADMIN_EXTRA: NavItem[] = [
+  { label: 'Team', path: 'team', matchSegment: 'team', icon: <Users2 className="h-[18px] w-[18px]" aria-hidden="true" />, section: 'Main' },
+];
+
 const ADMIN_EXTRA: NavItem[] = [
   { label: 'Companies', path: 'companies', matchSegment: 'companies', icon: <Briefcase className="h-[18px] w-[18px]" />, section: 'Management' },
   { label: 'Users', path: 'users', matchSegment: 'users', icon: <Users2 className="h-[18px] w-[18px]" />, section: 'Management' },
@@ -102,7 +107,9 @@ export function DashboardLayout({ title: _title, children }: Props) {
   }, [darkMode]);
 
   // Build nav
-  const nav = role === 'proroto_admin' ? [...CORE_NAV, ...ADMIN_EXTRA] : CORE_NAV;
+  const nav = role === 'proroto_admin' ? [...CORE_NAV, ...ADMIN_EXTRA]
+    : role === 'pm_admin' ? [...CORE_NAV, ...PM_ADMIN_EXTRA]
+    : CORE_NAV;
   const pathAfterRoot = location.pathname.replace(root, '').replace(/^\//, '');
   const firstSegment = pathAfterRoot.split('/')[0] || '';
 

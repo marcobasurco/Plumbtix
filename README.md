@@ -156,7 +156,7 @@ work-orders/
 | Role | Scope | Ticket Transitions |
 |------|-------|-------------------|
 | `proroto_admin` | All companies | Full lifecycle; only role that schedules, assigns technicians, cancels, and sets quote/invoice |
-| `pm_admin` | Own company | `new → needs_info`, `needs_info → new`, `waiting_approval → scheduled` (approve quote). No scheduling, assignment or cancel — only Pro Roto dispatches (migration 00028) |
+| `pm_admin` | Own company | `new → needs_info`, `needs_info → new`, `waiting_approval → scheduled` (approve quote). No scheduling, assignment or cancel — only Pro Roto dispatches (migration 00028). Invites Admins/Staff and sets Staff building access from the Team page |
 | `pm_user` | Entitled buildings | `waiting_approval → scheduled` (approve quote) only |
 | `resident` | Own space | None (create + comment only) |
 

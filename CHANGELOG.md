@@ -20,6 +20,14 @@ functions that import `_shared/email-templates.ts` (`create-ticket`,
 - The Actions panel for PM roles now shows only the actions they have; the
   assigned technician and schedule remain visible in "Work details".
 
+### Team page for property-company Admins (`/dashboard/team`)
+- Admins can now invite Admins and Staff, resend or revoke pending
+  invitations, and choose which buildings each Staff member sees — all from
+  their own dashboard. The backend already allowed this (`send-invitation`,
+  `resend-invitation`, `delete-invitation`, `building_entitlements` RLS); there
+  was simply no PM-side screen for it, so every invite had to go through Pro
+  Roto. Nav item "Team" appears for `pm_admin` only.
+
 ### Vocabulary
 - "Ticket" → **"work order"** everywhere a person reads it: navigation, list,
   detail, wizard, dashboard, settings, dispatch, reports, PDF footer and every

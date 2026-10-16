@@ -421,6 +421,21 @@ export async function fetchEntitlements(buildingId: string): Promise<Entitlement
   return (data ?? []) as EntitlementRow[];
 }
 
+/**
+ * Every entitlement the caller can see — for pm_admin that is their whole
+ * company (RLS `pm_admin_company_entitlements`). Used by the Team page to show
+ * and edit building access per person instead of per building.
+ */
+export async function fetchAllEntitlements(): Promise<EntitlementRow[]> {
+  const { data, error } = await supabase
+    .from('building_entitlements')
+    .select('*')
+    .order('created_at');
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as EntitlementRow[];
+}
+
 export async function createEntitlement(buildingId: string, userId: string): Promise<EntitlementRow> {
   return invokeFunction<EntitlementRow>('create-entitlement', {
     building_id: buildingId,
