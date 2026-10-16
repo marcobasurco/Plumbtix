@@ -341,6 +341,16 @@
   .ticket-filter-select, .ticket-filter-search { font-size: 16px; min-height: 44px; }
 }
 .form-input::placeholder { color: hsl(var(--muted-foreground)); }
+
+/* iOS Safari gives date/time inputs an intrinsic width and ignores width:100%
+   unless the native appearance is removed — otherwise they spill past the
+   card edge on a phone. Applies to every date/time field in the app. */
+input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"] {
+  -webkit-appearance: none; appearance: none;
+  min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;
+  text-align: left;
+}
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .form-textarea { min-height: 80px; resize: vertical; }
 .form-select {
   appearance: none;
