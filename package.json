@@ -6,7 +6,7 @@
   "description": "PlumbTix \u2014 Work Order Management by Pro Roto Inc.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/write-csp-headers.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

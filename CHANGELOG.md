@@ -94,6 +94,13 @@ functions that import `_shared/email-templates.ts` (`create-ticket`,
   state it is, the text says which. Charts, metric cards, notices, avatars and
   the public page use the same families. Manifest / theme-color updated.
 
+### Deploy previews: Netlify review toolbar no longer a grey box
+- The Content-Security-Policy now comes from `scripts/write-csp-headers.mjs`
+  (writes `dist/_headers` at build time) instead of `netlify.toml`, so deploy
+  previews can allow Netlify's review toolbar (`frame-src app.netlify.com`)
+  while production keeps the strict policy. Also corrects the stale
+  "report-only" comment — the policy has been enforced since 0.10.0.
+
 ### Mobile bottom tab bar
 - On phones: Overview · Work orders · **Report** (raised, one tap from
   anywhere) · Buildings (Dispatch for Pro Roto) · Menu. Hidden on the report
