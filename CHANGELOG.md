@@ -1,5 +1,15 @@
 # Work Orders Changelog
 
+## [Unreleased]
+
+### Auth emails through Resend
+- Password-reset, email-change and magic-link emails now go through Resend
+  (`[auth.email.smtp]` in `config.toml`, pushed with `supabase config push`)
+  instead of Supabase's built-in mailer, which allows only a few emails per
+  hour per project. Branded templates in `supabase/templates/` use the app's
+  vocabulary and layout. Reset links expire after one hour; one request per
+  minute per address.
+
 ## [0.10.0] — Tenant-Boundary Hardening (October 2026)
 
 Fixes from the October 2026 production-readiness review. No UI changes; all

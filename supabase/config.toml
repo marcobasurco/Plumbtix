@@ -51,6 +51,56 @@ password_requirements = "lower_upper_letters_digits_symbols"
 enable_signup = false
 double_confirm_changes = true
 enable_confirmations = false
+# Password-reset links: 1 hour is plenty and limits the window if an inbox is
+# compromised. Minimum 60 s between resend requests for the same address.
+otp_expiry = 3600
+max_frequency = "1m0s"
+
+# ---------------------------------------------------------------------------
+# Auth emails go through Resend, same sender as the app's own notifications.
+# Supabase's built-in mailer allows only a few emails per hour per project —
+# the day 150 properties' staff start resetting passwords it would silently
+# drop most of them.
+#
+# Production: push this block with `supabase config push` (CLI ≥ 2.0), or set
+# the same values in Dashboard → Authentication → Emails → SMTP Settings.
+# RESEND_API_KEY must exist in the shell for `config push` and in
+# supabase/.env for local `supabase start`.
+# ---------------------------------------------------------------------------
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "notifications@proroto.com"
+sender_name = "Pro Roto Work Orders"
+
+# Branded templates (same vocabulary as the app). Variables:
+#   {{ .ConfirmationURL }}  the one-time link
+#   {{ .SiteURL }}          site_url above
+#   {{ .Email }} / {{ .NewEmail }}
+[auth.email.template.recovery]
+subject = "Reset your Pro Roto Work Orders password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new email for Pro Roto Work Orders"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.email.template.magic_link]
+subject = "Your sign-in link for Pro Roto Work Orders"
+content_path = "./supabase/templates/magic_link.html"
+
+# Unused flows (self-signup is off; invitations are sent by the app through
+# send-invitation), kept on-brand in case they are ever turned on.
+[auth.email.template.invite]
+subject = "You're invited to Pro Roto Work Orders"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.confirmation]
+subject = "Confirm your email for Pro Roto Work Orders"
+content_path = "./supabase/templates/confirmation.html"
 
 [auth.external.google]
 enabled = false
