@@ -8,6 +8,14 @@ plus one authorization change (below). Edge functions to redeploy:
 functions that import `_shared/email-templates.ts` (`create-ticket`,
 `add-comment`).
 
+### config.toml aligned with production
+- `supabase config push` is now the way Auth/API/Storage settings reach
+  production, so the file must describe production: Site URL is
+  `https://workorders.proroto.com` (was localhost — it drives the reset-link
+  fallback and `{{ .SiteURL }}` in auth emails), PostgREST exposes only
+  `public` with `extensions` on the search path, and the upload cap is back to
+  50 MiB (10 MiB would have rejected phone videos that skip compression).
+
 ### Auth emails through Resend
 - Password-reset, email-change and magic-link emails now go through Resend
   (`[auth.email.smtp]` in `config.toml`, pushed with `supabase config push`)
