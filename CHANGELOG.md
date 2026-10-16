@@ -1,5 +1,61 @@
 # Work Orders Changelog
 
+## [0.11.0] — Field-first UX, round 1 (October 2026)
+
+First of two UX rounds from the October 2026 PM-flow review. Everything here
+is visual/copy; no schema or authorization changes. Edge functions change only
+email wording (deploy `send-invitation`, `resend-invitation` and any function
+that imports `_shared/email-templates.ts`).
+
+### Vocabulary
+- "Ticket" → **"work order"** everywhere a person reads it: navigation, list,
+  detail, wizard, dashboard, settings, dispatch, reports, PDF footer and every
+  email subject. Code identifiers are unchanged.
+- Role labels → **Admin** (`pm_admin`) and **Staff** (`pm_user`). "Property
+  Manager Admin" never fit on a phone; the labels now match how the property
+  companies talk about their own people. Also used in invitation emails.
+- Locations are named one way everywhere via `formatSpaceLabel()` in
+  `shared/types/enums.ts` — a raw `common_area` key no longer leaks into the
+  list, PDF or public page.
+
+### Report a problem
+- Primary **"Report a problem"** button on the overview for every role and on
+  the work-order list, including the empty state. The wizard's submit is now
+  "Send work order" and the success toast shows the new number
+  ("Work order #123 sent to Pro Roto").
+- Choosing "Gas smell" shows a leave-the-area / call-911 line before anything
+  else.
+
+### Work-order list
+- Opens on **open work orders**, emergencies first (severity-first ordering).
+- One-tap chips — Open · Emergencies · Needs my approval · All — with status,
+  building and date filters folded under "More filters". Search is labelled
+  and uses `type="search"`.
+- Emergencies get a red left edge in both the card and the table.
+
+### Work-order detail
+- Header leads with *what* and *where* ("Water heater · Hoover Pavilion, Unit
+  3B"); the number, badges and date sit under it; Print/PDF no longer push the
+  badges below the fold on a phone.
+- Action buttons say what they do — "Approve quote ($450)", "Dispatch
+  technician", "I've added the info", "Mark completed" — instead of the
+  destination status. Cancelling asks for confirmation.
+- Status history and the dashboard use design tokens, so dark mode is readable.
+
+### Accessibility and touch
+- 44 px minimum targets for the sidebar links, header icons, filter chips,
+  attachment actions and the lightbox controls; 16 px inputs on touch screens
+  (no iOS zoom).
+- Visible focus rings on card-style buttons; `aria-label`s on icon-only
+  buttons; labels on the search box, comment box and action-panel fields.
+- Attachment delete is always visible on touch (no hover-only control) and
+  confirms with the app's dialog instead of `window.confirm`. Lightbox closes
+  with Esc and pages with the arrow keys.
+- `prefers-reduced-motion` honoured globally and in framer-motion
+  (`MotionConfig reducedMotion="user"`).
+- Load failures show a **Try again** button, with friendly copy for network and
+  expired-session errors (`friendlyError()`).
+
 ## [0.10.0] — Tenant-Boundary Hardening (October 2026)
 
 Fixes from the October 2026 production-readiness review. No UI changes; all

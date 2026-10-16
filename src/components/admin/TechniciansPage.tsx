@@ -118,7 +118,7 @@ export function TechniciansPage() {
         <div className="min-w-0">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">Technicians</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Pro Roto field crew — used for ticket assignment
+            Pro Roto field crew — used for work order assignment
           </p>
         </div>
         <Button onClick={() => setShowForm((v) => !v)}>

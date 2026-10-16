@@ -1,5 +1,5 @@
 // =============================================================================
-// Work Orders — Create Ticket Wizard
+// Work Orders — Create Work Order Wizard
 // =============================================================================
 // 6-step flow:
 //   1. Select Building  (PostgREST, RLS-scoped)
@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   fetchBuildingOptions,
   fetchSpacesForBuilding,
+  formatSpaceLabel,
   ALLOWED_MIME_TYPES,
   type BuildingOption,
   type SpaceOption,
@@ -32,7 +33,6 @@ import {
   ISSUE_TYPE_LABELS,
   TICKET_SEVERITIES,
   SEVERITY_LABELS,
-  COMMON_AREA_LABELS,
 } from '@shared/types/enums';
 import type { IssueType, TicketSeverity } from '@shared/types/enums';
 import { DEFAULT_SEVERITY } from '@shared/types/transitions';
@@ -40,6 +40,7 @@ import { ErrorBanner } from '@/components/ErrorBanner';
 import { Loading } from '@/components/Loading';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -195,6 +196,7 @@ export function CreateTicketWizard() {
     }
 
     const ticketId = result.data.ticket.id;
+    const ticketNumber = result.data.ticket.ticket_number;
 
     // 2. Upload files (with video compression)
     if (validFiles.length > 0) {
@@ -271,8 +273,13 @@ export function CreateTicketWizard() {
       }
     }
 
-    // 3. Redirect to detail page (relative to current dashboard)
+    // 3. Confirm, then redirect to the detail page (relative to current dashboard)
     setSubmitting(false);
+    toast.success(`Work order #${ticketNumber} sent to Pro Roto`, {
+      description: state.severity === 'emergency'
+        ? "We've been paged. Keep your phone nearby."
+        : "You'll get an email when it's scheduled.",
+    });
     navigate(`../${ticketId}`, { replace: true, relative: 'path' });
   }, [state, validFiles, submitting, navigate]);
 
@@ -282,13 +289,7 @@ export function CreateTicketWizard() {
   const selectedSpace = spaces.find((s) => s.id === state.spaceId);
 
   function spaceLabel(s: SpaceOption): string {
-    if (s.space_type === 'unit' && s.unit_number) {
-      return `Unit ${s.unit_number}${s.floor != null ? ` (Floor ${s.floor})` : ''}`;
-    }
-    const label = s.common_area_type
-      ? (s.label || (COMMON_AREA_LABELS[s.common_area_type as keyof typeof COMMON_AREA_LABELS] ?? s.common_area_type))
-      : s.space_type;
-    return `${label}${s.floor != null ? ` (Floor ${s.floor})` : ''}`;
+    return `${formatSpaceLabel(s)}${s.floor != null ? ` (Floor ${s.floor})` : ''}`;
   }
 
   // ── Steps ────────────────────────────────────────────────────────────
@@ -359,6 +360,11 @@ export function CreateTicketWizard() {
         return (
           <div>
             <h2 style={stepTitle}>3. What's the issue?</h2>
+            {state.issueType === 'gas_smell' && (
+              <p role="alert" style={{ ...muted, color: 'hsl(var(--destructive))', fontWeight: 600, marginBottom: '12px' }}>
+                If you smell gas: leave the area, don't flip switches, and call 911 or your gas utility first. Then send this work order.
+              </p>
+            )}
             <div style={optionGrid}>
               {ISSUE_TYPES.map((it) => (
                 <button
@@ -571,7 +577,7 @@ export function CreateTicketWizard() {
                 ))}
                 {uploadProgress.some((u) => u.status === 'failed') && (
                   <p style={{ color: 'hsl(var(--foreground))', fontSize: '0.8rem', marginTop: '8px', background: 'hsl(var(--muted))', padding: '8px', borderRadius: '4px', border: '1px solid hsl(var(--border))' }}>
-                    Some uploads failed. The ticket was created successfully — you can retry from the ticket detail page.
+                    Some uploads failed. The work order was created — you can add the files again from its page.
                   </p>
                 )}
               </div>
@@ -587,7 +593,7 @@ export function CreateTicketWizard() {
     <div style={{ maxWidth: '640px' }}>
       {/* Back to list */}
       <button type="button" onClick={() => navigate('..', { relative: 'path' })} style={backLink}>
-        ← Back to tickets
+        ← Back to work orders
       </button>
 
       {/* Progress bar */}
@@ -630,7 +636,7 @@ export function CreateTicketWizard() {
               type="submit"
               disabled={submitting}
             >
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating Ticket…</> : 'Create Ticket'}
+              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Sending…</> : 'Send work order'}
             </Button>
           )}
         </div>

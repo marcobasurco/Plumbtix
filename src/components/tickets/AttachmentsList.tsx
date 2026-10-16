@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { shouldCompress, compressVideo } from '@/lib/videoCompressor';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   ImageIcon, FileIcon, Download, X, ChevronLeft, ChevronRight,
   Plus, Loader2, Trash2, Play,
@@ -85,6 +86,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState<UploadingFile[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AttachmentWithUrl | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Load attachments + signed URLs ───
@@ -222,8 +224,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
 
   // ─── Delete handler ───
   const handleDelete = useCallback(async (att: AttachmentWithUrl) => {
-    if (!confirm(`Delete "${att.file_name}"? This cannot be undone.`)) return;
-
+    setPendingDelete(null);
     setDeleting(att.id);
     const result = await deleteAttachment({ id: att.id });
     setDeleting(null);
@@ -246,6 +247,19 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
   const closeLightbox = () => setLightboxIndex(null);
   const prevImage = () => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i));
   const nextImage = () => setLightboxIndex((i) => (i !== null && i < mediaItems.length - 1 ? i + 1 : i));
+
+  // Keyboard: Esc closes, arrows move — the lightbox is a modal, so it must
+  // be operable without a mouse.
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxIndex(null);
+      else if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i));
+      else if (e.key === 'ArrowRight') setLightboxIndex((i) => (i !== null && i < mediaItems.length - 1 ? i + 1 : i));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxIndex, mediaItems.length]);
 
   const isUploading = uploading.some((u) =>
     u.status === 'compressing' || u.status === 'uploading' || u.status === 'registering'
@@ -381,7 +395,8 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                 <button
                   type="button"
                   onClick={() => openLightbox(att.id)}
-                  className="w-full h-full cursor-pointer"
+                  className="w-full h-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                  aria-label={`Open ${att.file_name}`}
                 >
                   {isVideoType(att.file_type) ? (
                     <>
@@ -413,17 +428,18 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(att); }}
+                  onClick={(e) => { e.stopPropagation(); setPendingDelete(att); }}
                   disabled={deleting === att.id}
-                  className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/50 text-white/80
-                             hover:bg-red-600 hover:text-white transition-colors
-                             opacity-0 group-hover:opacity-100 z-10"
-                  title="Delete"
+                  aria-label={`Delete ${att.file_name}`}
+                  className="absolute top-1 right-1 h-9 w-9 inline-flex items-center justify-center rounded-full bg-black/55 text-white
+                             hover:bg-red-600 transition-colors z-10
+                             opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   {deleting === att.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -449,10 +465,11 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="shrink-0"
+              className="shrink-0 h-10 w-10 p-0"
               onClick={() => window.open(att.signedUrl!, '_blank')}
+              aria-label={`Download ${att.file_name}`}
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="h-4 w-4" aria-hidden="true" />
             </Button>
           ) : (
             <span className="text-xs text-destructive">Error</span>
@@ -460,14 +477,15 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 text-muted-foreground hover:text-destructive"
+            className="shrink-0 h-10 w-10 p-0 text-muted-foreground hover:text-destructive"
             disabled={deleting === att.id}
-            onClick={() => handleDelete(att)}
+            onClick={() => setPendingDelete(att)}
+            aria-label={`Delete ${att.file_name}`}
           >
             {deleting === att.id ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
             )}
           </Button>
         </div>
@@ -476,24 +494,29 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
       {/* ─── Lightbox overlay (images + videos) ─── */}
       {lightboxIndex !== null && mediaItems[lightboxIndex] && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={mediaItems[lightboxIndex].file_name}
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={closeLightbox}
         >
           <button
             type="button"
             onClick={closeLightbox}
-            className="absolute top-4 right-4 text-white/80 hover:text-white z-10"
+            className="absolute top-4 right-4 h-11 w-11 inline-flex items-center justify-center rounded-full text-white/80 hover:text-white hover:bg-white/10 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            aria-label="Close preview"
           >
-            <X className="h-7 w-7" />
+            <X className="h-7 w-7" aria-hidden="true" />
           </button>
 
           {lightboxIndex > 0 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); prevImage(); }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white z-10"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 h-12 w-12 inline-flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              aria-label="Previous"
             >
-              <ChevronLeft className="h-10 w-10" />
+              <ChevronLeft className="h-10 w-10" aria-hidden="true" />
             </button>
           )}
 
@@ -519,9 +542,10 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); nextImage(); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white z-10"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 h-12 w-12 inline-flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              aria-label="Next"
             >
-              <ChevronRight className="h-10 w-10" />
+              <ChevronRight className="h-10 w-10" aria-hidden="true" />
             </button>
           )}
 
@@ -538,6 +562,16 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+        title="Delete this file?"
+        description={pendingDelete ? `"${pendingDelete.file_name}" will be removed from this work order. This can't be undone.` : ''}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete); }}
+      />
     </div>
   );
 }

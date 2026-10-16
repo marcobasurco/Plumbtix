@@ -118,9 +118,30 @@ export const COMMON_AREA_LABELS: Record<CommonAreaType, string> = {
   other: 'Other',
 };
 
+/**
+ * One way to name a location everywhere (list, detail, wizard, PDF, public
+ * page, emails). Never shows a raw enum key like `common_area` to a person.
+ */
+export function formatSpaceLabel(space: {
+  space_type: string;
+  unit_number?: string | null;
+  common_area_type?: string | null;
+  label?: string | null;
+}): string {
+  if (space.label) return space.label;
+  if (space.space_type === 'unit') {
+    return space.unit_number ? `Unit ${space.unit_number}` : 'Unit';
+  }
+  const key = space.common_area_type as CommonAreaType | null | undefined;
+  if (key && key in COMMON_AREA_LABELS) return COMMON_AREA_LABELS[key];
+  return 'Common area';
+}
+
+// Role labels as people see them. "Admin" and "Staff" are the property
+// company's own vocabulary; "Property Manager Admin" never fit on a phone.
 export const ROLE_LABELS: Record<UserRole, string> = {
   proroto_admin: 'Pro Roto Admin',
-  pm_admin: 'Property Manager Admin',
-  pm_user: 'Property Manager',
+  pm_admin: 'Admin',
+  pm_user: 'Staff',
   resident: 'Resident',
 };

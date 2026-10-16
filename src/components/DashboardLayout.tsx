@@ -61,7 +61,7 @@ interface NavItem {
 
 const CORE_NAV: NavItem[] = [
   { label: 'Overview', path: '', matchSegment: '__home__', icon: <LayoutDashboard className="h-[18px] w-[18px]" />, section: 'Main' },
-  { label: 'Tickets', path: 'tickets', matchSegment: 'tickets', icon: <Ticket className="h-[18px] w-[18px]" />, section: 'Main' },
+  { label: 'Work orders', path: 'tickets', matchSegment: 'tickets', icon: <Ticket className="h-[18px] w-[18px]" aria-hidden="true" />, section: 'Main' },
   { label: 'Buildings', path: 'buildings', matchSegment: 'buildings', icon: <Building2 className="h-[18px] w-[18px]" />, section: 'Main' },
   { label: 'Analytics', path: 'analytics', matchSegment: 'analytics', icon: <BarChart3 className="h-[18px] w-[18px]" />, section: 'Main' },
 ];
@@ -164,7 +164,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
       </div>
 
       {/* Nav links grouped by section */}
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" aria-label="Main">
         {Array.from(sections.entries()).map(([section, items], idx) => (
           <div key={section}>
             {idx > 0 && <div className="sidebar-section-label">{section}</div>}
@@ -173,6 +173,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                 key={item.label}
                 to={item.path ? `${root}/${item.path}` : root}
                 className={`sidebar-link ${isActive(item) ? 'active' : ''}`}
+                aria-current={isActive(item) ? 'page' : undefined}
                 onClick={closeMobile}
               >
                 {item.icon}
@@ -187,11 +188,11 @@ export function DashboardLayout({ title: _title, children }: Props) {
       <div className="sidebar-footer">
         <Button
           variant="ghost"
-          className="w-full justify-start text-muted-foreground/60 hover:text-foreground gap-2.5"
+          className="w-full justify-start min-h-[44px] text-muted-foreground hover:text-foreground gap-2.5"
           onClick={signOut}
         >
-          <LogOut className="h-[18px] w-[18px]" />
-          Sign Out
+          <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />
+          Sign out
         </Button>
       </div>
     </>
@@ -205,6 +206,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
           <div
             className="fixed inset-0 bg-black/50 z-[39] md:hidden"
             onClick={closeMobile}
+            aria-hidden="true"
           />
         )}
 
@@ -221,17 +223,18 @@ export function DashboardLayout({ title: _title, children }: Props) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="mobile-menu-btn h-8 w-8"
+                className="mobile-menu-btn h-11 w-11 -ml-2"
                 onClick={() => setMobileOpen(true)}
-                aria-label="Menu"
+                aria-label="Open menu"
+                aria-expanded={mobileOpen}
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
 
               {/* Breadcrumb-style title */}
               <div className="flex items-center gap-1.5 text-sm">
                 <span className="text-muted-foreground font-medium hidden sm:inline">PlumbTix</span>
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 hidden sm:block" />
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 hidden sm:block" aria-hidden="true" />
                 <span className="content-header-title">{activeLabel}</span>
               </div>
             </div>
@@ -246,9 +249,10 @@ export function DashboardLayout({ title: _title, children }: Props) {
                     variant="ghost"
                     size="icon"
                     onClick={() => setDarkMode(!darkMode)}
-                    className="h-8 w-8"
+                    className="h-11 w-11 sm:h-9 sm:w-9"
+                    aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                   >
-                    {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    {darkMode ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{darkMode ? 'Light mode' : 'Dark mode'}</TooltipContent>
@@ -257,7 +261,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
               {/* User dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 gap-2 px-2">
+                  <Button variant="ghost" className="h-11 sm:h-9 gap-2 px-2" aria-label="Account menu">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-[10px] font-bold text-white">
                         {initials}
@@ -275,7 +279,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate(`${root}/settings`)}>
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setDarkMode(!darkMode)}>
@@ -284,7 +288,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                     Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
