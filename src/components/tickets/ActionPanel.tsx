@@ -17,7 +17,7 @@ interface ActionPanelProps {
   currentStatus: TicketStatus;
   /** Currently assigned technician (roster FK) — dropdown pre-selects this */
   currentTechnicianId: string | null;
-  /** Quote on the work order, if any — shown on the approve button */
+  /** Quote on the work order, if any — shown on Pro Roto's approval buttons */
   quoteAmount?: number | null;
   onUpdated: () => void;
 }
@@ -26,24 +26,27 @@ const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: '
 
 /**
  * What the button *does*, not where the row ends up. A property manager on a
- * phone should read "Approve quote ($450)" — not "Scheduled" — and a tech
- * should read "I'm on site", not "On Site". Falls back to the status label for
- * any pair not listed here, so a new transition can't render an empty button.
+ * phone should read "I've added the info" — not "New" — and a dispatcher
+ * should read "Customer approved — schedule", not "Scheduled". Quote
+ * approvals happen by phone, so the approval buttons are Pro Roto's only.
+ * Falls back to the status label for any pair not listed here, so a new
+ * transition can't render an empty button.
  */
 function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole, quote: number | null | undefined): string {
   const isPm = role === 'pm_admin' || role === 'pm_user';
-  if (to === 'cancelled') return 'Cancel work order';
+  const quoteText = quote != null ? ` (${currency.format(quote)})` : '';
+  if (to === 'cancelled') return from === 'waiting_approval' ? `Customer declined${quoteText}` : 'Cancel work order';
   if (to === 'needs_info') return isPm ? 'Need more info from reporter' : 'Ask for more info';
   if (from === 'needs_info' && to === 'new') return isPm ? "I've added the info" : 'Info received';
   if (to === 'scheduled') {
-    if (from === 'waiting_approval') return quote != null ? `Approve quote (${currency.format(quote)})` : 'Approve';
+    if (from === 'waiting_approval') return `Customer approved${quoteText} — schedule`;
     if (from === 'dispatched') return 'Back to scheduled';
     return 'Schedule';
   }
   if (to === 'dispatched') return 'Dispatch technician';
   if (to === 'on_site') return 'Technician on site';
-  if (to === 'in_progress') return from === 'waiting_approval' ? 'Resume work' : 'Start work';
-  if (to === 'waiting_approval') return 'Request approval';
+  if (to === 'in_progress') return from === 'waiting_approval' ? `Customer approved${quoteText} — resume` : 'Start work';
+  if (to === 'waiting_approval') return 'Waiting on customer approval';
   if (to === 'completed') return 'Mark completed';
   if (to === 'invoiced') return 'Mark invoiced';
   return STATUS_LABELS[to];
@@ -189,7 +192,9 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
         </p>
       ) : allowed.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nothing for you to do right now — it's {STATUS_LABELS[currentStatus].toLowerCase()}. You'll be notified when that changes.
+          {currentStatus === 'waiting_approval'
+            ? <>Pro Roto will call you to go over the quote{quote != null ? ` (${currency.format(quote)})` : ''} before any work continues. Nothing to do here.</>
+            : <>Nothing for you to do right now — it's {STATUS_LABELS[currentStatus].toLowerCase()}. You'll be notified when that changes.</>}
         </p>
       ) : (
         <div className="mb-4">

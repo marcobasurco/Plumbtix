@@ -327,9 +327,9 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
       message = 'Work is now in progress on your request.';
       break;
     case 'waiting_approval':
-      message = `Pro Roto has completed their assessment and is requesting approval to proceed.`;
+      message = `Pro Roto has completed their assessment and needs your approval to proceed.`;
       if (d.quoteAmount) message += ` Estimated cost: <strong>$${esc(d.quoteAmount.toFixed(2))}</strong>.`;
-      message += ' Please review and approve or decline.';
+      message += ' Pro Roto will call you to confirm — or call us if you have questions.';
       break;
     case 'completed':
       message = 'The work has been completed. Please review and let us know if you have any questions.';
@@ -367,7 +367,7 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
         ])}
       `,
       ctaUrl: ticketUrl,
-      ctaLabel: isApprovalNeeded ? 'Review & approve' : 'View work order',
+      ctaLabel: 'View work order',
     }),
   };
 }

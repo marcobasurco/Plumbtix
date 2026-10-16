@@ -1,20 +1,21 @@
 -- =============================================================================
 -- Migration 00028: Only Pro Roto dispatches
 -- =============================================================================
--- Product decision (Marco, 2026-10-16): property-manager roles never schedule
--- or assign work. They report, add information, and approve quotes. Pro Roto
--- does everything else.
+-- Product decision (Marco, 2026-10-16): property-manager roles report
+-- problems and answer Pro Roto's questions. Pro Roto schedules, dispatches,
+-- cancels, and takes quote approvals by phone.
 --
 -- Changes
 --   1. protect_ticket_columns(): technician / scheduling columns are now
 --      proroto_admin-only (were proroto_admin + pm_admin, migration 00027).
---   2. enforce_ticket_status_transition(): pm_admin loses
---        new        → scheduled
---        needs_info → scheduled
---        scheduled  → needs_info
---      pm_admin keeps new → needs_info, needs_info → new, and
---      waiting_approval → scheduled (quote approval). pm_user unchanged
---      (quote approval only). proroto_admin unchanged.
+--   2. enforce_ticket_status_transition():
+--        pm_admin: keeps new → needs_info and needs_info → new; loses
+--                  new → scheduled, needs_info → scheduled,
+--                  scheduled → needs_info, waiting_approval → scheduled.
+--        pm_user:  needs_info → new ("I've added the info", new — the reporter
+--                  answers Pro Roto directly); loses waiting_approval →
+--                  scheduled.
+--        proroto_admin unchanged.
 --
 -- MUST match: shared/types/transitions.ts + supabase/functions/update-ticket.
 -- Idempotent: CREATE OR REPLACE only; no data changes.
@@ -132,25 +133,23 @@ BEGIN
                 allowed := false;
         END CASE;
 
-    -- pm_admin: triage information and approve quotes. Never schedules,
-    -- un-schedules, or cancels — only Pro Roto dispatches.
+    -- pm_admin: information triage only. Never schedules, un-schedules,
+    -- approves or cancels — only Pro Roto dispatches; approvals are by phone.
     ELSIF caller_role = 'pm_admin' THEN
         CASE OLD.status
             WHEN 'new' THEN
                 allowed := NEW.status IN ('needs_info');
             WHEN 'needs_info' THEN
                 allowed := NEW.status IN ('new');
-            WHEN 'waiting_approval' THEN
-                allowed := NEW.status IN ('scheduled');
             ELSE
                 allowed := false;
         END CASE;
 
-    -- pm_user: approve quotes only
+    -- pm_user: answer an information request on a work order they can see
     ELSIF caller_role = 'pm_user' THEN
         CASE OLD.status
-            WHEN 'waiting_approval' THEN
-                allowed := NEW.status IN ('scheduled');
+            WHEN 'needs_info' THEN
+                allowed := NEW.status IN ('new');
             ELSE
                 allowed := false;
         END CASE;
@@ -180,6 +179,6 @@ $$;
 -- Verification (run by hand after `supabase db push`):
 --   SELECT prosrc LIKE '%Only Pro Roto can change scheduling fields%'
 --     FROM pg_proc WHERE proname = 'protect_ticket_columns';            -- true
---   SELECT prosrc LIKE '%Never schedules, un-schedules, or cancels%'
+--   SELECT prosrc LIKE '%approvals are by phone%'
 --     FROM pg_proc WHERE proname = 'enforce_ticket_status_transition'; -- true
 -- ---------------------------------------------------------------------------

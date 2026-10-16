@@ -22,8 +22,9 @@ export const TRANSITION_MATRIX: Record<
   TicketStatus,
   Partial<Record<UserRole, readonly TicketStatus[]>>
 > = {
-  // Only Pro Roto dispatches (migration 00028): PM roles triage information
-  // and approve quotes; they never schedule, un-schedule, assign or cancel.
+  // Only Pro Roto dispatches (migration 00028): PM roles report and answer
+  // information requests. Scheduling, assignment, cancelling and quote
+  // approval (taken by phone) are Pro Roto's.
   new: {
     proroto_admin: ['needs_info', 'scheduled', 'cancelled'],
     pm_admin:      ['needs_info'],
@@ -32,6 +33,7 @@ export const TRANSITION_MATRIX: Record<
   needs_info: {
     proroto_admin: ['new', 'scheduled', 'cancelled'],
     pm_admin:      ['new'],
+    pm_user:       ['new'],
   },
 
   scheduled: {
@@ -52,8 +54,6 @@ export const TRANSITION_MATRIX: Record<
 
   waiting_approval: {
     proroto_admin: ['scheduled', 'in_progress', 'cancelled'],
-    pm_admin:      ['scheduled'],
-    pm_user:       ['scheduled'],
   },
 
   completed: {
