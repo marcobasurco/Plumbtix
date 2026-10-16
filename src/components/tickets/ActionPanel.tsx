@@ -17,7 +17,7 @@ interface ActionPanelProps {
   currentStatus: TicketStatus;
   /** Currently assigned technician (roster FK) — dropdown pre-selects this */
   currentTechnicianId: string | null;
-  /** Quote on the work order, if any — shown on the approve button */
+  /** Quote on the work order, if any — shown on Pro Roto's approval buttons */
   quoteAmount?: number | null;
   onUpdated: () => void;
 }
@@ -26,24 +26,27 @@ const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: '
 
 /**
  * What the button *does*, not where the row ends up. A property manager on a
- * phone should read "Approve quote ($450)" — not "Scheduled" — and a tech
- * should read "I'm on site", not "On Site". Falls back to the status label for
- * any pair not listed here, so a new transition can't render an empty button.
+ * phone should read "I've added the info" — not "New" — and a dispatcher
+ * should read "Customer approved — schedule", not "Scheduled". Quote
+ * approvals happen by phone, so the approval buttons are Pro Roto's only.
+ * Falls back to the status label for any pair not listed here, so a new
+ * transition can't render an empty button.
  */
 function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole, quote: number | null | undefined): string {
   const isPm = role === 'pm_admin' || role === 'pm_user';
-  if (to === 'cancelled') return 'Cancel work order';
+  const quoteText = quote != null ? ` (${currency.format(quote)})` : '';
+  if (to === 'cancelled') return from === 'waiting_approval' ? `Customer declined${quoteText}` : 'Cancel work order';
   if (to === 'needs_info') return isPm ? 'Need more info from reporter' : 'Ask for more info';
   if (from === 'needs_info' && to === 'new') return isPm ? "I've added the info" : 'Info received';
   if (to === 'scheduled') {
-    if (from === 'waiting_approval') return quote != null ? `Approve quote (${currency.format(quote)})` : 'Approve';
+    if (from === 'waiting_approval') return `Customer approved${quoteText} — schedule`;
     if (from === 'dispatched') return 'Back to scheduled';
     return 'Schedule';
   }
   if (to === 'dispatched') return 'Dispatch technician';
   if (to === 'on_site') return 'Technician on site';
-  if (to === 'in_progress') return from === 'waiting_approval' ? 'Resume work' : 'Start work';
-  if (to === 'waiting_approval') return 'Request approval';
+  if (to === 'in_progress') return from === 'waiting_approval' ? `Customer approved${quoteText} — resume` : 'Start work';
+  if (to === 'waiting_approval') return 'Waiting on customer approval';
   if (to === 'completed') return 'Mark completed';
   if (to === 'invoiced') return 'Mark invoiced';
   return STATUS_LABELS[to];
@@ -52,8 +55,10 @@ function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole, quote
 export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quoteAmount: quote, onUpdated }: ActionPanelProps) {
   const { role } = useAuth();
   const isAdmin = role === 'proroto_admin';
-  const isPmAdmin = role === 'pm_admin';
-  const canEditFields = isAdmin || isPmAdmin;
+  // Only Pro Roto dispatches (migration 00028): technician, scheduling and
+  // billing are editable by proroto_admin alone. PM roles see the values in
+  // the "Work details" card on the page instead.
+  const canEditFields = isAdmin;
   const ids = {
     tech: useId(), date: useId(), window: useId(), quote: useId(), invoice: useId(),
   };
@@ -79,7 +84,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [declineReason, setDeclineReason] = useState('');
 
-  // Load the roster for the assignment dropdown (admin + pm_admin)
+  // Load the roster for the assignment dropdown (proroto_admin only)
   useEffect(() => {
     if (!canEditFields) return;
     fetchTechnicians(true)
@@ -102,7 +107,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
       status: targetStatus,
     };
 
-    // Attach scheduling fields if set (admin or pm_admin)
+    // Attach scheduling fields if set (proroto_admin only)
     if (canEditFields) {
       if (technicianId !== (currentTechnicianId ?? '')) payload.technician_id = technicianId || null;
       if (scheduledDate) payload.scheduled_date = scheduledDate;
@@ -143,9 +148,8 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     if (technicianId !== (currentTechnicianId ?? '')) { payload.technician_id = technicianId || null; hasChanges = true; }
     if (scheduledDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
     if (timeWindow.trim()) { payload.scheduled_time_window = timeWindow.trim(); hasChanges = true; }
-    // Financials: proroto_admin only
-    if (isAdmin && quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
-    if (isAdmin && invoiceNumber.trim()) { payload.invoice_number = invoiceNumber.trim(); hasChanges = true; }
+    if (quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
+    if (invoiceNumber.trim()) { payload.invoice_number = invoiceNumber.trim(); hasChanges = true; }
 
     if (!hasChanges) {
       setError('Nothing to save yet — change a field first.');
@@ -188,7 +192,9 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
         </p>
       ) : allowed.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nothing for you to do right now — it's {STATUS_LABELS[currentStatus].toLowerCase()}. You'll be notified when that changes.
+          {currentStatus === 'waiting_approval'
+            ? <>Pro Roto will call you to go over the quote{quote != null ? ` (${currency.format(quote)})` : ''} before any work continues. Nothing to do here.</>
+            : <>Nothing for you to do right now — it's {STATUS_LABELS[currentStatus].toLowerCase()}. You'll be notified when that changes.</>}
         </p>
       ) : (
         <div className="mb-4">
@@ -218,12 +224,10 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
         </div>
       )}
 
-      {/* Editable fields: scheduling (admin + pm_admin), financials (admin only) */}
+      {/* Editable fields — Pro Roto only: scheduling + billing */}
       {canEditFields && !terminal && (
         <div className="border-t border-border pt-4 mt-2">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">
-            {isAdmin ? 'Scheduling & billing' : 'Scheduling'}
-          </p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduling & billing</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -244,19 +248,14 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
               <input id={ids.window} type="text" value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} placeholder="e.g. 9am–12pm" className={fieldClass} />
             </div>
 
-            {/* Financial fields: Pro Roto admin only */}
-            {isAdmin && (
-              <>
-                <div>
-                  <label htmlFor={ids.quote} className={labelClass}>Quote amount ($)</label>
-                  <input id={ids.quote} type="number" inputMode="decimal" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" className={fieldClass} />
-                </div>
-                <div>
-                  <label htmlFor={ids.invoice} className={labelClass}>Invoice number</label>
-                  <input id={ids.invoice} type="text" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="INV-001" className={fieldClass} />
-                </div>
-              </>
-            )}
+            <div>
+              <label htmlFor={ids.quote} className={labelClass}>Quote amount ($)</label>
+              <input id={ids.quote} type="number" inputMode="decimal" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" className={fieldClass} />
+            </div>
+            <div>
+              <label htmlFor={ids.invoice} className={labelClass}>Invoice number</label>
+              <input id={ids.invoice} type="text" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="INV-001" className={fieldClass} />
+            </div>
           </div>
 
           <Button size="sm" onClick={handleFieldUpdate} disabled={submitting} className="mt-3 min-h-[44px] sm:min-h-0">

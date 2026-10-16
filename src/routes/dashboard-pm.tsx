@@ -9,6 +9,8 @@ import { BuildingDetail } from '@/components/buildings/BuildingDetail';
 import { BuildingForm } from '@/components/buildings/BuildingForm';
 import { AnalyticsPage } from '@/components/admin/AnalyticsPage';
 import { SettingsPage } from '@/components/SettingsPage';
+import { TeamPage } from '@/components/team/TeamPage';
+import { RoleGate } from '@/components/RoleGate';
 
 export function PMDashboard() {
   return (
@@ -23,6 +25,7 @@ export function PMDashboard() {
         <Route path="buildings/:buildingId" element={<BuildingDetail />} />
         <Route path="buildings/:buildingId/edit" element={<BuildingForm />} />
         <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="team" element={<RoleGate allowed={['pm_admin']}><TeamPage /></RoleGate>} />
         <Route path="settings" element={<SettingsPage />} />
       </Routes>
     </DashboardLayout>

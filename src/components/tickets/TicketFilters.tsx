@@ -37,7 +37,7 @@ export function TicketFilters({ filters, onChange }: TicketFiltersProps) {
   const chips: Chip[] = [
     { key: 'open', label: 'Open', active: status === 'open' && severity === 'all', patch: { status: 'open', severity: 'all' } },
     { key: 'emergency', label: 'Emergencies', active: severity === 'emergency', patch: { status: 'open', severity: 'emergency' } },
-    { key: 'approval', label: 'Needs my approval', active: status === 'waiting_approval', patch: { status: 'waiting_approval', severity: 'all' } },
+    { key: 'approval', label: 'Awaiting approval', active: status === 'waiting_approval', patch: { status: 'waiting_approval', severity: 'all' } },
     { key: 'all', label: 'All', active: status === 'all' && severity === 'all', patch: { status: 'all', severity: 'all' } },
   ];
 
