@@ -14,7 +14,7 @@ import type { TicketStatus, TicketSeverity } from '@shared/types/enums';
 // Display helpers
 // ---------------------------------------------------------------------------
 
-export { formatSpaceLabel } from '@shared/types/enums';
+export { formatSpaceLabel, formatTicketLocation } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
 // Ticket list
@@ -37,6 +37,7 @@ export interface TicketListRow {
   severity: TicketSeverity;
   issue_type: string;
   description: string | null;
+  location_note: string | null;
   created_at: string;
   updated_at: string;
   building: {
@@ -92,6 +93,7 @@ export async function fetchTicketList(
       severity,
       issue_type,
       description,
+      location_note,
       created_at,
       updated_at,
       building:buildings!inner(id, name, address_line1, city),
@@ -164,6 +166,7 @@ export interface TicketDetailRow {
   issue_type: string;
   description: string | null;
   access_instructions: string | null;
+  location_note: string | null;
   scheduling_preference: Record<string, unknown> | null;
   assigned_technician: string | null;
   scheduled_date: string | null;

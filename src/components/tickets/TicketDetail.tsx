@@ -8,7 +8,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchTicketDetail, formatSpaceLabel, type TicketDetailRow } from '@/lib/tickets';
+import { fetchTicketDetail, formatTicketLocation, type TicketDetailRow } from '@/lib/tickets';
 import { useAuth } from '@/lib/auth';
 import { StatusBadge } from './StatusBadge';
 import { SeverityBadge } from './SeverityBadge';
@@ -225,7 +225,7 @@ export function TicketDetail() {
     type?: string; preferred_date?: string; preferred_time?: string;
   } | null;
 
-  const spaceLabel = formatSpaceLabel(spc);
+  const spaceLabel = formatTicketLocation(ticket);
   const issueLabel = ISSUE_TYPE_LABELS[ticket.issue_type as keyof typeof ISSUE_TYPE_LABELS] ?? ticket.issue_type;
   const buildingLabel = bld.name || bld.address_line1;
 
@@ -470,8 +470,10 @@ export function TicketDetail() {
           </Card>
         </div>
 
-        {/* Right column: action panel + sharing + attachments */}
-        <div className="space-y-5">
+        {/* Right column: action panel + sharing + attachments.
+            On a phone this column comes FIRST — what can I do, and the photos —
+            before the descriptive cards. */}
+        <div className="space-y-5 order-first lg:order-none">
           <ActionPanel
             ticketId={ticket.id}
             currentStatus={ticket.status as TicketStatus}

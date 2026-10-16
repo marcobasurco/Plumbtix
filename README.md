@@ -86,6 +86,8 @@ All schema changes live in `supabase/migrations/` and are applied in order
 | `00005`–`00025` | Status-transition trigger, comment lockdown, RLS recursion fix, usage/subscriptions, realtime, storage policy rework, notifications (email / in-app / SMS), audit tables, full-text search, company logo, PM transitions, public sharing + column lock, technicians, ticket audit trail, rate limiting |
 | `00026` | Captures objects that were created by hand in production (equipment, `spaces.label`, enum values) so a fresh database matches production |
 | `00027` | Tenant-boundary hardening: identity-column protection on `users`, ticket delete/column rules, ticket-scoped storage policies, `security_invoker` analytics view, entitlement-aware equipment policies, helper-function guards |
+| `00028` | Only Pro Roto dispatches: technician/scheduling columns `proroto_admin`-only; PM transitions reduced to information triage (approvals by phone) |
+| `00029` | "Somewhere else" location: `tickets.location_note` + an "Other / not listed" catch-all space per building (trigger + backfill) |
 
 **Rules**
 

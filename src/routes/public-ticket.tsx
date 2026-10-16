@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { STATUS_LABELS, SEVERITY_LABELS, ISSUE_TYPE_LABELS, formatSpaceLabel } from '@shared/types/enums';
+import { STATUS_LABELS, SEVERITY_LABELS, ISSUE_TYPE_LABELS, formatTicketLocation } from '@shared/types/enums';
 import type { TicketStatus, TicketSeverity, IssueType } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
@@ -31,6 +31,7 @@ interface PublicSpace {
   space_type: string;
   unit_number: string | null;
   common_area_type: string | null;
+  label: string | null;
   floor: number | null;
 }
 
@@ -41,6 +42,7 @@ interface PublicTicket {
   severity: TicketSeverity;
   issue_type: string;
   description: string | null;
+  location_note: string | null;
   assigned_technician: string | null;
   scheduled_date: string | null;
   scheduled_time_window: string | null;
@@ -180,7 +182,7 @@ export function PublicTicketView() {
 
   const bld = ticket.building;
   const spc = ticket.space;
-  const spaceLabel = formatSpaceLabel(spc);
+  const spaceLabel = formatTicketLocation(ticket);
 
   return (
     <div className="min-h-screen bg-background">
@@ -254,7 +256,7 @@ export function PublicTicketView() {
             value={`${bld.name ? `${bld.name} — ` : ''}${bld.address_line1}${bld.address_line2 ? `, ${bld.address_line2}` : ''}, ${bld.city}, ${bld.state} ${bld.zip}`}
             bold
           />
-          <Row label="Space" value={`${spaceLabel}${spc.floor != null ? ` (Floor ${spc.floor})` : ''}`} />
+          <Row label="Location" value={`${spaceLabel}${spc.floor != null ? ` (Floor ${spc.floor})` : ''}`} />
         </Section>
 
         {/* ── Photos ── */}

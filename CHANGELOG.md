@@ -47,13 +47,32 @@ functions that import `_shared/email-templates.ts` (`create-ticket`,
   `shared/types/enums.ts` — a raw `common_area` key no longer leaks into the
   list, PDF or public page.
 
-### Report a problem
+### Report a problem — three screens, camera first
+- The six-step wizard is now three screens: **Where** (building, skipped when
+  there is only one → location; tapping a location moves on by itself),
+  **What** (issue → severity pre-chosen from the issue, one tap to change →
+  Take photo / Add from library with thumbnails → what's happening; access
+  notes and a preferred time under "More options"), **Send** (summary with
+  Edit links, then upload progress). About 8 taps instead of ~17.
+- **"Somewhere else"** on the location screen (migration 00029): every building
+  gets an "Other / not listed" catch-all space and the reporter types where
+  exactly ("3rd floor corridor by elevator B"). The note is shown everywhere
+  the location is — list, detail, PDF, public page, emails and the emergency
+  SMS — so an unlisted corridor never blocks a report.
+- The draft survives a reload or swipe-back (sessionStorage; photos are the
+  one thing that must be re-added).
 - Primary **"Report a problem"** button on the overview for every role and on
-  the work-order list, including the empty state. The wizard's submit is now
-  "Send work order" and the success toast shows the new number
-  ("Work order #123 sent to Pro Roto").
+  the work-order list, including the empty state. Submit is "Send work order";
+  the success toast shows the new number.
 - Choosing "Gas smell" shows a leave-the-area / call-911 line before anything
   else.
+
+### Mobile bottom tab bar
+- On phones: Overview · Work orders · **Report** (raised, one tap from
+  anywhere) · Buildings (Dispatch for Pro Roto) · Menu. Hidden on the report
+  flow itself, which has its own sticky action bar.
+- The work-order detail page puts Actions and Photos first on a phone, before
+  the descriptive cards.
 
 ### Work-order list
 - Opens on **open work orders**, emergencies first (severity-first ordering).
