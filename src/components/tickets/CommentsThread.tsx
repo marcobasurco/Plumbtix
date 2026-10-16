@@ -108,7 +108,7 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
               key={c.id}
               className={`px-3.5 py-2.5 rounded-md border text-foreground ${
                 c.is_internal
-                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                  ? 'bg-[hsl(var(--tone-warn-bg))] border-[hsl(var(--tone-warn-dot)/0.4)]'
                   : 'bg-card border-border'
               }`}
             >
@@ -140,7 +140,9 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
       <form onSubmit={handleSubmit} className="mt-2">
         <ErrorBanner message={postError} onDismiss={() => setPostError(null)} />
 
+        <label htmlFor="comment-text" className="sr-only">Add a comment</label>
         <textarea
+          id="comment-text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Add a comment…"

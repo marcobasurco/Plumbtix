@@ -151,7 +151,7 @@ export function BuildingList() {
                 onClick={() => navigate(b.id)}
               >
                 {/* Top gradient accent on hover */}
-                <div className="absolute top-0 left-0 right-0 h-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-blue-500 to-violet-500" />
+                <div className="absolute top-0 left-0 right-0 h-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-primary" />
                 <CardContent className="p-4">
                   <div className="font-bold text-foreground leading-tight mb-0.5">
                     {b.name || b.address_line1}

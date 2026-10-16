@@ -18,8 +18,11 @@
 
 import type { SupabaseClient } from './supabase.ts';
 
-/** E.164 phone number regex: + followed by 1–15 digits */
-const E164_REGEX = /^\+[1-9]\d{1,14}$/;
+import { E164_REGEX, normalizePhone } from './phone.ts';
+
+// Phone parsing lives in ./phone.ts (one standard for the whole product);
+// re-exported here so existing imports keep working.
+export { normalizePhone };
 
 export interface SMSResult {
   ok: boolean;
@@ -44,34 +47,9 @@ function isSandboxMode(): boolean {
   return sandbox === 'true' || sandbox === '1';
 }
 
-/**
- * Validate that a phone number is in E.164 format.
- */
+/** Validate that a phone number is in E.164 format. */
 export function isE164(phone: string): boolean {
   return E164_REGEX.test(phone);
-}
-
-/**
- * Normalize a phone string to E.164. Handles common cases:
- * - Already E.164 → pass through
- * - 10-digit US number → prepend +1
- * - 11-digit starting with 1 → prepend +
- * Returns null if cannot normalize.
- */
-export function normalizePhone(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, '');
-
-  // Already E.164
-  if (isE164(phone)) return phone;
-
-  // 10-digit US number
-  if (digits.length === 10) return `+1${digits}`;
-
-  // 11-digit starting with 1 (US with country code)
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-
-  return null;
 }
 
 /**
@@ -179,4 +157,56 @@ export async function sendSMSAndLog(
   }
 
   return result;
+}
+
+// =============================================================================
+// Voice call (on-call escalation)
+// =============================================================================
+// A text can sit unread at 2 a.m.; a ringing phone cannot. Uses the Twilio
+// Calls API with inline TwiML so no public webhook is needed. Same config and
+// sandbox behaviour as SMS. Never throws.
+// =============================================================================
+
+function escapeXml(s: string): string {
+  return s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c] as string));
+}
+
+export async function placeCall(to: string, message: string): Promise<SMSResult> {
+  if (!isE164(to)) {
+    return { ok: false, error: `Invalid phone number format: ${to}` };
+  }
+  if (isSandboxMode()) {
+    console.log('[call] SANDBOX — would call %s: %s', to, message);
+    return { ok: true, sid: `SANDBOX_CALL_${Date.now()}` };
+  }
+  const config = getTwilioConfig();
+  if (!config) {
+    return { ok: false, error: 'Twilio not configured' };
+  }
+  const { accountSid, authToken, fromNumber } = config;
+  const say = escapeXml(message);
+  // Say it twice, slowly, then hang up. <Pause> gives a sleepy listener a beat.
+  const twiml = `<Response><Pause length="1"/><Say voice="alice">${say}</Say><Pause length="1"/><Say voice="alice">${say}</Say></Response>`;
+  try {
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Calls.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+      },
+      body: new URLSearchParams({ To: to, From: fromNumber, Twiml: twiml, Timeout: '40' }),
+    });
+    const data = await res.json();
+    if (res.ok && data.sid) {
+      console.log('[call] Placed: sid=%s to=%s', data.sid, to.slice(0, 5) + '***' + to.slice(-2));
+      return { ok: true, sid: data.sid };
+    }
+    const error = data.message || `Twilio error ${res.status}`;
+    console.error('[call] Twilio API error:', res.status, error);
+    return { ok: false, error };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'Call failed';
+    console.error('[call] Network error:', error);
+    return { ok: false, error };
+  }
 }

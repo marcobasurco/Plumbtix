@@ -2,8 +2,8 @@
 // Work Orders — Ticket Status Transition Matrix
 // =============================================================================
 //
-// CRITICAL: This matrix MUST match the Postgres trigger in migration 00005
-// (enforce_ticket_status_transition). If you change one, you MUST change both.
+// CRITICAL: This matrix MUST match the Postgres trigger enforce_ticket_status_transition
+// (migration 00005, last changed in 00028). If you change one, you MUST change both.
 //
 // Layers:
 //   1. Postgres trigger (00005) — database seatbelt, rejects invalid UPDATEs
@@ -22,19 +22,22 @@ export const TRANSITION_MATRIX: Record<
   TicketStatus,
   Partial<Record<UserRole, readonly TicketStatus[]>>
 > = {
+  // Only Pro Roto dispatches (migration 00028): PM roles report and answer
+  // information requests. Scheduling, assignment, cancelling and quote
+  // approval (taken by phone) are Pro Roto's.
   new: {
     proroto_admin: ['needs_info', 'scheduled', 'cancelled'],
-    pm_admin:      ['needs_info', 'scheduled'],
+    pm_admin:      ['needs_info'],
   },
 
   needs_info: {
     proroto_admin: ['new', 'scheduled', 'cancelled'],
-    pm_admin:      ['new', 'scheduled'],
+    pm_admin:      ['new'],
+    pm_user:       ['new'],
   },
 
   scheduled: {
     proroto_admin: ['dispatched', 'needs_info', 'cancelled'],
-    pm_admin:      ['needs_info'],
   },
 
   dispatched: {
@@ -51,8 +54,6 @@ export const TRANSITION_MATRIX: Record<
 
   waiting_approval: {
     proroto_admin: ['scheduled', 'in_progress', 'cancelled'],
-    pm_admin:      ['scheduled'],
-    pm_user:       ['scheduled'],
   },
 
   completed: {

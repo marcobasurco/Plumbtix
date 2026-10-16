@@ -12,6 +12,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from '
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ToastProvider } from '@/components/Toast';
 import { Toaster } from 'sonner';
+import { MotionConfig } from 'framer-motion';
 import { Loading } from '@/components/Loading';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RoleGate, roleHome } from '@/components/RoleGate';
@@ -62,6 +63,8 @@ export function App() {
       <BrowserRouter>
         <AuthProvider>
           <ToastProvider>
+            {/* Respect the OS "reduce motion" setting for every framer-motion animation */}
+            <MotionConfig reducedMotion="user">
             <Toaster position="bottom-right" richColors closeButton />
             <WelcomeTour />
             <Suspense fallback={<Loading />}>
@@ -90,6 +93,7 @@ export function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
+            </MotionConfig>
           </ToastProvider>
         </AuthProvider>
       </BrowserRouter>

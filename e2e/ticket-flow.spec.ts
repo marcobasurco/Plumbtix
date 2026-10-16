@@ -72,7 +72,7 @@ test.describe('Authenticated Flow', () => {
     await page.waitForURL('**/admin**', { timeout: 10000 });
 
     // Navigate to tickets
-    await page.click('text=Tickets');
+    await page.click('text=Work orders');
     await expect(page).toHaveURL(/tickets/);
   });
 });

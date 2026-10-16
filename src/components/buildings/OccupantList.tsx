@@ -14,6 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Plus, X, Loader2, Copy, Check, Pencil, Send } from 'lucide-react';
+import { formatPhone, isValidPhone, PHONE_ERROR } from '@shared/phone';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 interface OccupantListProps {
   spaceId: string;
@@ -65,6 +67,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
     setFormError(null);
     if (!name.trim() || !email.trim()) { setFormError('Name and email are required'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setFormError('Invalid email format'); return; }
+    if (!isValidPhone(phone)) { setFormError(PHONE_ERROR); return; }
 
     setSubmitting(true);
     try {
@@ -105,7 +108,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
     setEditingId(occ.id);
     setEditName(occ.name);
     setEditEmail(occ.email);
-    setEditPhone(occ.phone || '');
+    setEditPhone(formatPhone(occ.phone));
     setEditType(occ.occupant_type as 'homeowner' | 'tenant');
   };
 
@@ -116,6 +119,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
 
   const handleEditSave = async (resend: boolean) => {
     if (!editingId || !editName.trim() || !editEmail.trim()) return;
+    if (!isValidPhone(editPhone)) { setFormError(PHONE_ERROR); return; }
     setEditSubmitting(true);
     const result = await updateOccupant({
       occupant_id: editingId,
@@ -188,8 +192,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Phone</Label>
-                  <Input type="tel" value={editPhone} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditPhone(e.target.value)}
-                    className="h-8 text-xs" placeholder="(555) 123-4567" />
+                  <PhoneInput value={editPhone} onChange={setEditPhone} className="h-8 text-xs" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Type</Label>
@@ -230,7 +233,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {occ.email}{occ.phone && ` · ${occ.phone}`}
+                  {occ.email}{occ.phone && ` · ${formatPhone(occ.phone)}`}
                 </div>
                 {occ.invite_token && unclaimed && (
                   <button
@@ -312,13 +315,7 @@ export function OccupantList({ spaceId, spaceLabel, canWrite }: OccupantListProp
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Phone</Label>
-                <Input
-                  type="tel"
-                  value={phone}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
-                  placeholder="(555) 123-4567"
-                  className="h-8 text-xs"
-                />
+                <PhoneInput value={phone} onChange={setPhone} className="h-8 text-xs" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Type</Label>

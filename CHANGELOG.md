@@ -1,6 +1,12 @@
 # Work Orders Changelog
 
-## [Unreleased]
+## [0.11.0] — Field-first UX, round 1 (October 2026)
+
+First of two UX rounds from the October 2026 PM-flow review. Mostly visual/copy,
+plus one authorization change (below). Edge functions to redeploy:
+`update-ticket` (rules), `send-invitation`, `resend-invitation`, and the
+functions that import `_shared/email-templates.ts` (`create-ticket`,
+`add-comment`).
 
 ### Auth emails through Resend
 - Password-reset, email-change and magic-link emails now go through Resend
@@ -9,6 +15,154 @@
   hour per project. Branded templates in `supabase/templates/` use the app's
   vocabulary and layout. Reset links expire after one hour; one request per
   minute per address.
+
+### Authorization — Only Pro Roto dispatches; approvals by phone (migration 00028)
+- Technician assignment, scheduled date/time window, quote and invoice are now
+  **proroto_admin-only** at the database trigger, the `update-ticket` edge
+  function and the UI. `pm_admin` could previously assign Pro Roto's
+  technicians and set schedules.
+- Quote approval is no longer done in the app. Pro Roto calls the customer and
+  records the outcome ("Customer approved ($…) — schedule" / "Customer
+  declined"). `waiting_approval → scheduled` removed for `pm_admin` and
+  `pm_user`; the status email no longer says "Review & approve".
+- `pm_admin` transitions reduced to `new → needs_info` and `needs_info → new`.
+  Removed: `new → scheduled`, `needs_info → scheduled`, `scheduled →
+  needs_info`, `waiting_approval → scheduled`.
+- `pm_user` gains `needs_info → new` ("I've added the info") so the person who
+  reported the problem can answer Pro Roto's question without an Admin; loses
+  `waiting_approval → scheduled`.
+- `proroto_admin` unchanged.
+- The Actions panel for PM roles shows only the actions they have; on a work
+  order waiting for approval it says Pro Roto will call. The assigned
+  technician and schedule remain visible in "Work details".
+
+### Team page for property-company Admins (`/dashboard/team`)
+- Admins can now invite Admins and Staff, resend or revoke pending
+  invitations, and choose which buildings each Staff member sees — all from
+  their own dashboard. The backend already allowed this (`send-invitation`,
+  `resend-invitation`, `delete-invitation`, `building_entitlements` RLS); there
+  was simply no PM-side screen for it, so every invite had to go through Pro
+  Roto. Nav item "Team" appears for `pm_admin` only.
+
+### Vocabulary
+- "Ticket" → **"work order"** everywhere a person reads it: navigation, list,
+  detail, wizard, dashboard, settings, dispatch, reports, PDF footer and every
+  email subject. Code identifiers are unchanged.
+- Role labels → **Admin** (`pm_admin`) and **Staff** (`pm_user`). "Property
+  Manager Admin" never fit on a phone; the labels now match how the property
+  companies talk about their own people. Also used in invitation emails.
+- Locations are named one way everywhere via `formatSpaceLabel()` in
+  `shared/types/enums.ts` — a raw `common_area` key no longer leaks into the
+  list, PDF or public page.
+
+### Report a problem — three screens, camera first
+- The six-step wizard is now three screens: **Where** (building, skipped when
+  there is only one → location; tapping a location moves on by itself),
+  **What** (issue → severity pre-chosen from the issue, one tap to change →
+  Take photo / Add from library with thumbnails → what's happening; access
+  notes and a preferred time under "More options"), **Send** (summary with
+  Edit links, then upload progress). About 8 taps instead of ~17.
+- **"Somewhere else"** on the location screen (migration 00029): every building
+  gets an "Other / not listed" catch-all space and the reporter types where
+  exactly ("3rd floor corridor by elevator B"). The note is shown everywhere
+  the location is — list, detail, PDF, public page, emails and the emergency
+  SMS — so an unlisted corridor never blocks a report.
+- The draft survives a reload or swipe-back (sessionStorage; photos are the
+  one thing that must be re-added).
+- Primary **"Report a problem"** button on the overview for every role and on
+  the work-order list, including the empty state. Submit is "Send work order";
+  the success toast shows the new number.
+- Choosing "Gas smell" shows a leave-the-area / call-911 line before anything
+  else.
+
+### Emergency acknowledgement and on-call escalation (migration 00030)
+- An emergency work order must now be **acknowledged** by a Pro Roto admin
+  ("I'm on it" on the work order, or implicitly by changing its status).
+  Until it is, the **on-call roster** is paged in order — text **and phone
+  call** — every N minutes (per person, default 10), twice through the list;
+  then everyone is emailed and the work order shows "No response".
+- New admin page **On-call** (`/admin/on-call`): ordered roster of Pro Roto
+  admins, wait minutes, on/off, plus a live list of emergencies waiting for
+  someone.
+- Reporter is told who picked it up (in-app + SMS). PM roles see "Pro Roto has
+  been paged" until then. "Unacknowledged" / "No response" badges on the list.
+- Plumbing: `on_call_roster`, `ticket_escalation_log`, five columns on
+  `tickets`, triggers that arm/disarm the clock and protect the columns,
+  `escalate-emergencies` (called every minute by pg_cron → pg_net; secret and
+  URL in Vault) and `acknowledge-emergency` edge functions, `placeCall()` in
+  the Twilio helper. See the migration header for the one-time Vault setup.
+
+### Palette — "calm water"
+- Rebuilt the color tokens for long days on a phone and nights at a desk: no
+  pure white or black, a quieter action blue, red reserved for emergencies,
+  a light sidebar in light mode, and a dark mode that is dark grey-blue, not
+  black. Every text/background pair clears WCAG AA; most clear AAA.
+- Status and severity badges now use five semantic tones (info, active, waiting,
+  done, danger) instead of ten rainbow hues — the color says what kind of
+  state it is, the text says which. Charts, metric cards, notices, avatars and
+  the public page use the same families. Manifest / theme-color updated.
+
+### Deploy previews: Netlify review toolbar no longer a grey box
+- The Content-Security-Policy now comes from `scripts/write-csp-headers.mjs`
+  (writes `dist/_headers` at build time) instead of `netlify.toml`, so deploy
+  previews can allow Netlify's review toolbar (`frame-src app.netlify.com`)
+  while production keeps the strict policy. Also corrects the stale
+  "report-only" comment — the policy has been enforced since 0.10.0.
+
+### Phone numbers — one standard (migration 00031)
+- **Stored** as E.164 (`+16505551234`) in every phone column (`users`,
+  `technicians`, `buildings.onsite_contact_phone`, `occupants`): existing
+  values were normalized (changes logged to `phone_cleanup_log`), a trigger
+  normalizes every write and rejects text that isn't a number, and a CHECK
+  constraint is the seatbelt. The Import page used to store "(415) 555-0100".
+- **Shown** as `(650) 555-1234` everywhere — work order, PDF, buildings,
+  technicians, team, on-call, company users, residents. International numbers
+  stay as `+44…`. `tel:` links always dial E.164.
+- **Typed** into one `PhoneInput` (formats as you type, phone keypad on
+  mobile, saved-number autofill) on Settings, Users, Technicians, Buildings,
+  Residents and the invitation page; the same message everywhere when a
+  number can't be read. Edge functions validate with a shared `PhoneSchema`;
+  Import rows with a bad phone are reported instead of silently dropped.
+- One implementation: `shared/phone.ts` (browser) mirrored by
+  `supabase/functions/_shared/phone.ts` (Deno), with a unit test that keeps
+  the two identical.
+
+### Mobile bottom tab bar
+- On phones: Overview · Work orders · **Report** (raised, one tap from
+  anywhere) · Buildings (Dispatch for Pro Roto) · Menu. Hidden on the report
+  flow itself, which has its own sticky action bar.
+- The work-order detail page puts Actions and Photos first on a phone, before
+  the descriptive cards.
+
+### Work-order list
+- Opens on **open work orders**, emergencies first (severity-first ordering).
+- One-tap chips — Open · Emergencies · Needs my approval · All — with status,
+  building and date filters folded under "More filters". Search is labelled
+  and uses `type="search"`.
+- Emergencies get a red left edge in both the card and the table.
+
+### Work-order detail
+- Header leads with *what* and *where* ("Water heater · Hoover Pavilion, Unit
+  3B"); the number, badges and date sit under it; Print/PDF no longer push the
+  badges below the fold on a phone.
+- Action buttons say what they do — "Approve quote ($450)", "Dispatch
+  technician", "I've added the info", "Mark completed" — instead of the
+  destination status. Cancelling asks for confirmation.
+- Status history and the dashboard use design tokens, so dark mode is readable.
+
+### Accessibility and touch
+- 44 px minimum targets for the sidebar links, header icons, filter chips,
+  attachment actions and the lightbox controls; 16 px inputs on touch screens
+  (no iOS zoom).
+- Visible focus rings on card-style buttons; `aria-label`s on icon-only
+  buttons; labels on the search box, comment box and action-panel fields.
+- Attachment delete is always visible on touch (no hover-only control) and
+  confirms with the app's dialog instead of `window.confirm`. Lightbox closes
+  with Esc and pages with the arrow keys.
+- `prefers-reduced-motion` honoured globally and in framer-motion
+  (`MotionConfig reducedMotion="user"`).
+- Load failures show a **Try again** button, with friendly copy for network and
+  expired-session errors (`friendlyError()`).
 
 ## [0.10.0] — Tenant-Boundary Hardening (October 2026)
 

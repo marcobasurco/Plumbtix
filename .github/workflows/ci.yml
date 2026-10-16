@@ -22,6 +22,9 @@ jobs:
   ci:
     name: Lint, Typecheck, Test, Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # lint/typecheck output is posted on the PR when it fails
     steps:
       - uses: actions/checkout@v4
 
@@ -34,10 +37,27 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npx eslint src/ shared/
+        id: lint
+        run: |
+          set -o pipefail
+          npx eslint src/ shared/ 2>&1 | tee lint-output.txt
 
       - name: Type check
-        run: npm run typecheck
+        id: typecheck
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee typecheck-output.txt
+
+      # Raw job logs are not always reachable from where PRs are reviewed, so
+      # the first failing step's output goes on the PR as a comment.
+      - name: Post lint / typecheck output on the PR
+        if: failure() && github.event_name == 'pull_request' && (steps.lint.outcome == 'failure' || steps.typecheck.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.lint.outcome }}" = "failure" ]; then STEP=Lint; FILE=lint-output.txt; else STEP="Type check"; FILE=typecheck-output.txt; fi
+          { echo "### CI: $STEP failed"; echo; echo '```'; tail -c 60000 "$FILE"; echo '```'; } > pr-comment.md
+          gh pr comment ${{ github.event.pull_request.number }} --body-file pr-comment.md
 
       - name: Unit tests
         run: npx vitest run --reporter=verbose

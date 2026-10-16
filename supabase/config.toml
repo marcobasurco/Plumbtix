@@ -132,6 +132,9 @@ policy = "oneshot"
 [functions.accept-invitation]
 verify_jwt = false
 
+[functions.acknowledge-emergency]
+verify_jwt = false
+
 [functions.claim-resident]
 verify_jwt = false
 
@@ -163,6 +166,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.delete-entitlement]
+verify_jwt = false
+
+[functions.escalate-emergencies]
 verify_jwt = false
 
 [functions.delete-invitation]

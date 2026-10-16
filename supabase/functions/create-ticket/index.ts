@@ -43,6 +43,8 @@ const CreateTicketSchema = z.object({
   severity: z.enum(SEVERITIES),
   description: z.string().min(1, 'Description is required').max(5000),
   access_instructions: z.string().max(2000).optional(),
+  /** Where exactly, when the space is the building's "Other / not listed" catch-all (00029) */
+  location_note: z.string().trim().min(1).max(300).optional(),
   scheduling_preference: z.object({
     type: z.enum(['asap', 'preferred_window']),
     preferred_date: z.string().optional(),
@@ -78,6 +80,7 @@ Deno.serve(async (req: Request) => {
     severity: requestedSeverity,
     description,
     access_instructions,
+    location_note,
     scheduling_preference,
   } = parsed.data;
 
@@ -111,6 +114,7 @@ Deno.serve(async (req: Request) => {
         status: 'new',
         description,
         access_instructions: access_instructions ?? null,
+        location_note: location_note ?? null,
         scheduling_preference: scheduling_preference ?? null,
       })
       .select()
@@ -137,7 +141,7 @@ Deno.serve(async (req: Request) => {
         const svc = createServiceClient();
         const [buildingRes, spaceRes, creatorRes] = await Promise.all([
           svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', building_id).single(),
-          svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', space_id).single(),
+          svc.from('spaces').select('space_type, unit_number, common_area_type, label').eq('id', space_id).single(),
           svc.from('users').select('id, full_name, email').eq('id', userId).single(),
         ]);
 
@@ -156,6 +160,7 @@ Deno.serve(async (req: Request) => {
             invoice_number: null,
             building: buildingRes.data,
             space: spaceRes.data,
+            location_note: location_note ?? null,
             created_by: creatorRes.data,
           });
         }

@@ -3,6 +3,13 @@
 // =============================================================================
 // Rich overview page with metric cards, charts, and recent activity.
 // Uses Recharts for data visualization and Lucide icons.
+//
+// UX rules applied here (see the October 2026 UX review):
+//   • "Report a problem" is the first thing on the page for every role —
+//     on a phone it must not sit below the charts.
+//   • Every clickable card is a real <button> (keyboard + screen readers).
+//   • Colors come from design-system tokens so dark mode is readable.
+//   • Load failures explain themselves and offer "Try again".
 // =============================================================================
 
 import { useEffect, useState, useCallback } from 'react';
@@ -23,34 +30,34 @@ import {
 } from 'recharts';
 import {
   TicketCheck, AlertTriangle, Building2, LayoutGrid,
-  TrendingUp, Clock, ArrowRight, Zap, CircleDot,
+  TrendingUp, Clock, ArrowRight, Zap, CircleDot, Plus,
 } from 'lucide-react';
 import { useRealtimeTickets } from '@/hooks/useRealtime';
 import { Loading } from '@/components/Loading';
-import { ErrorBanner } from '@/components/ErrorBanner';
+import { ErrorBanner, friendlyError } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
 
 // ---------------------------------------------------------------------------
-// Color palette for charts
+// Chart colors (data colors, deliberately fixed in both themes)
 // ---------------------------------------------------------------------------
 
-const STATUS_COLORS: Partial<Record<TicketStatus, string>> = {
-  new: '#3b82f6',
-  needs_info: '#f59e0b',
-  scheduled: '#8b5cf6',
-  dispatched: '#06b6d4',
-  on_site: '#10b981',
-  in_progress: '#f97316',
-  waiting_approval: '#ec4899',
-  completed: '#22c55e',
-  invoiced: '#6366f1',
-  cancelled: '#94a3b8',
+const STATUS_COLORS: Record<TicketStatus, string> = {
+  new: '#5b8fb9',
+  needs_info: '#d9a441',
+  scheduled: '#4f9fb0',
+  dispatched: '#3f8f9f',
+  on_site: '#35808c',
+  in_progress: '#2c6f79',
+  waiting_approval: '#c98a2e',
+  completed: '#5aa37c',
+  invoiced: '#3f8a62',
+  cancelled: '#a3acb8',
 };
 
 const SEVERITY_COLORS: Record<TicketSeverity, string> = {
-  emergency: '#ef4444',
-  urgent: '#f59e0b',
-  standard: '#3b82f6',
+  emergency: '#c2423c',
+  urgent: '#d9a441',
+  standard: '#5b8fb9',
 };
 
 // ---------------------------------------------------------------------------
@@ -67,9 +74,9 @@ interface MetricCardProps {
 }
 
 function MetricCard({ label, value, icon, accent, subtitle, onClick }: MetricCardProps) {
-  return (
-    <div className="metric-card" onClick={onClick} style={onClick ? { cursor: 'pointer' } : undefined}>
-      <div className="metric-card-icon" style={{ background: accent + '14', color: accent }}>
+  const content = (
+    <>
+      <div className="metric-card-icon" style={{ background: accent + '14', color: accent }} aria-hidden="true">
         {icon}
       </div>
       <div className="metric-card-content">
@@ -78,11 +85,17 @@ function MetricCard({ label, value, icon, accent, subtitle, onClick }: MetricCar
         {subtitle && <div className="metric-card-subtitle">{subtitle}</div>}
       </div>
       {onClick && (
-        <div className="metric-card-arrow">
+        <div className="metric-card-arrow" aria-hidden="true">
           <ArrowRight size={16} />
         </div>
       )}
-    </div>
+    </>
+  );
+  if (!onClick) return <div className="metric-card">{content}</div>;
+  return (
+    <button type="button" className="metric-card card-button" onClick={onClick}>
+      {content}
+    </button>
   );
 }
 
@@ -102,7 +115,7 @@ function StatusDot({ status }: { status: TicketStatus }) {
       padding: '2px 10px',
       gap: '5px',
     }}>
-      <CircleDot size={10} />
+      <CircleDot size={10} aria-hidden="true" />
       {STATUS_LABELS[status]}
     </span>
   );
@@ -117,7 +130,7 @@ function SeverityIndicator({ severity }: { severity: TicketSeverity }) {
       fontSize: 'var(--text-xs)',
       padding: '2px 10px',
     }}>
-      {severity === 'emergency' && <Zap size={10} />}
+      {severity === 'emergency' && <Zap size={10} aria-hidden="true" />}
       {SEVERITY_LABELS[severity]}
     </span>
   );
@@ -132,7 +145,7 @@ function BarTooltip({ active, payload, label }: { active?: boolean; payload?: Ar
       borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', fontWeight: 600,
       boxShadow: 'var(--shadow-lg)',
     }}>
-      {label}: {payload[0].value} ticket{payload[0].value !== 1 ? 's' : ''}
+      {label}: {payload[0].value} work order{payload[0].value !== 1 ? 's' : ''}
     </div>
   );
 }
@@ -154,7 +167,8 @@ export function DashboardOverview() {
     try {
       setMetrics(await fetchDashboardMetrics());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load dashboard');
+      console.error('[dashboard] load failed:', e);
+      setError(friendlyError(e, "Couldn't load your dashboard."));
     } finally {
       setLoading(false);
     }
@@ -162,35 +176,47 @@ export function DashboardOverview() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Realtime: auto-refresh metrics when tickets change
+  // Realtime: auto-refresh metrics when work orders change
   useRealtimeTickets(load, !loading);
-
-  if (loading) return <Loading message="Loading dashboard…" />;
-  if (error) return <ErrorBanner message={error} />;
-  if (!metrics) return null;
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'there';
   const basePath = role === 'proroto_admin' ? '/admin' : role === 'resident' ? '/my' : '/dashboard';
+  const canReport = role !== null; // every signed-in role can report a problem
+
+  if (loading) return <Loading message="Loading dashboard…" />;
+  if (error) return <ErrorBanner message={error} onRetry={load} />;
+  if (!metrics) return null;
+
+  const hasEmergencies = metrics.emergencyTickets > 0;
 
   return (
     <div className="animate-in">
-      {/* Greeting */}
-      <div style={{ marginBottom: 28 }}>
-        <h2 className="page-title" style={{ fontSize: 'var(--text-2xl)' }}>
-          Good {getTimeOfDay()}, {firstName}
-        </h2>
-        <p className="page-subtitle">
-          Here's what's happening across your properties today.
-        </p>
+      {/* Greeting + primary action */}
+      <div className="page-title-bar" style={{ marginBottom: 20 }}>
+        <div>
+          <h2 className="page-title" style={{ fontSize: 'var(--text-2xl)' }}>
+            Good {getTimeOfDay()}, {firstName}
+          </h2>
+          <p className="page-subtitle">
+            {hasEmergencies
+              ? `${metrics.emergencyTickets} emergency work order${metrics.emergencyTickets === 1 ? '' : 's'} need${metrics.emergencyTickets === 1 ? 's' : ''} attention.`
+              : `${metrics.openTickets} open work order${metrics.openTickets === 1 ? '' : 's'} across your buildings.`}
+          </p>
+        </div>
+        {canReport && (
+          <Button size="lg" className="w-full sm:w-auto" onClick={() => navigate(`${basePath}/tickets/new`)}>
+            <Plus className="h-5 w-5" aria-hidden="true" /> Report a problem
+          </Button>
+        )}
       </div>
 
       {/* Metric cards */}
       <div className="metric-grid">
         <MetricCard
-          label="Open Tickets"
+          label="Open work orders"
           value={metrics.openTickets}
           icon={<TicketCheck size={22} />}
-          accent="#3b82f6"
+          accent="#2972a3"
           subtitle={`${metrics.totalTickets} total`}
           onClick={() => navigate(`${basePath}/tickets?status=open`)}
         />
@@ -198,35 +224,191 @@ export function DashboardOverview() {
           label="Emergencies"
           value={metrics.emergencyTickets}
           icon={<AlertTriangle size={22} />}
-          accent={metrics.emergencyTickets > 0 ? '#ef4444' : '#22c55e'}
-          subtitle={metrics.emergencyTickets > 0 ? 'Needs attention' : 'All clear'}
+          accent={hasEmergencies ? '#c2423c' : '#3f8a62'}
+          subtitle={hasEmergencies ? 'Needs attention' : 'All clear'}
           onClick={() => navigate(`${basePath}/tickets?severity=emergency`)}
         />
         <MetricCard
-          label="Completed This Month"
+          label="Completed this month"
           value={metrics.completedThisMonth}
           icon={<TrendingUp size={22} />}
-          accent="#22c55e"
+          accent="#3f8a62"
           onClick={() => navigate(`${basePath}/tickets?status=completed`)}
         />
         <MetricCard
           label="Buildings"
           value={metrics.totalBuildings}
           icon={<Building2 size={22} />}
-          accent="#8b5cf6"
-          subtitle={`${metrics.totalSpaces} spaces`}
+          accent="#4f9fb0"
+          subtitle={`${metrics.totalSpaces} locations`}
           onClick={() => navigate(`${basePath}/buildings`)}
         />
       </div>
 
-      {/* Charts row */}
-      <div className="dashboard-charts">
-        {/* Ticket volume chart */}
+      {/* Recent work orders + severity breakdown */}
+      <div className="dashboard-bottom">
+        {/* Recent work orders */}
+        <div className="card">
+          <div className="card-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Clock size={16} className="text-muted-foreground" aria-hidden="true" />
+              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Recent work orders</span>
+            </div>
+            <Button variant="link" size="sm" onClick={() => navigate(`${basePath}/tickets`)}>
+              View all <ArrowRight size={13} style={{ marginLeft: 2 }} aria-hidden="true" />
+            </Button>
+          </div>
+          {metrics.recentTickets.length > 0 ? (
+            <div style={{ padding: 0 }}>
+              {metrics.recentTickets.map((t, i) => (
+                <button
+                  type="button"
+                  key={t.id}
+                  className="recent-ticket-row card-button"
+                  onClick={() => navigate(`${basePath}/tickets/${t.id}`)}
+                  style={i === metrics.recentTickets.length - 1 ? { borderBottom: 'none' } : undefined}
+                  aria-label={`Work order #${t.ticket_number}, ${ISSUE_TYPE_LABELS[t.issue_type as IssueType] ?? t.issue_type}, ${SEVERITY_LABELS[t.severity]}, ${STATUS_LABELS[t.status]}`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                    <span className="text-mono text-foreground" style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>
+                      #{t.ticket_number}
+                    </span>
+                    <span className="truncate text-muted-foreground" style={{ fontSize: 'var(--text-sm)' }}>
+                      {ISSUE_TYPE_LABELS[t.issue_type as IssueType] ?? t.issue_type}
+                    </span>
+                  </div>
+                  {/* minWidth:0 (not flexShrink:0): a rigid cluster made this row's
+                      min-content wider than phone screens, inflating the shared
+                      .dashboard-bottom grid track — every sibling section bled off-screen.
+                      Badges stay rigid; the date absorbs the squeeze via ellipsis. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <SeverityIndicator severity={t.severity} />
+                    <StatusDot status={t.status} />
+                    <span className="text-xs text-muted"
+                      style={{ textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden',
+                               textOverflow: 'ellipsis', minWidth: 0, flexShrink: 1 }}>
+                      {formatDate(t.created_at)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="card-body">
+              <p className="text-muted text-sm" style={{ marginBottom: 12 }}>
+                No work orders yet. Report the first plumbing problem and it will show up here.
+              </p>
+              {canReport && (
+                <Button variant="outline" size="sm" onClick={() => navigate(`${basePath}/tickets/new`)}>
+                  <Plus className="h-4 w-4" aria-hidden="true" /> Report a problem
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Severity breakdown mini cards */}
+        <div className="severity-sidebar">
+          <h3 className="text-sm font-bold text-foreground" style={{ marginBottom: 2 }}>By severity</h3>
+          {(['emergency', 'urgent', 'standard'] as TicketSeverity[]).map((sev) => {
+            const item = metrics.severityBreakdown.find((s) => s.severity === sev);
+            const count = item?.count ?? 0;
+            const total = metrics.totalTickets || 1;
+            const pct = Math.round((count / total) * 100);
+            const color = SEVERITY_COLORS[sev];
+            return (
+              <button
+                type="button"
+                key={sev}
+                className="severity-card card-button"
+                onClick={() => navigate(`${basePath}/tickets?severity=${sev}`)}
+                aria-label={`${SEVERITY_LABELS[sev]}: ${count} work orders, ${pct}% of total`}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span className="text-foreground" style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>
+                    {SEVERITY_LABELS[sev]}
+                  </span>
+                  <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)', color, letterSpacing: '-0.02em' }}>
+                    {count}
+                  </span>
+                </div>
+                <div className="severity-bar-track" aria-hidden="true">
+                  <div
+                    className="severity-bar-fill"
+                    style={{ width: `${Math.max(pct, 2)}%`, background: color }}
+                  />
+                </div>
+                <div className="text-xs text-muted" style={{ marginTop: 4 }}>{pct}% of total</div>
+              </button>
+            );
+          })}
+
+          {/* Company Analytics (proroto_admin only) */}
+          {role === 'proroto_admin' && metrics.companyBreakdown.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <h3 className="text-sm font-bold text-foreground" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <LayoutGrid size={14} aria-hidden="true" /> Company breakdown
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr className="border-b-2 border-border">
+                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Company</th>
+                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Bldgs</th>
+                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Locations</th>
+                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Users</th>
+                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Open</th>
+                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.companyBreakdown.map((c) => (
+                      <tr key={c.company_id} className="border-b border-border">
+                        <td className="text-foreground" style={{ padding: '6px 8px', fontWeight: 500 }}>{c.company_name}</td>
+                        <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.building_count}</td>
+                        <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.space_count}</td>
+                        <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.user_count}</td>
+                        <td className={c.open_tickets > 0 ? 'font-semibold' : 'text-muted-foreground'} style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>{c.open_tickets}</td>
+                        <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.total_tickets}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Quick actions */}
+          <div style={{ marginTop: 20 }}>
+            <h3 className="text-sm font-bold text-foreground" style={{ marginBottom: 12 }}>
+              Quick actions
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`${basePath}/tickets`)}>
+                <TicketCheck size={14} aria-hidden="true" /> View work orders
+              </Button>
+              <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`${basePath}/buildings`)}>
+                <Building2 size={14} aria-hidden="true" /> View buildings
+              </Button>
+              {role === 'proroto_admin' && (
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/admin/companies')}>
+                  <LayoutGrid size={14} aria-hidden="true" /> Manage companies
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts row — after the actionable content; on a phone these are
+          reference material, not the reason the person opened the app */}
+      <div className="dashboard-charts" style={{ marginTop: 24, marginBottom: 0 }}>
+        {/* Volume chart */}
         <div className="card chart-card">
           <div className="card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <LayoutGrid size={16} style={{ color: 'var(--slate-400)' }} />
-              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Ticket Volume</span>
+              <LayoutGrid size={16} className="text-muted-foreground" aria-hidden="true" />
+              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Work order volume</span>
             </div>
             <span className="text-xs text-muted">Last 6 months</span>
           </div>
@@ -255,7 +437,7 @@ export function DashboardOverview() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="chart-empty">No ticket data yet</div>
+              <div className="chart-empty">No work orders yet</div>
             )}
           </div>
         </div>
@@ -264,8 +446,8 @@ export function DashboardOverview() {
         <div className="card chart-card">
           <div className="card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CircleDot size={16} style={{ color: 'var(--slate-400)' }} />
-              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>By Status</span>
+              <CircleDot size={16} className="text-muted-foreground" aria-hidden="true" />
+              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>By status</span>
             </div>
           </div>
           <div className="card-body" style={{ height: 260, padding: '4px 8px' }}>
@@ -304,161 +486,9 @@ export function DashboardOverview() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="chart-empty">No ticket data yet</div>
+              <div className="chart-empty">No work orders yet</div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Recent tickets + severity breakdown */}
-      <div className="dashboard-bottom">
-        {/* Recent tickets */}
-        <div className="card">
-          <div className="card-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Clock size={16} style={{ color: 'var(--slate-400)' }} />
-              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Recent Tickets</span>
-            </div>
-            <Button variant="link" size="sm" onClick={() => navigate(`${basePath}/tickets`)}>
-              View all <ArrowRight size={13} style={{ marginLeft: 2 }} />
-            </Button>
-          </div>
-          {metrics.recentTickets.length > 0 ? (
-            <div style={{ padding: 0 }}>
-              {metrics.recentTickets.map((t, i) => (
-                <div
-                  key={t.id}
-                  className="recent-ticket-row"
-                  onClick={() => navigate(`${basePath}/tickets/${t.id}`)}
-                  style={i === metrics.recentTickets.length - 1 ? { borderBottom: 'none' } : undefined}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                    <span className="text-mono" style={{ fontWeight: 700, color: 'var(--slate-900)', fontSize: 'var(--text-sm)' }}>
-                      #{t.ticket_number}
-                    </span>
-                    <span className="truncate" style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-600)' }}>
-                      {ISSUE_TYPE_LABELS[t.issue_type as IssueType] ?? t.issue_type}
-                    </span>
-                  </div>
-                  {/* minWidth:0 (not flexShrink:0): a rigid cluster made this row's
-                      min-content wider than phone screens, inflating the shared
-                      .dashboard-bottom grid track — every sibling section bled off-screen.
-                      Badges stay rigid; the date absorbs the squeeze via ellipsis. */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <span className="text-xs text-muted" style={{ display: 'none' }}>
-                      {t.building_name}
-                    </span>
-                    <SeverityIndicator severity={t.severity} />
-                    <StatusDot status={t.status} />
-                    <span className="text-xs text-muted"
-                      style={{ textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden',
-                               textOverflow: 'ellipsis', minWidth: 0, flexShrink: 1 }}>
-                      {formatDate(t.created_at)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="card-body">
-              <p className="text-muted text-sm">No tickets yet. Create your first ticket to get started.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Severity breakdown mini cards */}
-        <div className="severity-sidebar">
-          <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 12 }}>
-            By Severity
-          </h3>
-          {(['emergency', 'urgent', 'standard'] as TicketSeverity[]).map((sev) => {
-            const item = metrics.severityBreakdown.find(s => s.severity === sev);
-            const count = item?.count ?? 0;
-            const total = metrics.totalTickets || 1;
-            const pct = Math.round((count / total) * 100);
-            const color = SEVERITY_COLORS[sev];
-            return (
-              <div
-                key={sev}
-                className="severity-card"
-                onClick={() => navigate(`${basePath}/tickets?severity=${sev}`)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--slate-700)' }}>
-                    {SEVERITY_LABELS[sev]}
-                  </span>
-                  <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)', color, letterSpacing: '-0.02em' }}>
-                    {count}
-                  </span>
-                </div>
-                <div className="severity-bar-track">
-                  <div
-                    className="severity-bar-fill"
-                    style={{ width: `${Math.max(pct, 2)}%`, background: color }}
-                  />
-                </div>
-                <div className="text-xs text-muted" style={{ marginTop: 4 }}>{pct}% of total</div>
-              </div>
-            );
-          })}
-
-          {/* Company Analytics (proroto_admin only) */}
-          {role === 'proroto_admin' && metrics.companyBreakdown.length > 0 && (
-            <div style={{ marginTop: 20 }}>
-              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <LayoutGrid size={14} /> Company Breakdown
-              </h3>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid var(--slate-200)' }}>
-                      <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Company</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Bldgs</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Spaces</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Users</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Open</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: 'var(--slate-600)' }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {metrics.companyBreakdown.map((c) => (
-                      <tr key={c.company_id} style={{ borderBottom: '1px solid var(--slate-100)' }}>
-                        <td style={{ padding: '6px 8px', fontWeight: 500, color: 'var(--slate-800)' }}>{c.company_name}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--slate-600)' }}>{c.building_count}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--slate-600)' }}>{c.space_count}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--slate-600)' }}>{c.user_count}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, color: c.open_tickets > 0 ? '#f59e0b' : 'var(--slate-600)' }}>{c.open_tickets}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--slate-600)' }}>{c.total_tickets}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Quick actions */}
-          {(role === 'proroto_admin' || role === 'pm_admin') && (
-            <div style={{ marginTop: 20 }}>
-              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--slate-700)', marginBottom: 12 }}>
-                Quick Actions
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <Button size="sm" className="w-full" onClick={() => navigate(`${basePath}/tickets/new`)}>
-                  <TicketCheck size={14} /> New Ticket
-                </Button>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`${basePath}/buildings`)}>
-                  <Building2 size={14} /> View Buildings
-                </Button>
-                {role === 'proroto_admin' && (
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/admin/companies')}>
-                    <LayoutGrid size={14} /> Manage Companies
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

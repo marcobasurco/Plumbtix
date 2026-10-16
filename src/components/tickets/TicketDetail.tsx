@@ -1,14 +1,15 @@
 // =============================================================================
-// Work Orders — Ticket Detail Page (v0.3.0 Polish)
+// Work Orders — Work Order Detail Page
 // =============================================================================
-// Full ticket view with info cards, status timeline, comments, attachments,
+// Full work-order view with info cards, status timeline, comments, attachments,
 // and action panel. Uses shadcn/ui components + Tailwind for consistency.
 // Mobile-responsive: stacks to single column on small screens.
 // =============================================================================
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchTicketDetail, type TicketDetailRow } from '@/lib/tickets';
+import { fetchTicketDetail, formatTicketLocation, type TicketDetailRow } from '@/lib/tickets';
+import { formatPhone, telHref } from '@shared/phone';
 import { useAuth } from '@/lib/auth';
 import { StatusBadge } from './StatusBadge';
 import { SeverityBadge } from './SeverityBadge';
@@ -19,8 +20,9 @@ import { ActionPanel } from './ActionPanel';
 import { SharingCard } from './SharingCard';
 import { AuditTrail } from './AuditTrail';
 import { EquipmentCard } from './EquipmentCard';
+import { EmergencyBanner } from './EmergencyBanner';
 import { PageTransition } from '@/components/PageTransition';
-import { ErrorBanner } from '@/components/ErrorBanner';
+import { ErrorBanner, friendlyError } from '@/components/ErrorBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,6 +45,14 @@ function formatDateTime(iso: string): string {
 function formatCurrency(amount: number | null): string {
   if (amount === null) return '—';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
+function BackToList({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1 min-h-[44px] sm:min-h-0" onClick={onClick}>
+      <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Work orders
+    </Button>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +129,7 @@ export function TicketDetail() {
       const data = await fetchTicketDetail(ticketId);
       setTicket(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load ticket');
+      setError(friendlyError(e, "Couldn't load this work order."));
     } finally {
       setLoading(false);
     }
@@ -194,8 +204,22 @@ export function TicketDetail() {
       </PageTransition>
     );
   }
-  if (error) return <ErrorBanner message={error} />;
-  if (!ticket) return <ErrorBanner message="Ticket not found" />;
+  if (error) {
+    return (
+      <PageTransition>
+        <BackToList onClick={() => navigate('..', { relative: 'path' })} />
+        <ErrorBanner message={error} onRetry={load} />
+      </PageTransition>
+    );
+  }
+  if (!ticket) {
+    return (
+      <PageTransition>
+        <BackToList onClick={() => navigate('..', { relative: 'path' })} />
+        <ErrorBanner message="This work order doesn't exist or you don't have access to it." />
+      </PageTransition>
+    );
+  }
 
   const bld = ticket.building;
   const spc = ticket.space;
@@ -203,30 +227,35 @@ export function TicketDetail() {
     type?: string; preferred_date?: string; preferred_time?: string;
   } | null;
 
-  const spaceLabel = spc.space_type === 'unit' && spc.unit_number
-    ? `Unit ${spc.unit_number}`
-    : (spc.label || spc.common_area_type?.replace(/_/g, ' ') || spc.space_type);
+  const spaceLabel = formatTicketLocation(ticket);
+  const issueLabel = ISSUE_TYPE_LABELS[ticket.issue_type as keyof typeof ISSUE_TYPE_LABELS] ?? ticket.issue_type;
+  const buildingLabel = bld.name || bld.address_line1;
 
   return (
     <PageTransition>
-      {/* Back button */}
-      <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1" onClick={() => navigate('..', { relative: 'path' })}>
-        <ChevronLeft className="h-3.5 w-3.5" /> Tickets
-      </Button>
+      <BackToList onClick={() => navigate('..', { relative: 'path' })} />
 
-      {/* Header */}
-      <div className="flex justify-between items-start flex-wrap gap-3 mb-6 pb-4 border-b border-border">
-        <div className="min-w-0">
-          <h2 className="text-xl font-bold tracking-tight">
-            Ticket #{ticket.ticket_number}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Opened {formatDateTime(ticket.created_at)} by {ticket.created_by?.full_name ?? 'Unknown'}
-          </p>
-        </div>
-        <div className="flex gap-2 items-center flex-wrap">
+      {/* Header — the first thing a tech reads on a phone is *what* and *where*,
+          so that is the H1; the number, badges and date come under it, and the
+          print/PDF actions sit last so they don't push the badges below the fold. */}
+      <header className="mb-6 pb-4 border-b border-border">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-muted-foreground">Work order #{ticket.ticket_number}</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5">
+              {issueLabel}
+              <span className="font-normal text-muted-foreground"> · {buildingLabel}, {spaceLabel}</span>
+            </h1>
+            <div className="flex gap-2 items-center flex-wrap mt-2">
+              <SeverityBadge severity={ticket.severity} />
+              <StatusBadge status={ticket.status} />
+              <span className="text-sm text-muted-foreground">
+                Opened {formatDateTime(ticket.created_at)} by {ticket.created_by?.full_name ?? 'Unknown'}
+              </span>
+            </div>
+          </div>
           {canPrint && (
-            <>
+            <div className="flex gap-2 items-center flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -235,8 +264,8 @@ export function TicketDetail() {
                 disabled={printGenerating}
               >
                 {printGenerating
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  : <Printer className="h-3.5 w-3.5" />}
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  : <Printer className="h-3.5 w-3.5" aria-hidden="true" />}
                 {printGenerating ? 'Preparing…' : 'Print'}
               </Button>
               <Button
@@ -247,16 +276,28 @@ export function TicketDetail() {
                 disabled={pdfGenerating}
               >
                 {pdfGenerating
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  : <Download className="h-3.5 w-3.5" />}
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  : <Download className="h-3.5 w-3.5" aria-hidden="true" />}
                 {pdfGenerating ? 'Generating…' : 'Download PDF'}
               </Button>
-            </>
+            </div>
           )}
-          <SeverityBadge severity={ticket.severity} />
-          <StatusBadge status={ticket.status} />
         </div>
-      </div>
+      </header>
+
+      {ticket.severity === 'emergency' && (
+        <EmergencyBanner
+          ticketId={ticket.id}
+          status={ticket.status}
+          acknowledgedAt={ticket.acknowledged_at}
+          acknowledgedByName={ticket.acknowledged_by?.full_name ?? null}
+          escalationStep={ticket.escalation_step ?? 0}
+          nextEscalationAt={ticket.next_escalation_at}
+          exhaustedAt={ticket.escalation_exhausted_at}
+          createdAt={ticket.created_at}
+          onChanged={handleUpdated}
+        />
+      )}
 
       {/* Two-column layout — stacks on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
@@ -268,13 +309,13 @@ export function TicketDetail() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                Ticket Details
+                Details
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0 space-y-1 divide-y divide-border">
               <InfoRow
                 icon={<Wrench className="h-4 w-4" />}
-                label="Issue Type"
+                label="Issue type"
                 value={ISSUE_TYPE_LABELS[ticket.issue_type as keyof typeof ISSUE_TYPE_LABELS] ?? ticket.issue_type}
               />
               {ticket.description && (
@@ -287,14 +328,14 @@ export function TicketDetail() {
               {ticket.access_instructions && (
                 <InfoRow
                   icon={<KeyRound className="h-4 w-4" />}
-                  label="Access Instructions"
+                  label="Access instructions"
                   value={ticket.access_instructions}
                 />
               )}
               {sched && (
                 <InfoRow
                   icon={<Calendar className="h-4 w-4" />}
-                  label="Scheduling Preference"
+                  label="Scheduling preference"
                   value={
                     <>
                       {sched.type === 'asap' ? 'ASAP' : 'Preferred window'}
@@ -330,7 +371,7 @@ export function TicketDetail() {
               />
               <InfoRow
                 icon={<FileText className="h-4 w-4" />}
-                label="Space"
+                label="Location"
                 value={
                   <>
                     {spaceLabel}
@@ -341,19 +382,19 @@ export function TicketDetail() {
               {isAdmin && bld.gate_code && (
                 <InfoRow
                   icon={<KeyRound className="h-4 w-4" />}
-                  label="Gate Code"
+                  label="Gate code"
                   value={<span className="font-mono font-semibold">{bld.gate_code}</span>}
                 />
               )}
               {isAdmin && bld.onsite_contact_name && (
                 <InfoRow
                   icon={<User className="h-4 w-4" />}
-                  label="Onsite Contact"
+                  label="Onsite contact"
                   value={
                     <>
                       {bld.onsite_contact_name}
                       {bld.onsite_contact_phone && (
-                        <> — <a href={`tel:${bld.onsite_contact_phone}`} className="text-primary hover:underline">{bld.onsite_contact_phone}</a></>
+                        <> — <a href={telHref(bld.onsite_contact_phone) ?? undefined} className="text-primary hover:underline">{formatPhone(bld.onsite_contact_phone)}</a></>
                       )}
                     </>
                   }
@@ -368,7 +409,7 @@ export function TicketDetail() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Wrench className="h-4 w-4 text-muted-foreground" />
-                  Work Details
+                  Work details
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-1 divide-y divide-border">
@@ -401,7 +442,7 @@ export function TicketDetail() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
-                  Reported By
+                  Reported by
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 space-y-1 divide-y divide-border">
@@ -415,7 +456,7 @@ export function TicketDetail() {
                   <InfoRow
                     icon={<Phone className="h-4 w-4" />}
                     label="Phone"
-                    value={<a href={`tel:${ticket.created_by.phone}`} className="text-primary hover:underline">{ticket.created_by.phone}</a>}
+                    value={<a href={telHref(ticket.created_by.phone) ?? undefined} className="text-primary hover:underline">{formatPhone(ticket.created_by.phone)}</a>}
                   />
                 )}
               </CardContent>
@@ -445,12 +486,15 @@ export function TicketDetail() {
           </Card>
         </div>
 
-        {/* Right column: action panel + sharing + attachments */}
-        <div className="space-y-5">
+        {/* Right column: action panel + sharing + attachments.
+            On a phone this column comes FIRST — what can I do, and the photos —
+            before the descriptive cards. */}
+        <div className="space-y-5 order-first lg:order-none">
           <ActionPanel
             ticketId={ticket.id}
             currentStatus={ticket.status as TicketStatus}
             currentTechnicianId={ticket.technician_id}
+            quoteAmount={ticket.quote_amount}
             onUpdated={handleUpdated}
           />
           {(role === 'proroto_admin' || role === 'pm_admin') && (

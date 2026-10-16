@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useAuth } from '@/lib/auth';
 import { updateTicket } from '@/lib/api';
 import { fetchTechnicians } from '@/lib/technicians';
@@ -6,8 +6,9 @@ import type { Technician } from '@shared/types/database';
 import type { UpdateTicketRequest } from '@shared/types/api';
 import { getAllowedTransitions, isTerminalStatus } from '@shared/types/transitions';
 import { STATUS_LABELS } from '@shared/types/enums';
-import type { TicketStatus } from '@shared/types/enums';
+import type { TicketStatus, UserRole } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, Settings2 } from 'lucide-react';
 
@@ -16,18 +17,56 @@ interface ActionPanelProps {
   currentStatus: TicketStatus;
   /** Currently assigned technician (roster FK) — dropdown pre-selects this */
   currentTechnicianId: string | null;
+  /** Quote on the work order, if any — shown on Pro Roto's approval buttons */
+  quoteAmount?: number | null;
   onUpdated: () => void;
 }
 
-export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUpdated }: ActionPanelProps) {
+const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+/**
+ * What the button *does*, not where the row ends up. A property manager on a
+ * phone should read "I've added the info" — not "New" — and a dispatcher
+ * should read "Customer approved — schedule", not "Scheduled". Quote
+ * approvals happen by phone, so the approval buttons are Pro Roto's only.
+ * Falls back to the status label for any pair not listed here, so a new
+ * transition can't render an empty button.
+ */
+function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole, quote: number | null | undefined): string {
+  const isPm = role === 'pm_admin' || role === 'pm_user';
+  const quoteText = quote != null ? ` (${currency.format(quote)})` : '';
+  if (to === 'cancelled') return from === 'waiting_approval' ? `Customer declined${quoteText}` : 'Cancel work order';
+  if (to === 'needs_info') return isPm ? 'Need more info from reporter' : 'Ask for more info';
+  if (from === 'needs_info' && to === 'new') return isPm ? "I've added the info" : 'Info received';
+  if (to === 'scheduled') {
+    if (from === 'waiting_approval') return `Customer approved${quoteText} — schedule`;
+    if (from === 'dispatched') return 'Back to scheduled';
+    return 'Schedule';
+  }
+  if (to === 'dispatched') return 'Dispatch technician';
+  if (to === 'on_site') return 'Technician on site';
+  if (to === 'in_progress') return from === 'waiting_approval' ? `Customer approved${quoteText} — resume` : 'Start work';
+  if (to === 'waiting_approval') return 'Waiting on customer approval';
+  if (to === 'completed') return 'Mark completed';
+  if (to === 'invoiced') return 'Mark invoiced';
+  return STATUS_LABELS[to];
+}
+
+export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quoteAmount: quote, onUpdated }: ActionPanelProps) {
   const { role } = useAuth();
   const isAdmin = role === 'proroto_admin';
-  const isPmAdmin = role === 'pm_admin';
-  const canEditFields = isAdmin || isPmAdmin;
+  // Only Pro Roto dispatches (migration 00028): technician, scheduling and
+  // billing are editable by proroto_admin alone. PM roles see the values in
+  // the "Work details" card on the page instead.
+  const canEditFields = isAdmin;
+  const ids = {
+    tech: useId(), date: useId(), window: useId(), quote: useId(), invoice: useId(),
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   // Editable fields
   // technicianId mirrors the CURRENT assignment ('' = unassigned); a change
@@ -45,7 +84,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [declineReason, setDeclineReason] = useState('');
 
-  // Load the roster for the assignment dropdown (admin + pm_admin)
+  // Load the roster for the assignment dropdown (proroto_admin only)
   useEffect(() => {
     if (!canEditFields) return;
     fetchTechnicians(true)
@@ -68,7 +107,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
       status: targetStatus,
     };
 
-    // Attach scheduling fields if set (admin or pm_admin)
+    // Attach scheduling fields if set (proroto_admin only)
     if (canEditFields) {
       if (technicianId !== (currentTechnicianId ?? '')) payload.technician_id = technicianId || null;
       if (scheduledDate) payload.scheduled_date = scheduledDate;
@@ -87,7 +126,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
     const result = await updateTicket(payload as UpdateTicketRequest);
 
     if (result.ok) {
-      setSuccess(`Ticket updated to ${STATUS_LABELS[targetStatus]}`);
+      setSuccess(`Work order is now ${STATUS_LABELS[targetStatus].toLowerCase()}.`);
       setScheduledDate(''); setTimeWindow('');
       setQuoteAmount(''); setInvoiceNumber(''); setDeclineReason('');
       onUpdated();
@@ -109,19 +148,18 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
     if (technicianId !== (currentTechnicianId ?? '')) { payload.technician_id = technicianId || null; hasChanges = true; }
     if (scheduledDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
     if (timeWindow.trim()) { payload.scheduled_time_window = timeWindow.trim(); hasChanges = true; }
-    // Financials: proroto_admin only
-    if (isAdmin && quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
-    if (isAdmin && invoiceNumber.trim()) { payload.invoice_number = invoiceNumber.trim(); hasChanges = true; }
+    if (quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
+    if (invoiceNumber.trim()) { payload.invoice_number = invoiceNumber.trim(); hasChanges = true; }
 
     if (!hasChanges) {
-      setError('No fields to update');
+      setError('Nothing to save yet — change a field first.');
       setSubmitting(false);
       return;
     }
 
     const result = await updateTicket(payload as UpdateTicketRequest);
     if (result.ok) {
-      setSuccess('Ticket fields updated');
+      setSuccess('Changes saved.');
       setScheduledDate(''); setTimeWindow('');
       setQuoteAmount(''); setInvoiceNumber('');
       onUpdated();
@@ -131,71 +169,70 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
     setSubmitting(false);
   };
 
+  const fieldClass = 'w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]';
+  const labelClass = 'block text-xs font-semibold text-muted-foreground mb-1';
+
   return (
-    <div className="p-4 rounded-lg border border-border bg-card">
-      <h3 className="text-base font-semibold mb-3 pb-2 border-b border-border flex items-center gap-2">
-        <Settings2 className="h-4 w-4 text-muted-foreground" />
+    <section className="p-4 rounded-lg border border-border bg-card" aria-labelledby="action-panel-heading">
+      <h3 id="action-panel-heading" className="text-base font-semibold mb-3 pb-2 border-b border-border flex items-center gap-2">
+        <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         Actions
       </h3>
 
       <ErrorBanner message={error} onDismiss={() => setError(null)} />
       {success && (
-        <div className="mb-3 text-sm px-3 py-2 rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800">
+        <div role="status" className="mb-3 text-sm px-3 py-2 rounded-md tone-ok tone-notice">
           {success}
         </div>
       )}
 
       {terminal ? (
         <p className="text-sm text-muted-foreground">
-          This ticket is {STATUS_LABELS[currentStatus].toLowerCase()} — no further transitions available.
+          This work order is {STATUS_LABELS[currentStatus].toLowerCase()} and can't be changed.
         </p>
       ) : allowed.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No actions available for your role on this ticket.
+          {currentStatus === 'waiting_approval'
+            ? <>Pro Roto will call you to go over the quote{quote != null ? ` (${currency.format(quote)})` : ''} before any work continues. Nothing to do here.</>
+            : <>Nothing for you to do right now — it's {STATUS_LABELS[currentStatus].toLowerCase()}. You'll be notified when that changes.</>}
         </p>
       ) : (
-        <>
-          {/* Transition buttons */}
-          <div className="mb-4">
-            <p className="text-xs text-muted-foreground mb-2">
-              Move ticket from <strong className="text-foreground">{STATUS_LABELS[currentStatus]}</strong> to:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {allowed.map((target) => (
+        <div className="mb-4">
+          <p className="text-xs text-muted-foreground mb-2">
+            Currently <strong className="text-foreground">{STATUS_LABELS[currentStatus]}</strong>
+          </p>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+            {allowed.map((target) => {
+              const destructive = target === 'cancelled';
+              return (
                 <button
                   key={target}
-                  onClick={() => handleTransition(target)}
+                  type="button"
+                  onClick={() => destructive ? setConfirmCancel(true) : handleTransition(target)}
                   disabled={submitting}
-                  className={`px-4 py-2.5 text-sm font-semibold rounded-lg text-white min-h-[44px] transition-colors disabled:opacity-50 ${
-                    target === 'cancelled'
-                      ? 'bg-red-600 hover:bg-red-700'
-                      : 'bg-blue-600 hover:bg-blue-700'
+                  className={`px-4 py-2.5 text-sm font-semibold rounded-lg min-h-[44px] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                    destructive
+                      ? 'border border-destructive/40 text-destructive bg-background hover:bg-destructive/10'
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   }`}
                 >
-                  {STATUS_LABELS[target]}
+                  {actionLabel(currentStatus, target, role, quote)}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
-
-        </>
+        </div>
       )}
 
-      {/* Editable fields: scheduling (admin + pm_admin), financials (admin only) */}
+      {/* Editable fields — Pro Roto only: scheduling + billing */}
       {canEditFields && !terminal && (
         <div className="border-t border-border pt-4 mt-2">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">
-            {isAdmin ? 'Update Fields' : 'Scheduling'}
-          </p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduling & billing</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Assigned Technician</label>
-              <select
-                value={technicianId}
-                onChange={(e) => setTechnicianId(e.target.value)}
-                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
-              >
+              <label htmlFor={ids.tech} className={labelClass}>Assigned technician</label>
+              <select id={ids.tech} value={technicianId} onChange={(e) => setTechnicianId(e.target.value)} className={fieldClass}>
                 <option value="">— Unassigned —</option>
                 {technicians.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
@@ -203,66 +240,42 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Scheduled Date</label>
-              <input
-                type="date"
-                value={scheduledDate}
-                onChange={(e) => setScheduledDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
-              />
+              <label htmlFor={ids.date} className={labelClass}>Scheduled date</label>
+              <input id={ids.date} type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-muted-foreground mb-1">Time Window</label>
-              <input
-                type="text"
-                value={timeWindow}
-                onChange={(e) => setTimeWindow(e.target.value)}
-                placeholder="e.g. 9am-12pm"
-                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
-              />
+              <label htmlFor={ids.window} className={labelClass}>Time window</label>
+              <input id={ids.window} type="text" value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} placeholder="e.g. 9am–12pm" className={fieldClass} />
             </div>
 
-            {/* Financial fields: Pro Roto admin only */}
-            {isAdmin && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Quote Amount ($)</label>
-                  <input
-                    type="number"
-                    value={quoteAmount}
-                    onChange={(e) => setQuoteAmount(e.target.value)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Invoice Number</label>
-                  <input
-                    type="text"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    placeholder="INV-001"
-                    className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[44px]"
-                  />
-                </div>
-              </>
-            )}
+            <div>
+              <label htmlFor={ids.quote} className={labelClass}>Quote amount ($)</label>
+              <input id={ids.quote} type="number" inputMode="decimal" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" className={fieldClass} />
+            </div>
+            <div>
+              <label htmlFor={ids.invoice} className={labelClass}>Invoice number</label>
+              <input id={ids.invoice} type="text" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="INV-001" className={fieldClass} />
+            </div>
           </div>
 
-          <Button
-            size="sm"
-            onClick={handleFieldUpdate}
-            disabled={submitting}
-            className="mt-3"
-          >
+          <Button size="sm" onClick={handleFieldUpdate} disabled={submitting} className="mt-3 min-h-[44px] sm:min-h-0">
             {submitting ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…</>
-            ) : 'Save Fields'}
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Saving…</>
+            ) : 'Save changes'}
           </Button>
         </div>
       )}
-    </div>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        onOpenChange={setConfirmCancel}
+        title="Cancel this work order?"
+        description="The reporter will be notified and no technician will be dispatched. This can't be undone."
+        confirmLabel="Cancel work order"
+        cancelLabel="Keep it open"
+        variant="destructive"
+        onConfirm={() => { setConfirmCancel(false); handleTransition('cancelled'); }}
+      />
+    </section>
   );
 }
