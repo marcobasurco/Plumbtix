@@ -345,7 +345,6 @@ export async function notifyStatusChange(
         scheduledDate: ticket.scheduled_date || undefined,
         timeWindow: ticket.scheduled_time_window || undefined,
         quoteAmount: ticket.quote_amount || undefined,
-        invoiceNumber: ticket.invoice_number || undefined,
       },
     };
 

@@ -295,7 +295,6 @@ export interface StatusChangeEmailData {
     scheduledDate?: string;
     timeWindow?: string;
     quoteAmount?: number;
-    invoiceNumber?: string;
   };
 }
 
@@ -334,9 +333,8 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
     case 'completed':
       message = 'The work has been completed. Please review and let us know if you have any questions.';
       break;
-    case 'invoiced':
-      message = 'An invoice has been generated for this work order.';
-      if (d.invoiceNumber) message += ` Invoice #: <strong>${esc(d.invoiceNumber)}</strong>.`;
+    case 'invoiced': // legacy status — no longer reachable (00032)
+      message = 'This work order has been closed.';
       break;
     case 'cancelled':
       message = 'This work order has been cancelled.';

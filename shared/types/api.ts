@@ -72,7 +72,6 @@ export interface UpdateTicketRequest {
   scheduled_date?: string;
   scheduled_time_window?: string;
   quote_amount?: number;
-  invoice_number?: string;
   decline_reason?: string;  // required when PM declines waiting_approval → cancelled
 }
 export interface UpdateTicketResponse {

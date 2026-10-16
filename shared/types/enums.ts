@@ -68,6 +68,14 @@ export const TICKET_STATUSES = [
 ] as const;
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 
+/**
+ * Statuses a work order can still reach. 'invoiced' is kept in the enum and
+ * the database for historic rows only — invoices live in ServiceTitan (00032).
+ */
+export const LEGACY_TICKET_STATUSES: readonly TicketStatus[] = ['invoiced'];
+export const SELECTABLE_TICKET_STATUSES: readonly TicketStatus[] =
+  TICKET_STATUSES.filter((s) => !LEGACY_TICKET_STATUSES.includes(s));
+
 // --- invitations.role ---
 export const INVITATION_ROLES = ['pm_admin', 'pm_user'] as const;
 export type InvitationRole = (typeof INVITATION_ROLES)[number];
@@ -101,7 +109,7 @@ export const STATUS_LABELS: Record<TicketStatus, string> = {
   in_progress: 'In Progress',
   waiting_approval: 'Waiting for Approval',
   completed: 'Completed',
-  invoiced: 'Invoiced',
+  invoiced: 'Invoiced (legacy)',
   cancelled: 'Cancelled',
 };
 

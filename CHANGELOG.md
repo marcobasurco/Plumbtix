@@ -1,5 +1,17 @@
 # Work Orders Changelog
 
+## [Unreleased]
+
+### Invoicing removed (migration 00032)
+- Invoices are created in ServiceTitan; PlumbTix reports problems and
+  dispatches to them. A work order now ends at **Completed**: the
+  `completed → invoiced` transition, the "Mark invoiced" button, the invoice
+  number field and the Invoice rows on the work order, PDF and emails are
+  gone. The `invoiced` status and `invoice_number` column stay in the database
+  for historic rows only (shown as "Invoiced (legacy)").
+- Quote amount stays — it's what Pro Roto reads to the customer on the
+  approval call.
+
 ## [0.11.0] — Field-first UX, round 1 (October 2026)
 
 First of two UX rounds from the October 2026 PM-flow review. Mostly visual/copy,

@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { updateTicket } from '@/lib/api';
 import { fetchCompanyOptions, type CompanyOption } from '@/lib/admin';
 import {
-  TICKET_STATUSES,
+  SELECTABLE_TICKET_STATUSES,
   STATUS_LABELS,
   ISSUE_TYPE_LABELS,
   SEVERITY_LABELS,
@@ -311,7 +311,7 @@ export function DispatchBoard() {
     return true;
   });
 
-  const columns = (showTerminal ? TICKET_STATUSES : ACTIVE_STATUSES) as readonly TicketStatus[];
+  const columns = (showTerminal ? SELECTABLE_TICKET_STATUSES : ACTIVE_STATUSES) as readonly TicketStatus[];
   const grouped = new Map<TicketStatus, DispatchTicket[]>();
   for (const s of columns) grouped.set(s, []);
   for (const t of filteredTickets) grouped.get(t.status)?.push(t);

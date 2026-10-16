@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // CRITICAL: This matrix MUST match the Postgres trigger enforce_ticket_status_transition
-// (migration 00005, last changed in 00028). If you change one, you MUST change both.
+// (migration 00005, last changed in 00032). If you change one, you MUST change both.
 //
 // Layers:
 //   1. Postgres trigger (00005) — database seatbelt, rejects invalid UPDATEs
@@ -56,10 +56,9 @@ export const TRANSITION_MATRIX: Record<
     proroto_admin: ['scheduled', 'in_progress', 'cancelled'],
   },
 
-  completed: {
-    proroto_admin: ['invoiced'],
-  },
-
+  // A work order ends at completed. Invoices live in ServiceTitan (00032);
+  // 'invoiced' stays in the enum only for historic rows.
+  completed: {},
   invoiced:  {},
   cancelled: {},
 };
