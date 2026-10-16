@@ -8,6 +8,14 @@ plus one authorization change (below). Edge functions to redeploy:
 functions that import `_shared/email-templates.ts` (`create-ticket`,
 `add-comment`).
 
+### Auth emails through Resend
+- Password-reset, email-change and magic-link emails now go through Resend
+  (`[auth.email.smtp]` in `config.toml`, pushed with `supabase config push`)
+  instead of Supabase's built-in mailer, which allows only a few emails per
+  hour per project. Branded templates in `supabase/templates/` use the app's
+  vocabulary and layout. Reset links expire after one hour; one request per
+  minute per address.
+
 ### Authorization — Only Pro Roto dispatches; approvals by phone (migration 00028)
 - Technician assignment, scheduled date/time window, quote and invoice are now
   **proroto_admin-only** at the database trigger, the `update-ticket` edge

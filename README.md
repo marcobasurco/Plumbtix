@@ -171,6 +171,29 @@ work-orders/
 
 ---
 
+## Auth Emails (password reset, email change)
+
+Supabase's built-in mailer allows only a few emails per hour per project. Auth
+emails therefore go through **Resend** — the same sender as the app's own
+notifications — configured in `supabase/config.toml` under `[auth.email.smtp]`
+with branded templates in `supabase/templates/`.
+
+Push it to production (needs `RESEND_API_KEY` in the shell):
+
+```powershell
+$env:RESEND_API_KEY = "re_xxxxxxxxx"
+npx supabase@latest config push
+```
+
+Or set the same values by hand: Dashboard → Authentication → Emails → **SMTP
+Settings** (host `smtp.resend.com`, port `465`, user `resend`, password = the
+Resend API key, sender `notifications@proroto.com` / "Pro Roto Work Orders"),
+and paste each template from `supabase/templates/` under **Email Templates**.
+
+Test: Login → "Forgot password?" → the email arrives from
+`notifications@proroto.com` within seconds and the link opens `/reset-password`.
+Resend → Logs shows it as `auth` traffic alongside the app's emails.
+
 ## Commands
 
 ```bash
