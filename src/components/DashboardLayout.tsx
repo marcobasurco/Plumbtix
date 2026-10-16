@@ -42,9 +42,9 @@ function roleRoot(role: string | null): string {
 
 const ROLE_BADGE_VARIANT: Record<string, 'info' | 'urgent' | 'success' | 'secondary'> = {
   proroto_admin: 'info',
-  pm_admin: 'urgent',
-  pm_user: 'urgent',
-  resident: 'success',
+  pm_admin: 'secondary',
+  pm_user: 'secondary',
+  resident: 'secondary',
 };
 
 // ---------------------------------------------------------------------------
@@ -165,7 +165,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
       <div className="sidebar-user">
         <div className="flex items-center gap-2.5">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-xs font-bold text-white">
+            <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -281,7 +281,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-11 sm:h-9 gap-2 px-2" aria-label="Account menu">
                     <Avatar className="h-6 w-6">
-                      <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-[10px] font-bold text-white">
+                      <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground">
                         {initials}
                       </AvatarFallback>
                     </Avatar>

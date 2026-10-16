@@ -64,7 +64,7 @@ export function EmergencyBanner({
   // ── Acknowledged ──────────────────────────────────────────────────────
   if (acknowledgedAt) {
     return (
-      <div role="status" className="mb-5 flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:border-green-900 dark:bg-green-900/20 dark:text-green-200">
+      <div role="status" className="mb-5 flex items-center gap-3 rounded-lg px-4 py-3 text-sm tone-ok tone-notice">
         <Check className="h-5 w-5 shrink-0" aria-hidden="true" />
         <span>
           <strong>{acknowledgedByName ?? 'Pro Roto'}</strong> is on it — acknowledged at {timeOnly(acknowledgedAt)}.

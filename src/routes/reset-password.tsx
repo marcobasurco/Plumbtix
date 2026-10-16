@@ -129,7 +129,7 @@ export function ResetPasswordPage() {
     <div className="login-page">
       <div className="w-full max-w-[400px] relative z-10">
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
             <Wrench className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -168,7 +168,7 @@ export function ResetPasswordPage() {
                 </Button>
               </div>
             ) : success ? (
-              <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md px-3 py-3">
+              <div className="flex items-center gap-2 text-sm tone-ok tone-notice rounded-md px-3 py-3">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>Password updated. Redirecting to login…</span>
               </div>

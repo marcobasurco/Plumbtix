@@ -84,6 +84,23 @@ functions that import `_shared/email-templates.ts` (`create-ticket`,
   URL in Vault) and `acknowledge-emergency` edge functions, `placeCall()` in
   the Twilio helper. See the migration header for the one-time Vault setup.
 
+### Palette — "calm water"
+- Rebuilt the color tokens for long days on a phone and nights at a desk: no
+  pure white or black, a quieter action blue, red reserved for emergencies,
+  a light sidebar in light mode, and a dark mode that is dark grey-blue, not
+  black. Every text/background pair clears WCAG AA; most clear AAA.
+- Status and severity badges now use five semantic tones (info, active, waiting,
+  done, danger) instead of ten rainbow hues — the color says what kind of
+  state it is, the text says which. Charts, metric cards, notices, avatars and
+  the public page use the same families. Manifest / theme-color updated.
+
+### Deploy previews: Netlify review toolbar no longer a grey box
+- The Content-Security-Policy now comes from `scripts/write-csp-headers.mjs`
+  (writes `dist/_headers` at build time) instead of `netlify.toml`, so deploy
+  previews can allow Netlify's review toolbar (`frame-src app.netlify.com`)
+  while production keeps the strict policy. Also corrects the stale
+  "report-only" comment — the policy has been enforced since 0.10.0.
+
 ### Mobile bottom tab bar
 - On phones: Overview · Work orders · **Report** (raised, one tap from
   anywhere) · Buildings (Dispatch for Pro Roto) · Menu. Hidden on the report

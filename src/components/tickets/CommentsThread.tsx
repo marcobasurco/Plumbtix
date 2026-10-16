@@ -108,7 +108,7 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
               key={c.id}
               className={`px-3.5 py-2.5 rounded-md border text-foreground ${
                 c.is_internal
-                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                  ? 'bg-[hsl(var(--tone-warn-bg))] border-[hsl(var(--tone-warn-dot)/0.4)]'
                   : 'bg-card border-border'
               }`}
             >
