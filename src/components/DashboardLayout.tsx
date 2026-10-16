@@ -26,7 +26,7 @@ import {
 import {
   LayoutDashboard, Ticket, Building2, Users2, Kanban,
   LogOut, Menu, Wrench, Briefcase, Moon, Sun, BarChart3,
-  FileSpreadsheet, ChevronRight, Settings,
+  FileSpreadsheet, ChevronRight, Settings, Plus,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 
@@ -119,6 +119,16 @@ export function DashboardLayout({ title: _title, children }: Props) {
   }
 
   const activeLabel = nav.find(isActive)?.label ?? 'Dashboard';
+
+  // Mobile bottom tab bar: the four places a person goes on a phone, with
+  // "Report" raised in the middle. Hidden on the report flow itself (it has
+  // its own sticky action bar) and on the sidebar, which covers it.
+  const onReportFlow = pathAfterRoot === 'tickets/new';
+  const tabs: NavItem[] = [
+    CORE_NAV[0],
+    CORE_NAV[1],
+    role === 'proroto_admin' ? ADMIN_EXTRA[2] : CORE_NAV[2],
+  ];
 
   // Group nav by section
   const sections = new Map<string, NavItem[]>();
@@ -306,6 +316,41 @@ export function DashboardLayout({ title: _title, children }: Props) {
           <main className="content-main">
             {children}
           </main>
+
+          {!onReportFlow && (
+            <nav className="tab-bar" aria-label="Primary">
+              {tabs.slice(0, 2).map((item) => (
+                <Link
+                  key={item.label}
+                  to={item.path ? `${root}/${item.path}` : root}
+                  className="tab-bar-item"
+                  aria-current={isActive(item) ? 'page' : undefined}
+                >
+                  <span className="tab-bar-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+              <Link to={`${root}/tickets/new`} className="tab-bar-item report" aria-label="Report a problem">
+                <span className="tab-bar-icon"><Plus className="h-6 w-6" aria-hidden="true" /></span>
+                <span>Report</span>
+              </Link>
+              {tabs.slice(2).map((item) => (
+                <Link
+                  key={item.label}
+                  to={item.path ? `${root}/${item.path}` : root}
+                  className="tab-bar-item"
+                  aria-current={isActive(item) ? 'page' : undefined}
+                >
+                  <span className="tab-bar-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+              <button type="button" className="tab-bar-item" onClick={() => setMobileOpen(true)} aria-label="Open menu" aria-expanded={mobileOpen}>
+                <span className="tab-bar-icon"><Menu className="h-[18px] w-[18px]" aria-hidden="true" /></span>
+                <span>Menu</span>
+              </button>
+            </nav>
+          )}
         </div>
       </div>
     </TooltipProvider>

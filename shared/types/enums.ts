@@ -137,6 +137,25 @@ export function formatSpaceLabel(space: {
   return 'Common area';
 }
 
+/** Label of the per-building catch-all space created by migration 00029. */
+export const OTHER_LOCATION_LABEL = 'Other / not listed';
+
+export function isOtherLocationSpace(space: { common_area_type?: string | null; label?: string | null }): boolean {
+  return space.common_area_type === 'other' && space.label === OTHER_LOCATION_LABEL;
+}
+
+/**
+ * Location text for a work order: the reporter's own words when they chose
+ * "Somewhere else", otherwise the space's label.
+ */
+export function formatTicketLocation(ticket: {
+  location_note?: string | null;
+  space: Parameters<typeof formatSpaceLabel>[0];
+}): string {
+  if (ticket.location_note) return ticket.location_note;
+  return formatSpaceLabel(ticket.space);
+}
+
 // Role labels as people see them. "Admin" and "Staff" are the property
 // company's own vocabulary; "Property Manager Admin" never fit on a phone.
 export const ROLE_LABELS: Record<UserRole, string> = {

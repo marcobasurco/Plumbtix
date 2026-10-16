@@ -270,7 +270,7 @@ Deno.serve(async (req: Request) => {
           const svc = createServiceClient();
           const [buildingRes, spaceRes, creatorRes] = await Promise.all([
             svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', ticket.building_id).single(),
-            svc.from('spaces').select('space_type, unit_number, common_area_type').eq('id', ticket.space_id).single(),
+            svc.from('spaces').select('space_type, unit_number, common_area_type, label').eq('id', ticket.space_id).single(),
             svc.from('users').select('id, full_name, email').eq('id', ticket.created_by_user_id).single(),
           ]);
 
@@ -290,6 +290,7 @@ Deno.serve(async (req: Request) => {
               invoice_number: updated.invoice_number ?? ticket.invoice_number,
               building: buildingRes.data,
               space: spaceRes.data,
+              location_note: ticket.location_note ?? null,
               created_by: creatorRes.data,
             }, ticket.status, targetStatus, role);
           }

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { fetchTicketList, formatSpaceLabel, TICKET_PAGE_SIZE, type TicketListRow, type TicketListFilters } from '@/lib/tickets';
+import { fetchTicketList, formatTicketLocation, TICKET_PAGE_SIZE, type TicketListRow, type TicketListFilters } from '@/lib/tickets';
 import { ISSUE_TYPE_LABELS, SEVERITY_LABELS, STATUS_LABELS } from '@shared/types/enums';
 import { StatusBadge } from './StatusBadge';
 import { SeverityBadge } from './SeverityBadge';
@@ -83,7 +83,7 @@ function TicketCard({ ticket, onClick }: { ticket: TicketListRow; onClick: () =>
 
       <div className="ticket-card-footer">
         <span className="ticket-card-location">
-          {ticket.building.name || ticket.building.address_line1} · {formatSpaceLabel(ticket.space)}
+          {ticket.building.name || ticket.building.address_line1} · {formatTicketLocation(ticket)}
         </span>
         <span className="ticket-card-date">{formatDateShort(ticket.created_at)}</span>
       </div>
@@ -140,7 +140,7 @@ function TicketTable({ tickets, onRowClick }: { tickets: TicketListRow[]; onRowC
                 )}
               </td>
               <td className="px-4 py-3 border-t border-border">{t.building.name || t.building.address_line1}</td>
-              <td className="px-4 py-3 border-t border-border">{formatSpaceLabel(t.space)}</td>
+              <td className="px-4 py-3 border-t border-border">{formatTicketLocation(t)}</td>
               <td className="px-4 py-3 border-t border-border">{t.created_by?.full_name ?? 'Unknown'}</td>
               <td className="px-4 py-3 border-t border-border text-muted-foreground">{formatDate(t.created_at)}</td>
             </tr>

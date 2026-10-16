@@ -68,7 +68,10 @@ interface TicketContext {
     space_type: string;
     unit_number: string | null;
     common_area_type: string | null;
+    label?: string | null;
   };
+  /** Free text when the reporter chose "Somewhere else" (migration 00029) */
+  location_note?: string | null;
   created_by: {
     id: string;
     full_name: string;
@@ -128,7 +131,11 @@ async function getTicketCreator(
   return data;
 }
 
-function spaceLabel(space: TicketContext['space']): string {
+function spaceLabel(ticket: Pick<TicketContext, 'space' | 'location_note'>): string {
+  // The reporter's own words beat any list entry: "3rd floor corridor by elevator B".
+  if (ticket.location_note) return ticket.location_note;
+  const space = ticket.space;
+  if (space.label) return space.label;
   if (space.space_type === 'unit' && space.unit_number) return `Unit ${space.unit_number}`;
   if (space.common_area_type) {
     return space.common_area_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -158,7 +165,7 @@ async function smsEmergencyToPMs(
   pmUsers: Array<{ id: string; email: string; full_name: string; phone: string | null; sms_notifications_enabled: boolean }>,
 ): Promise<void> {
   const buildingName = truncate(ticket.building.name || ticket.building.address_line1, 40);
-  const unit = spaceLabel(ticket.space);
+  const unit = spaceLabel(ticket);
   const link = ticketLink(ticket.id);
   const desc = ticket.description
     ? truncate(ticket.description, 80)
@@ -204,7 +211,7 @@ async function smsCompletionToResident(
   if (!phone) return;
 
   const buildingName = truncate(ticket.building.name || ticket.building.address_line1, 40);
-  const unit = spaceLabel(ticket.space);
+  const unit = spaceLabel(ticket);
   const link = ticketLink(ticket.id);
 
   // Individual truncation above bounds total to ~168 chars (1 SMS segment typical)
@@ -250,7 +257,7 @@ export async function notifyNewTicket(
       description: ticket.description || '',
       buildingName,
       buildingAddress: address,
-      unitNumber: spaceLabel(ticket.space),
+      unitNumber: spaceLabel(ticket),
       createdByName: ticket.created_by.full_name,
       companyName: company?.name || 'Unknown',
     };
@@ -322,7 +329,7 @@ export async function notifyStatusChange(
 ): Promise<void> {
   try {
     const buildingName = ticket.building.name || ticket.building.address_line1;
-    const unit = spaceLabel(ticket.space);
+    const unit = spaceLabel(ticket);
 
     const baseData: Omit<StatusChangeEmailData, 'recipientName'> = {
       ticketNumber: ticket.ticket_number,

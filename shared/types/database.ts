@@ -127,6 +127,7 @@ export interface Ticket {
   status: TicketStatus;                // ticket_status NOT NULL DEFAULT 'new'
   description: string | null;          // TEXT
   access_instructions: string | null;  // TEXT
+  location_note: string | null;        // VARCHAR(300) — migration 00029, "Somewhere else" free text
   scheduling_preference: SchedulingPreference | null; // JSONB
   assigned_technician: string | null;  // VARCHAR(255)
   scheduled_date: string | null;       // DATE

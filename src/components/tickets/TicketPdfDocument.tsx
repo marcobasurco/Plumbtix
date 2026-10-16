@@ -15,7 +15,7 @@ import {
 } from '@react-pdf/renderer';
 import type { TicketDetailRow, StatusLogRow } from '@/lib/tickets';
 import type { UserRole, TicketStatus, IssueType } from '@shared/types/enums';
-import { STATUS_LABELS, ISSUE_TYPE_LABELS, SEVERITY_LABELS, formatSpaceLabel } from '@shared/types/enums';
+import { STATUS_LABELS, ISSUE_TYPE_LABELS, SEVERITY_LABELS, formatTicketLocation } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -210,7 +210,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
 
   const bld = ticket.building;
   const spc = ticket.space;
-  const spaceLabel = formatSpaceLabel(spc);
+  const spaceLabel = formatTicketLocation(ticket);
 
   const sched = ticket.scheduling_preference as {
     type?: string; preferred_date?: string; preferred_time?: string;
