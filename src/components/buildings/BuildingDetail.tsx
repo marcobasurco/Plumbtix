@@ -7,6 +7,7 @@
 // =============================================================================
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { formatPhone } from '@shared/phone';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   fetchBuildingDetail,
@@ -156,7 +157,7 @@ export function BuildingDetail() {
     { icon: KeyRound, label: 'Gate Code', value: building.gate_code, mono: true },
     { icon: Droplets, label: 'Water Shutoff', value: building.water_shutoff_location },
     { icon: Flame, label: 'Gas Shutoff', value: building.gas_shutoff_location },
-    { icon: User, label: 'Onsite Contact', value: building.onsite_contact_name ? `${building.onsite_contact_name}${building.onsite_contact_phone ? ` — ${building.onsite_contact_phone}` : ''}` : null },
+    { icon: User, label: 'Onsite contact', value: building.onsite_contact_name ? `${building.onsite_contact_name}${building.onsite_contact_phone ? ` — ${formatPhone(building.onsite_contact_phone)}` : ''}` : null },
     { icon: FileText, label: 'Access Notes', value: building.access_notes },
   ].filter((d) => d.value);
 

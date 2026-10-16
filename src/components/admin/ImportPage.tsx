@@ -21,6 +21,7 @@ import { createCompany, updateCompany, fetchCompanyList, type CompanyListRow } f
 import { createBuilding, updateBuilding, createSpace, updateSpace, fetchBuildingOccupants, createOccupant } from '@/lib/buildings';
 import type { BuildingFormData, SpaceFormData, OccupantFormData } from '@/lib/buildings';
 import { sendInvitation } from '@/lib/api';
+import { normalizePhone } from '@shared/phone';
 import { fetchAllEquipment, createEquipment, updateEquipment, type EquipmentSyncRow } from '@/lib/equipment';
 import type { CommonAreaType } from '@shared/types/enums';
 import { PageTransition } from '@/components/PageTransition';
@@ -216,16 +217,18 @@ function changedFields(existing: Record<string, unknown>, incoming: Record<strin
   return out;
 }
 
-/** Normalize phone to (XXX) XXX-XXXX, or return cleaned digits if not 10-digit US */
+/**
+ * Phone cells become E.164 (the product standard) or '' when empty. A cell
+ * with text that isn't a phone number is reported on the row via phoneProblem()
+ * instead of being silently dropped.
+ */
 function formatPhone(raw: string | null | undefined): string {
-  if (!raw) return '';
-  const digits = String(raw).replace(/\D/g, '');
-  if (digits.length === 0) return '';
-  // Strip leading 1 for US numbers
-  const d = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
-  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-  // Non-standard length — return digits with dashes as-is
-  return String(raw).trim();
+  return normalizePhone(raw) ?? '';
+}
+
+function phoneProblem(raw: string | null | undefined): string | null {
+  if (raw == null || !String(raw).trim()) return null;
+  return normalizePhone(raw) ? null : `Phone "${String(raw).trim()}" isn't a valid number — use (650) 555-1234 or +1…`;
 }
 
 
@@ -463,6 +466,9 @@ export function ImportPage() {
                 b.company_id === company.id && looseMatch(b.address_line1, row.address)
               );
 
+              const phoneErr = phoneProblem(row.onsite_contact_phone);
+              if (phoneErr) { rowResults.push({ row: rowNum, status: 'error', message: phoneErr }); break; }
+
               const form: BuildingFormData = {
                 name: row.building_name || '',
                 address_line1: row.address,
@@ -608,6 +614,7 @@ export function ImportPage() {
               );
               if (!space) { rowResults.push({ row: rowNum, status: 'error', message: `Unit "${row.unit_number}" not found in ${row.building_address}` }); break; }
               if (!row.email || !row.name) { rowResults.push({ row: rowNum, status: 'skipped', message: 'Missing name or email' }); break; }
+              { const phoneErr = phoneProblem(row.phone); if (phoneErr) { rowResults.push({ row: rowNum, status: 'error', message: phoneErr }); break; } }
 
               if (!occupantCache.has(building.id)) {
                 occupantCache.set(building.id, await fetchBuildingOccupants(building.id));
@@ -736,6 +743,7 @@ export function ImportPage() {
                 rowResults.push({ row: rowNum, status: 'error', message: `${row.email} is a ${existing.role} account — cannot modify via import` });
                 break;
               }
+              { const phoneErr = phoneProblem(row.phone); if (phoneErr) { rowResults.push({ row: rowNum, status: 'error', message: phoneErr }); break; } }
 
               if (existing) {
                 const diff = changedFields(

@@ -16,6 +16,7 @@
 // =============================================================================
 
 import { z } from 'zod';
+import { isValidPhone, PHONE_ERROR } from '@shared/phone';
 import { COMMON_AREA_TYPES } from '@shared/types/enums';
 
 // ---------------------------------------------------------------------------
@@ -60,16 +61,9 @@ export const BuildingSchema = z.object({
     .transform((v) => v?.trim() || ''),
   onsite_contact_phone: z
     .string()
-    .max(20)
+    .max(32)
     .optional()
-    .refine(
-      (v) => {
-        if (!v || !v.trim()) return true;
-        const cleaned = v.replace(/[\s\-().+]/g, '');
-        return /^\d{7,15}$/.test(cleaned);
-      },
-      { message: 'Invalid phone format' }
-    )
+    .refine((v) => isValidPhone(v), { message: PHONE_ERROR })
     .transform((v) => v?.trim() || ''),
   access_notes: z.string().optional().transform((v) => v?.trim() || ''),
 });

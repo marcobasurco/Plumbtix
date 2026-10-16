@@ -13,13 +13,15 @@ import { handleCors } from '../_shared/cors.ts';
 import { createUserClient, createServiceClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
 import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { normalizePhone, PHONE_ERROR } from '../_shared/phone.ts';
 import { runInBackground } from '../_shared/background.ts';
 
 const UpdateOccupantSchema = z.object({
   occupant_id: z.string().regex(UUID_REGEX, 'Invalid occupant_id'),
   name: z.string().min(1).max(255).optional(),
   email: z.string().email('Invalid email').optional(),
-  phone: z.string().max(20).nullable().optional(),
+  // Absent = leave unchanged; '' or null = clear; text = must parse (checked below)
+  phone: z.string().max(32).nullable().optional(),
   occupant_type: z.enum(['homeowner', 'tenant']).optional(),
   resend_invite: z.boolean().optional().default(false),
 });
@@ -61,7 +63,15 @@ Deno.serve(async (req: Request) => {
     const updates: Record<string, unknown> = {};
     if (name !== undefined) updates.name = name.trim();
     if (email !== undefined) updates.email = email.trim().toLowerCase();
-    if (phone !== undefined) updates.phone = phone?.trim() || null;
+    if (phone !== undefined) {
+      if (phone === null || !phone.trim()) {
+        updates.phone = null;
+      } else {
+        const e164 = normalizePhone(phone);
+        if (!e164) return err('VALIDATION_ERROR', PHONE_ERROR);
+        updates.phone = e164;
+      }
+    }
     if (occupant_type !== undefined) updates.occupant_type = occupant_type;
 
     const emailChanged = email !== undefined && email.trim().toLowerCase() !== existing.email;

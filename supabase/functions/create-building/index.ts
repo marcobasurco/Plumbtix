@@ -21,7 +21,7 @@
 import { handleCors } from '../_shared/cors.ts';
 import { createUserClient, getAuthenticatedUserId } from '../_shared/supabase.ts';
 import { ok, err, unauthorized, serverError } from '../_shared/response.ts';
-import { z, parseBody, UUID_REGEX } from '../_shared/validation.ts';
+import { z, parseBody, UUID_REGEX, PhoneSchema } from '../_shared/validation.ts';
 
 // ---------------------------------------------------------------------------
 // Validation schema — mirrors buildings table constraints exactly
@@ -47,12 +47,7 @@ const CreateBuildingSchema = z.object({
   water_shutoff_location: z.string().max(500).nullable().optional().transform((v) => v?.trim() || null),
   gas_shutoff_location: z.string().max(500).nullable().optional().transform((v) => v?.trim() || null),
   onsite_contact_name: z.string().max(255).nullable().optional().transform((v) => v?.trim() || null),
-  onsite_contact_phone: z
-    .string()
-    .max(20)
-    .nullable()
-    .optional()
-    .transform((v) => v?.trim() || null),
+  onsite_contact_phone: PhoneSchema,
   access_notes: z.string().nullable().optional().transform((v) => v?.trim() || null),
 });
 

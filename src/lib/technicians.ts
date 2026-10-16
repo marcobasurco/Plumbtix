@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { supabase } from './supabaseClient';
+import { normalizePhone } from '@shared/phone';
 import type { Technician } from '@shared/types/database';
 
 export interface TechnicianFormData {
@@ -37,7 +38,7 @@ export async function createTechnician(form: TechnicianFormData): Promise<Techni
     .from('technicians')
     .insert({
       name: form.name.trim(),
-      phone: form.phone?.trim() || null,
+      phone: normalizePhone(form.phone),
       email: form.email?.trim() || null,
     })
     .select()
@@ -61,7 +62,7 @@ export async function updateTechnician(
 ): Promise<Technician> {
   const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (updates.name !== undefined) payload.name = updates.name.trim();
-  if (updates.phone !== undefined) payload.phone = updates.phone?.trim() || null;
+  if (updates.phone !== undefined) payload.phone = normalizePhone(updates.phone);
   if (updates.email !== undefined) payload.email = updates.email?.trim() || null;
   if (updates.active !== undefined) payload.active = updates.active;
 
