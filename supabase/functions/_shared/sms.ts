@@ -180,3 +180,55 @@ export async function sendSMSAndLog(
 
   return result;
 }
+
+// =============================================================================
+// Voice call (on-call escalation)
+// =============================================================================
+// A text can sit unread at 2 a.m.; a ringing phone cannot. Uses the Twilio
+// Calls API with inline TwiML so no public webhook is needed. Same config and
+// sandbox behaviour as SMS. Never throws.
+// =============================================================================
+
+function escapeXml(s: string): string {
+  return s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c] as string));
+}
+
+export async function placeCall(to: string, message: string): Promise<SMSResult> {
+  if (!isE164(to)) {
+    return { ok: false, error: `Invalid phone number format: ${to}` };
+  }
+  if (isSandboxMode()) {
+    console.log('[call] SANDBOX — would call %s: %s', to, message);
+    return { ok: true, sid: `SANDBOX_CALL_${Date.now()}` };
+  }
+  const config = getTwilioConfig();
+  if (!config) {
+    return { ok: false, error: 'Twilio not configured' };
+  }
+  const { accountSid, authToken, fromNumber } = config;
+  const say = escapeXml(message);
+  // Say it twice, slowly, then hang up. <Pause> gives a sleepy listener a beat.
+  const twiml = `<Response><Pause length="1"/><Say voice="alice">${say}</Say><Pause length="1"/><Say voice="alice">${say}</Say></Response>`;
+  try {
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Calls.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`,
+      },
+      body: new URLSearchParams({ To: to, From: fromNumber, Twiml: twiml, Timeout: '40' }),
+    });
+    const data = await res.json();
+    if (res.ok && data.sid) {
+      console.log('[call] Placed: sid=%s to=%s', data.sid, to.slice(0, 5) + '***' + to.slice(-2));
+      return { ok: true, sid: data.sid };
+    }
+    const error = data.message || `Twilio error ${res.status}`;
+    console.error('[call] Twilio API error:', res.status, error);
+    return { ok: false, error };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'Call failed';
+    console.error('[call] Network error:', error);
+    return { ok: false, error };
+  }
+}

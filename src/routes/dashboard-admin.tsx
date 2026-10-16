@@ -12,6 +12,7 @@ import { CompanyDetail } from '@/components/admin/CompanyDetail';
 import { UsersPage } from '@/components/admin/UsersPage';
 import { DispatchBoard } from '@/components/admin/DispatchBoard';
 import { TechniciansPage } from '@/components/admin/TechniciansPage';
+import { OnCallPage } from '@/components/admin/OnCallPage';
 import { AnalyticsPage } from '@/components/admin/AnalyticsPage';
 import { ImportPage } from '@/components/admin/ImportPage';
 import { ReportsPage } from '@/components/admin/ReportsPage';
@@ -36,6 +37,7 @@ export function AdminDashboard() {
         <Route path="users" element={<UsersPage />} />
         <Route path="dispatch" element={<DispatchBoard />} />
         <Route path="technicians" element={<TechniciansPage />} />
+        <Route path="on-call" element={<OnCallPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="import" element={<ImportPage />} />
         <Route path="reports" element={<ReportsPage />} />

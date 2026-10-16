@@ -131,7 +131,7 @@ async function getTicketCreator(
   return data;
 }
 
-function spaceLabel(ticket: Pick<TicketContext, 'space' | 'location_note'>): string {
+export function formatLocation(ticket: Pick<TicketContext, 'space' | 'location_note'>): string {
   // The reporter's own words beat any list entry: "3rd floor corridor by elevator B".
   if (ticket.location_note) return ticket.location_note;
   const space = ticket.space;
@@ -165,7 +165,7 @@ async function smsEmergencyToPMs(
   pmUsers: Array<{ id: string; email: string; full_name: string; phone: string | null; sms_notifications_enabled: boolean }>,
 ): Promise<void> {
   const buildingName = truncate(ticket.building.name || ticket.building.address_line1, 40);
-  const unit = spaceLabel(ticket);
+  const unit = formatLocation(ticket);
   const link = ticketLink(ticket.id);
   const desc = ticket.description
     ? truncate(ticket.description, 80)
@@ -211,7 +211,7 @@ async function smsCompletionToResident(
   if (!phone) return;
 
   const buildingName = truncate(ticket.building.name || ticket.building.address_line1, 40);
-  const unit = spaceLabel(ticket);
+  const unit = formatLocation(ticket);
   const link = ticketLink(ticket.id);
 
   // Individual truncation above bounds total to ~168 chars (1 SMS segment typical)
@@ -257,7 +257,7 @@ export async function notifyNewTicket(
       description: ticket.description || '',
       buildingName,
       buildingAddress: address,
-      unitNumber: spaceLabel(ticket),
+      unitNumber: formatLocation(ticket),
       createdByName: ticket.created_by.full_name,
       companyName: company?.name || 'Unknown',
     };
@@ -329,7 +329,7 @@ export async function notifyStatusChange(
 ): Promise<void> {
   try {
     const buildingName = ticket.building.name || ticket.building.address_line1;
-    const unit = spaceLabel(ticket);
+    const unit = formatLocation(ticket);
 
     const baseData: Omit<StatusChangeEmailData, 'recipientName'> = {
       ticketNumber: ticket.ticket_number,
@@ -538,5 +538,55 @@ export async function notifyResidentClaim(data: ResidentClaimEmailData): Promise
   } catch (e) {
     console.error('[notifications] notifyResidentClaim error:', e);
     reportError(e, { area: 'notifications', event: 'resident_claim' });
+  }
+}
+
+// =============================================================================
+// Notification: Emergency acknowledged (reporter hears "someone is on it")
+// =============================================================================
+
+export async function notifyAcknowledged(
+  svc: SupabaseClient,
+  ticket: {
+    id: string;
+    ticket_number: number;
+    created_by_user_id: string;
+    building: { name: string | null; address_line1: string };
+    space: TicketContext['space'];
+    location_note?: string | null;
+  },
+  acknowledgedByName: string,
+): Promise<void> {
+  try {
+    const buildingName = ticket.building.name || ticket.building.address_line1;
+    const where = formatLocation(ticket);
+    const link = ticketLink(ticket.id);
+
+    const creator = await getTicketCreator(svc, ticket.created_by_user_id);
+
+    // In-app
+    await svc.from('notifications').insert({
+      user_id: ticket.created_by_user_id,
+      type: 'emergency_acknowledged',
+      title: `Pro Roto has your emergency — ${acknowledgedByName} is on it`,
+      body: `Work order #${ticket.ticket_number}, ${buildingName}, ${where}.`,
+      ticket_id: ticket.id,
+    });
+
+    // SMS — emergencies always text the reporter if we have a number
+    if (creator?.phone) {
+      const phone = normalizePhone(creator.phone);
+      if (phone) {
+        await sendSMSAndLog(svc, {
+          to: phone,
+          body: `Pro Roto has your emergency (WO #${ticket.ticket_number}, ${buildingName}, ${where}). ${acknowledgedByName} is on it. ${link}`,
+          userId: creator.id,
+          ticketId: ticket.id,
+        });
+      }
+    }
+  } catch (e) {
+    console.error('[notifications] notifyAcknowledged error:', e);
+    reportError(e, { area: 'notifications', event: 'emergency_acknowledged' });
   }
 }

@@ -67,6 +67,23 @@ functions that import `_shared/email-templates.ts` (`create-ticket`,
 - Choosing "Gas smell" shows a leave-the-area / call-911 line before anything
   else.
 
+### Emergency acknowledgement and on-call escalation (migration 00030)
+- An emergency work order must now be **acknowledged** by a Pro Roto admin
+  ("I'm on it" on the work order, or implicitly by changing its status).
+  Until it is, the **on-call roster** is paged in order — text **and phone
+  call** — every N minutes (per person, default 10), twice through the list;
+  then everyone is emailed and the work order shows "No response".
+- New admin page **On-call** (`/admin/on-call`): ordered roster of Pro Roto
+  admins, wait minutes, on/off, plus a live list of emergencies waiting for
+  someone.
+- Reporter is told who picked it up (in-app + SMS). PM roles see "Pro Roto has
+  been paged" until then. "Unacknowledged" / "No response" badges on the list.
+- Plumbing: `on_call_roster`, `ticket_escalation_log`, five columns on
+  `tickets`, triggers that arm/disarm the clock and protect the columns,
+  `escalate-emergencies` (called every minute by pg_cron → pg_net; secret and
+  URL in Vault) and `acknowledge-emergency` edge functions, `placeCall()` in
+  the Twilio helper. See the migration header for the one-time Vault setup.
+
 ### Mobile bottom tab bar
 - On phones: Overview · Work orders · **Report** (raised, one tap from
   anywhere) · Buildings (Dispatch for Pro Roto) · Menu. Hidden on the report

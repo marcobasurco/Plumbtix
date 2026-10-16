@@ -26,7 +26,7 @@ import {
 import {
   LayoutDashboard, Ticket, Building2, Users2, Kanban,
   LogOut, Menu, Wrench, Briefcase, Moon, Sun, BarChart3,
-  FileSpreadsheet, ChevronRight, Settings, Plus,
+  FileSpreadsheet, ChevronRight, Settings, Plus, Siren,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 
@@ -76,6 +76,7 @@ const ADMIN_EXTRA: NavItem[] = [
   { label: 'Users', path: 'users', matchSegment: 'users', icon: <Users2 className="h-[18px] w-[18px]" />, section: 'Management' },
   { label: 'Dispatch', path: 'dispatch', matchSegment: 'dispatch', icon: <Kanban className="h-[18px] w-[18px]" />, section: 'Management' },
   { label: 'Technicians', path: 'technicians', matchSegment: 'technicians', icon: <Wrench className="h-[18px] w-[18px]" />, section: 'Management' },
+  { label: 'On-call', path: 'on-call', matchSegment: 'on-call', icon: <Siren className="h-[18px] w-[18px]" aria-hidden="true" />, section: 'Management' },
   { label: 'Sync', path: 'import', matchSegment: 'import', icon: <FileSpreadsheet className="h-[18px] w-[18px]" />, section: 'Tools' },
   { label: 'Reports', path: 'reports', matchSegment: 'reports', icon: <BarChart3 className="h-[18px] w-[18px]" />, section: 'Tools' },
 ];
