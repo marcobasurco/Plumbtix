@@ -86,6 +86,7 @@ const EMPTY_DRAFT: Draft = {
 };
 
 const DRAFT_KEY = 'plumbtix.report-draft.v1';
+let fileSeq = 0;
 
 const SEVERITY_HELP: Record<TicketSeverity, string> = {
   emergency: 'Pro Roto is paged the moment you send this — any hour.',
@@ -126,6 +127,71 @@ function buildingTitle(b: BuildingOption): string {
 
 function spaceTitle(s: SpaceOption): string {
   return `${formatSpaceLabel(s)}${s.floor != null ? ` · Floor ${s.floor}` : ''}`;
+}
+
+/**
+ * Compress (videos), upload, and register each file against an existing work
+ * order. Reports progress through `onProgress`; returns how many failed.
+ * Lives outside the component on purpose: it uses Date.now() and the React
+ * Compiler lint forbids impure calls inside component code.
+ */
+async function uploadAttachments(
+  ticketId: string,
+  files: File[],
+  onProgress: (rows: UploadProgress[]) => void,
+): Promise<number> {
+  if (files.length === 0) return 0;
+  const progress: UploadProgress[] = files.map((f) => ({ fileName: f.name, status: 'pending' }));
+  const publish = () => onProgress([...progress]);
+  publish();
+
+  let failed = 0;
+  let videoIndex = 1;
+  for (let i = 0; i < files.length; i++) {
+    const original = files[i];
+    let file = original;
+
+    if (shouldCompress(file)) {
+      progress[i] = { ...progress[i], status: 'compressing', compressPercent: 0 };
+      publish();
+      try {
+        const c = await compressVideo(file, {
+          maxHeight: 720, crf: 28, preset: 'fast',
+          onProgress: (percent) => { progress[i] = { ...progress[i], compressPercent: percent }; publish(); },
+        });
+        file = c.file;
+      } catch { /* compression is best-effort; upload the original */ }
+    }
+
+    const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const filePath = `tickets/${ticketId}/${safeName}`;
+
+    progress[i] = { ...progress[i], status: 'uploading' };
+    publish();
+    const { error: uploadError } = await supabase.storage
+      .from('ticket-attachments')
+      .upload(filePath, file, { contentType: file.type, upsert: false });
+    if (uploadError) {
+      failed++;
+      progress[i] = { ...progress[i], status: 'failed', error: uploadError.message };
+      publish();
+      continue;
+    }
+
+    progress[i] = { ...progress[i], status: 'registering' };
+    publish();
+    const reg = await registerAttachment({
+      ticket_id: ticketId,
+      file_path: filePath,
+      file_name: shouldCompress(original) ? `video${videoIndex++}.mp4` : original.name,
+      file_type: file.type,
+      file_size: file.size,
+    });
+    if (!reg.ok) { failed++; progress[i] = { ...progress[i], status: 'failed', error: reg.error.message }; }
+    else progress[i] = { ...progress[i], status: 'done' };
+    publish();
+  }
+  return failed;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -225,7 +291,7 @@ export function CreateTicketWizard() {
       const ok = ALLOWED_MIME_TYPES.includes(file.type as typeof ALLOWED_MIME_TYPES[number]) || file.type.startsWith('video/');
       const isVisual = file.type.startsWith('image/') || file.type.startsWith('video/');
       return {
-        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `f${++fileSeq}`,
         file,
         previewUrl: isVisual ? URL.createObjectURL(file) : null,
         error: ok ? null : `Can't attach ${file.type || 'this file type'}`,
@@ -295,57 +361,7 @@ export function CreateTicketWizard() {
     clearDraft();
 
     // Upload files — the work order already exists, so a failed photo is recoverable
-    let failed = 0;
-    if (validFiles.length > 0) {
-      const progress: UploadProgress[] = validFiles.map((f) => ({ fileName: f.file.name, status: 'pending' }));
-      setUploadProgress([...progress]);
-      let videoIndex = 1;
-
-      for (let i = 0; i < validFiles.length; i++) {
-        const sf = validFiles[i];
-        let file = sf.file;
-
-        if (shouldCompress(file)) {
-          progress[i] = { ...progress[i], status: 'compressing', compressPercent: 0 };
-          setUploadProgress([...progress]);
-          try {
-            const c = await compressVideo(file, {
-              maxHeight: 720, crf: 28, preset: 'fast',
-              onProgress: (percent) => { progress[i] = { ...progress[i], compressPercent: percent }; setUploadProgress([...progress]); },
-            });
-            file = c.file;
-          } catch { /* compression is best-effort; upload the original */ }
-        }
-
-        const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const filePath = `tickets/${ticketId}/${safeName}`;
-
-        progress[i] = { ...progress[i], status: 'uploading' };
-        setUploadProgress([...progress]);
-        const { error: uploadError } = await supabase.storage
-          .from('ticket-attachments')
-          .upload(filePath, file, { contentType: file.type, upsert: false });
-        if (uploadError) {
-          failed++;
-          progress[i] = { ...progress[i], status: 'failed', error: uploadError.message };
-          setUploadProgress([...progress]);
-          continue;
-        }
-
-        progress[i] = { ...progress[i], status: 'registering' };
-        setUploadProgress([...progress]);
-        const reg = await registerAttachment({
-          ticket_id: ticketId,
-          file_path: filePath,
-          file_name: shouldCompress(sf.file) ? `video${videoIndex++}.mp4` : sf.file.name,
-          file_type: file.type,
-          file_size: file.size,
-        });
-        if (!reg.ok) { failed++; progress[i] = { ...progress[i], status: 'failed', error: reg.error.message }; }
-        else progress[i] = { ...progress[i], status: 'done' };
-        setUploadProgress([...progress]);
-      }
-    }
+    const failed = await uploadAttachments(ticketId, validFiles.map((f) => f.file), setUploadProgress);
 
     setSubmitting(false);
     toast.success(`Work order #${ticketNumber} sent to Pro Roto`, {
