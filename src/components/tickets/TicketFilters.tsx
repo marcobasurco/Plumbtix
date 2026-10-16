@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { TICKET_STATUSES, TICKET_SEVERITIES, STATUS_LABELS, SEVERITY_LABELS } from '@shared/types/enums';
+import { SELECTABLE_TICKET_STATUSES, TICKET_SEVERITIES, STATUS_LABELS, SEVERITY_LABELS } from '@shared/types/enums';
 import type { TicketListFilters, BuildingOption } from '@/lib/tickets';
 import { fetchBuildingOptions } from '@/lib/tickets';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
@@ -117,7 +117,7 @@ export function TicketFilters({ filters, onChange }: TicketFiltersProps) {
               onChange={(e) => update({ status: e.target.value as TicketListFilters['status'] })}>
               <option value="open">Open</option>
               <option value="all">All statuses</option>
-              {TICKET_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              {SELECTABLE_TICKET_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
           </div>
 

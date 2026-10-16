@@ -342,7 +342,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
         </View>
 
         {/* ── WORK DETAILS ── */}
-        {(ticket.assigned_technician || ticket.scheduled_date || ticket.quote_amount !== null || ticket.invoice_number || ticket.completed_at) && (
+        {(ticket.assigned_technician || ticket.scheduled_date || ticket.quote_amount !== null || ticket.completed_at) && (
           <View style={s.section}>
             <Text style={s.sectionHead}>Work Details</Text>
             {ticket.assigned_technician && (
@@ -363,12 +363,6 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
               <View style={s.row}>
                 <Text style={s.label}>Quote</Text>
                 <Text style={s.value}>{fmtCurrency(ticket.quote_amount)}</Text>
-              </View>
-            )}
-            {isFullReport && ticket.invoice_number && (
-              <View style={s.row}>
-                <Text style={s.label}>Invoice #</Text>
-                <Text style={s.value}>{ticket.invoice_number}</Text>
               </View>
             )}
             {ticket.completed_at && (

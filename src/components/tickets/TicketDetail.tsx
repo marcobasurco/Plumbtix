@@ -404,7 +404,7 @@ export function TicketDetail() {
           </Card>
 
           {/* Work Details Card (only if there's data) */}
-          {(ticket.assigned_technician || ticket.scheduled_date || ticket.quote_amount !== null || ticket.invoice_number || ticket.completed_at) && (
+          {(ticket.assigned_technician || ticket.scheduled_date || ticket.quote_amount !== null || ticket.completed_at) && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -425,9 +425,6 @@ export function TicketDetail() {
                 )}
                 {ticket.quote_amount !== null && (
                   <InfoRow icon={<FileText className="h-4 w-4" />} label="Quote" value={formatCurrency(ticket.quote_amount)} />
-                )}
-                {ticket.invoice_number && (
-                  <InfoRow icon={<FileText className="h-4 w-4" />} label="Invoice" value={ticket.invoice_number} />
                 )}
                 {ticket.completed_at && (
                   <InfoRow icon={<Clock className="h-4 w-4" />} label="Completed" value={formatDateTime(ticket.completed_at)} />

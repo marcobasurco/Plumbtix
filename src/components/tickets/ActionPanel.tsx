@@ -48,7 +48,6 @@ function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole, quote
   if (to === 'in_progress') return from === 'waiting_approval' ? `Customer approved${quoteText} — resume` : 'Start work';
   if (to === 'waiting_approval') return 'Waiting on customer approval';
   if (to === 'completed') return 'Mark completed';
-  if (to === 'invoiced') return 'Mark invoiced';
   return STATUS_LABELS[to];
 }
 
@@ -60,7 +59,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
   // the "Work details" card on the page instead.
   const canEditFields = isAdmin;
   const ids = {
-    tech: useId(), date: useId(), window: useId(), quote: useId(), invoice: useId(),
+    tech: useId(), date: useId(), window: useId(), quote: useId(),
   };
 
   const [submitting, setSubmitting] = useState(false);
@@ -81,7 +80,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
   const [scheduledDate, setScheduledDate] = useState('');
   const [timeWindow, setTimeWindow] = useState('');
   const [quoteAmount, setQuoteAmount] = useState('');
-  const [invoiceNumber, setInvoiceNumber] = useState('');
   const [declineReason, setDeclineReason] = useState('');
 
   // Load the roster for the assignment dropdown (proroto_admin only)
@@ -113,11 +111,8 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
       if (scheduledDate) payload.scheduled_date = scheduledDate;
       if (timeWindow.trim()) payload.scheduled_time_window = timeWindow.trim();
     }
-    // Financial fields: proroto_admin only
-    if (isAdmin) {
-      if (quoteAmount) payload.quote_amount = parseFloat(quoteAmount);
-      if (invoiceNumber.trim()) payload.invoice_number = invoiceNumber.trim();
-    }
+    // Quote: proroto_admin only
+    if (isAdmin && quoteAmount) payload.quote_amount = parseFloat(quoteAmount);
 
     if (targetStatus === 'cancelled' && declineReason.trim()) {
       payload.decline_reason = declineReason.trim();
@@ -128,7 +123,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     if (result.ok) {
       setSuccess(`Work order is now ${STATUS_LABELS[targetStatus].toLowerCase()}.`);
       setScheduledDate(''); setTimeWindow('');
-      setQuoteAmount(''); setInvoiceNumber(''); setDeclineReason('');
+      setQuoteAmount(''); setDeclineReason('');
       onUpdated();
     } else {
       setError(result.error.message);
@@ -149,7 +144,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     if (scheduledDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
     if (timeWindow.trim()) { payload.scheduled_time_window = timeWindow.trim(); hasChanges = true; }
     if (quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
-    if (invoiceNumber.trim()) { payload.invoice_number = invoiceNumber.trim(); hasChanges = true; }
 
     if (!hasChanges) {
       setError('Nothing to save yet — change a field first.');
@@ -161,7 +155,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     if (result.ok) {
       setSuccess('Changes saved.');
       setScheduledDate(''); setTimeWindow('');
-      setQuoteAmount(''); setInvoiceNumber('');
+      setQuoteAmount('');
       onUpdated();
     } else {
       setError(result.error.message);
@@ -227,7 +221,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
       {/* Editable fields — Pro Roto only: scheduling + billing */}
       {canEditFields && !terminal && (
         <div className="border-t border-border pt-4 mt-2">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduling & billing</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduling & quote</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -251,10 +245,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
             <div>
               <label htmlFor={ids.quote} className={labelClass}>Quote amount ($)</label>
               <input id={ids.quote} type="number" inputMode="decimal" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" className={fieldClass} />
-            </div>
-            <div>
-              <label htmlFor={ids.invoice} className={labelClass}>Invoice number</label>
-              <input id={ids.invoice} type="text" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="INV-001" className={fieldClass} />
             </div>
           </div>
 

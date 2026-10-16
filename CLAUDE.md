@@ -31,7 +31,7 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests and build on every P
 
 `proroto_admin` (Pro Roto, all companies) · `pm_admin` — shown as **Admin** (invites Admins/Staff, sets Staff building access, reports problems) · `pm_user` — shown as **Staff** (reports problems for entitled buildings via `building_entitlements`) · `resident` (own space only). Residents/occupants are an HOA concept — healthcare customers use the PM roles only.
 
-Product decisions (Marco, Oct 2026): **only Pro Roto dispatches** — scheduling, technician assignment, cancelling, quotes/invoices are `proroto_admin`-only; **quote approvals happen by phone** and Pro Roto records them; PM roles only triage information (`new → needs_info`, `needs_info → new`). In UI copy say **work order**, never "ticket" (identifiers in code stay `ticket*`).
+Product decisions (Marco, Oct 2026): **only Pro Roto dispatches** — scheduling, technician assignment, cancelling and quotes are `proroto_admin`-only; **quote approvals happen by phone** and Pro Roto records them; PM roles only triage information (`new → needs_info`, `needs_info → new`). **No invoicing** — invoices live in ServiceTitan; a work order ends at `completed` (00032; `invoiced` / `invoice_number` are legacy, read-only). In UI copy say **work order**, never "ticket" (identifiers in code stay `ticket*`).
 
 ## Security invariants — do not weaken
 
@@ -43,7 +43,7 @@ The database is the authorization layer. Edge functions validate first for frien
 4. `ticket_comments` has all PostgREST privileges revoked (00006); reads/writes go through `get-ticket-comments` / `create-comment`, which filter `is_internal`.
 5. Public sharing columns (`public_token`, `public_enabled`) are writable only via `toggle-public-sharing` (service role; trigger 00022).
 6. Views must be `security_invoker = true` and revoked from `anon` (`v_company_analytics`).
-7. Status transitions: the matrix lives in THREE places that must stay identical — `enforce_ticket_status_transition()` (latest version in migration 00028), `TRANSITION_MATRIX` in `supabase/functions/update-ticket/index.ts`, and `shared/types/transitions.ts`. `pm_admin`: `new→needs_info`, `needs_info→new`; `pm_user`: `needs_info→new`; everything else is Pro Roto.
+7. Status transitions: the matrix lives in THREE places that must stay identical — `enforce_ticket_status_transition()` (latest version in migration 00032), `TRANSITION_MATRIX` in `supabase/functions/update-ticket/index.ts`, and `shared/types/transitions.ts`. `pm_admin`: `new→needs_info`, `needs_info→new`; `pm_user`: `needs_info→new`; everything else is Pro Roto; `completed` is terminal.
 8. Password policy (12+ chars, upper/lower/digit/symbol) is set in the Supabase dashboard and mirrored in `supabase/functions/_shared/validation.ts` (`PasswordSchema`), `src/lib/password.ts`, and `supabase/config.toml`. Change all four together.
 9. Public self-signup is OFF in the dashboard and in `config.toml`. Do not re-enable.
 10. Email templates (`_shared/email-templates.ts`) HTML-escape every user-controlled value. Keep using `esc()` / `escMultiline()`.
@@ -54,7 +54,7 @@ The database is the authorization layer. Edge functions validate first for frien
 
 ## Migrations
 
-- Files in `supabase/migrations/`, numbered `000NN_description.sql`. Next number: 00032.
+- Files in `supabase/migrations/`, numbered `000NN_description.sql`. Next number: 00033.
 - Applied migrations are immutable. Fix forward with a new file. New migrations may `DROP POLICY IF EXISTS` / `CREATE POLICY` to replace earlier policies — the old "LOCKED sections" rule is retired.
 - Never change the schema in the Supabase dashboard. If it happens, run `supabase db diff` and commit the result before any other work.
 - Write migrations idempotently (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP ... IF EXISTS`). End each with commented verification queries.
