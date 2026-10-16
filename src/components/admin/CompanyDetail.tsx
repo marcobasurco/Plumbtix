@@ -105,7 +105,7 @@ function UserCard({ user }: { user: UserListRow }) {
   return (
     <div className="ticket-card" style={{ cursor: 'default' }}>
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+        <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0">
           {user.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">

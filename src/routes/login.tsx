@@ -48,7 +48,7 @@ export function LoginPage() {
       <div className="w-full max-w-[400px] relative z-10">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
             <Wrench className="h-5 w-5 text-white" />
           </div>
           <div>

@@ -232,9 +232,9 @@ export function SettingsPage() {
           )}
 
           {isPM && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-4">
+            <div className="rounded-lg tone-info tone-notice p-4">
               <div className="flex gap-2">
-                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                <Info className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                     Emergency alerts always enabled
@@ -250,9 +250,9 @@ export function SettingsPage() {
           )}
 
           {isAdmin && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 p-4">
+            <div className="rounded-lg tone-info tone-notice p-4">
               <div className="flex gap-2">
-                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                <Info className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                     Emergency alerts enabled

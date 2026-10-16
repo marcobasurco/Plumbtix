@@ -92,20 +92,22 @@ function fmtDateTime(iso: string) {
 }
 
 const SEV_CLASSES: Record<string, string> = {
-  emergency: 'bg-red-600 text-white',
-  urgent: 'bg-amber-500 text-white',
-  standard: 'bg-blue-600 text-white',
+  emergency: 'tone-danger',
+  urgent: 'tone-warn',
+  standard: 'tone-neutral',
 };
 
 const STATUS_CLASSES: Record<string, string> = {
-  new: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  needs_info: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-  scheduled: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
-  dispatched: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
-  on_site: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300',
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-  invoiced: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
-  cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300',
+  new: 'tone-info',
+  needs_info: 'tone-warn',
+  scheduled: 'tone-active',
+  dispatched: 'tone-active',
+  on_site: 'tone-active',
+  in_progress: 'tone-active',
+  waiting_approval: 'tone-warn',
+  completed: 'tone-ok',
+  invoiced: 'tone-ok',
+  cancelled: 'tone-neutral',
 };
 
 // ---------------------------------------------------------------------------
@@ -230,7 +232,7 @@ export function PublicTicketView() {
             </div>
           </div>
           {ticket.completed_at && (
-            <p className="text-sm text-green-600 dark:text-green-400 font-medium mt-1">
+            <p className="text-sm font-medium mt-1" style={{ color: 'hsl(var(--tone-ok-dot))' }}>
               ✓ Completed {fmtDate(ticket.completed_at)}
             </p>
           )}

@@ -84,6 +84,16 @@ functions that import `_shared/email-templates.ts` (`create-ticket`,
   URL in Vault) and `acknowledge-emergency` edge functions, `placeCall()` in
   the Twilio helper. See the migration header for the one-time Vault setup.
 
+### Palette — "calm water"
+- Rebuilt the color tokens for long days on a phone and nights at a desk: no
+  pure white or black, a quieter action blue, red reserved for emergencies,
+  a light sidebar in light mode, and a dark mode that is dark grey-blue, not
+  black. Every text/background pair clears WCAG AA; most clear AAA.
+- Status and severity badges now use five semantic tones (info, active, waiting,
+  done, danger) instead of ten rainbow hues — the color says what kind of
+  state it is, the text says which. Charts, metric cards, notices, avatars and
+  the public page use the same families. Manifest / theme-color updated.
+
 ### Mobile bottom tab bar
 - On phones: Overview · Work orders · **Report** (raised, one tap from
   anywhere) · Buildings (Dispatch for Pro Roto) · Menu. Hidden on the report

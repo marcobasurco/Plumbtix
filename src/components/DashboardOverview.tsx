@@ -42,22 +42,22 @@ import { Button } from '@/components/ui/button';
 // ---------------------------------------------------------------------------
 
 const STATUS_COLORS: Record<TicketStatus, string> = {
-  new: '#3b82f6',
-  needs_info: '#f59e0b',
-  scheduled: '#8b5cf6',
-  dispatched: '#06b6d4',
-  on_site: '#10b981',
-  in_progress: '#f97316',
-  waiting_approval: '#ec4899',
-  completed: '#22c55e',
-  invoiced: '#6366f1',
-  cancelled: '#94a3b8',
+  new: '#5b8fb9',
+  needs_info: '#d9a441',
+  scheduled: '#4f9fb0',
+  dispatched: '#3f8f9f',
+  on_site: '#35808c',
+  in_progress: '#2c6f79',
+  waiting_approval: '#c98a2e',
+  completed: '#5aa37c',
+  invoiced: '#3f8a62',
+  cancelled: '#a3acb8',
 };
 
 const SEVERITY_COLORS: Record<TicketSeverity, string> = {
-  emergency: '#ef4444',
-  urgent: '#f59e0b',
-  standard: '#3b82f6',
+  emergency: '#c2423c',
+  urgent: '#d9a441',
+  standard: '#5b8fb9',
 };
 
 // ---------------------------------------------------------------------------
@@ -216,7 +216,7 @@ export function DashboardOverview() {
           label="Open work orders"
           value={metrics.openTickets}
           icon={<TicketCheck size={22} />}
-          accent="#3b82f6"
+          accent="#2972a3"
           subtitle={`${metrics.totalTickets} total`}
           onClick={() => navigate(`${basePath}/tickets?status=open`)}
         />
@@ -224,7 +224,7 @@ export function DashboardOverview() {
           label="Emergencies"
           value={metrics.emergencyTickets}
           icon={<AlertTriangle size={22} />}
-          accent={hasEmergencies ? '#ef4444' : '#22c55e'}
+          accent={hasEmergencies ? '#c2423c' : '#3f8a62'}
           subtitle={hasEmergencies ? 'Needs attention' : 'All clear'}
           onClick={() => navigate(`${basePath}/tickets?severity=emergency`)}
         />
@@ -232,14 +232,14 @@ export function DashboardOverview() {
           label="Completed this month"
           value={metrics.completedThisMonth}
           icon={<TrendingUp size={22} />}
-          accent="#22c55e"
+          accent="#3f8a62"
           onClick={() => navigate(`${basePath}/tickets?status=completed`)}
         />
         <MetricCard
           label="Buildings"
           value={metrics.totalBuildings}
           icon={<Building2 size={22} />}
-          accent="#8b5cf6"
+          accent="#4f9fb0"
           subtitle={`${metrics.totalSpaces} locations`}
           onClick={() => navigate(`${basePath}/buildings`)}
         />
@@ -368,7 +368,7 @@ export function DashboardOverview() {
                         <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.building_count}</td>
                         <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.space_count}</td>
                         <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.user_count}</td>
-                        <td className={c.open_tickets > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'} style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>{c.open_tickets}</td>
+                        <td className={c.open_tickets > 0 ? 'font-semibold' : 'text-muted-foreground'} style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>{c.open_tickets}</td>
                         <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.total_tickets}</td>
                       </tr>
                     ))}
