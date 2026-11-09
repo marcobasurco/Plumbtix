@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### "Shift" theme — foundation (design direction B)
+- New visual identity chosen from the November 2026 mockups: **Day Shift**
+  (light) and **Night Shift** (dark) share one layout. Barlow / Barlow
+  Condensed type, square corners, borders instead of shadows, heavy rules
+  under headers.
+- Emergencies are a solid red block with white text, the same in both themes
+  (`--emergency`). Phone work-order cards use it now; the desktop table,
+  work-order header and wizard follow in the next round.
+- Tokens only: every screen picks the theme up from `src/index.css`. No
+  database, edge-function or permission changes.
+
 ### Invoicing removed (migration 00032)
 - Invoices are created in ServiceTitan; PlumbTix reports problems and
   dispatches to them. A work order now ends at **Completed**: the

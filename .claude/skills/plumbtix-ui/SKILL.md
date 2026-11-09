@@ -12,19 +12,25 @@ Source of truth: `src/index.css` (tokens + layout classes), `tailwind.config.ts`
 
 ## Foundations
 
-- **Type:** Inter (`--font-sans`), JetBrains Mono for ticket numbers, codes
-  and tabular data (`--font-mono`). Scale: `--text-xs` 0.75rem · `sm` 0.8125
+- **Theme:** "Shift" (Nov 2026). Light = Day Shift, dark = Night Shift; the
+  layout is identical in both. Square corners, borders instead of shadows,
+  2 px ink rules (`--rule`) under page headers and around action bars.
+- **Type:** Barlow (`--font-sans`) for text; Barlow Condensed
+  (`--font-display`, Tailwind `font-display`) for `h1`/`h2`, page titles and
+  big numbers; JetBrains Mono for work-order numbers, times, codes and
+  tabular data (`--font-mono`). Scale: `--text-xs` 0.75rem · `sm` 0.8125
   · `base` 0.875 (body) · `md` 0.9375 · `lg` 1.0625 · `xl` 1.25 (page title)
   · `2xl` 1.5 · `3xl` 2. Body line-height 1.625. Page titles are 700 weight
   with `-0.02em` tracking.
 - **Color:** shadcn semantic tokens (`bg-background`, `text-foreground`,
-  `text-muted-foreground`, `border-border`, `bg-card`, `bg-primary` = Pro Roto
-  blue `#2563eb`). Raw palette vars exist (`--slate-*`, `--blue-*`, `--red-*`
+  `text-muted-foreground`, `border-border`, `bg-card`, `bg-primary` = Shift
+  blue: `#0F5E93` by day, `#6CC0F5` by night). `--emergency` (`#C9302C`, white
+  text) is the same in both themes and is used only for emergencies. Raw palette vars exist (`--slate-*`, `--blue-*`, `--red-*`
   …) for charts and badges only. Dark mode is the `.dark` class on `<html>`
   (toggle in header; stored in `localStorage['plumbtix-theme']`). Every new
   color must have a dark counterpart.
-- **Radii:** `--radius-sm` 6 · `md` 8 · `lg` 12 (cards) · `xl` 16 ·
-  `full`. **Shadows:** `--shadow-card` for cards; `--shadow-md/lg` for
+- **Radii:** `--radius-sm` 2 · `md` 4 · `lg` 4 (cards) · `xl` 6 ·
+  `full`. **Shadows:** none on cards (`--shadow-card` is `none`); `--shadow-md/lg` for
   popovers only. **Motion:** `--duration-fast/base/slow` 150/200/300 ms with
   `--ease-out`; page-level transitions via `PageTransition`, `FadeIn`,
   `StaggerChildren` + `StaggerItem` (`src/components/PageTransition.tsx`). Respect
@@ -57,9 +63,10 @@ with optional `.badge-dot` (all have `.dark` variants).
 
 ## Conventions that carry meaning
 
-- **Severity:** emergency = red, urgent = amber, standard = blue — always
-  with the word, never color alone. Emergencies get the strongest emphasis
-  on any list or board.
+- **Severity:** emergency = red, urgent = amber, standard = neutral — always
+  with the word, never color alone. An emergency is a solid red block with
+  white text (`.ticket-card.is-emergency`), the strongest thing on any list
+  or board, identical in Day and Night.
 - **Status:** use `StatusBadge`; labels come from `shared/types/enums.ts`
   (`STATUS_LABELS`), never hand-typed. Role labels likewise (`ROLE_LABELS`).
 - **Ticket identity:** `#<ticket_number>` in mono, then issue type, then

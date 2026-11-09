@@ -23,7 +23,7 @@ const STATUS_TONE: Record<TicketStatus, string> = {
 export function StatusBadge({ status, showDot = true }: { status: TicketStatus; showDot?: boolean }) {
   return (
     <span className={cn(
-      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
+      'inline-flex items-center gap-1.5 rounded-sm px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
       STATUS_TONE[status] ?? 'tone-neutral',
     )}>
       {showDot && <span className="tone-dot h-1.5 w-1.5 rounded-full" aria-hidden="true" />}
