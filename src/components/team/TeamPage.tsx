@@ -377,7 +377,7 @@ export function TeamPage() {
                 <div className="grid gap-2">
                   {([
                     { value: 'pm_user' as const, title: 'Staff', body: 'Reports problems and follows work orders for the buildings you choose.' },
-                    { value: 'pm_admin' as const, title: 'Admin', body: 'Sees every building, invites people, and approves quotes.' },
+                    { value: 'pm_admin' as const, title: 'Admin', body: 'Sees every building, invites people, and chooses which buildings Staff can see.' },
                   ]).map((opt) => (
                     <label key={opt.value} className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer min-h-[44px] ${invRole === opt.value ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent'}`}>
                       <input type="radio" name={ids.role} value={opt.value} checked={invRole === opt.value} onChange={() => setInvRole(opt.value)} className="mt-1 h-4 w-4 accent-primary" />

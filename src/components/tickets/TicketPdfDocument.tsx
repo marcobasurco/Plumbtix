@@ -62,11 +62,6 @@ function fmtDateTime(iso: string): string {
   });
 }
 
-function fmtCurrency(amount: number | null): string {
-  if (amount === null) return '\u2014';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-}
-
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -342,7 +337,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
         </View>
 
         {/* ── WORK DETAILS ── */}
-        {(ticket.assigned_technician || ticket.scheduled_date || ticket.quote_amount !== null || ticket.completed_at) && (
+        {(ticket.assigned_technician || ticket.scheduled_date || ticket.completed_at) && (
           <View style={s.section}>
             <Text style={s.sectionHead}>Work Details</Text>
             {ticket.assigned_technician && (
@@ -357,12 +352,6 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
                 <Text style={s.value}>
                   {ticket.scheduled_date}{ticket.scheduled_time_window ? ` (${ticket.scheduled_time_window})` : ''}
                 </Text>
-              </View>
-            )}
-            {isFullReport && ticket.quote_amount !== null && (
-              <View style={s.row}>
-                <Text style={s.label}>Quote</Text>
-                <Text style={s.value}>{fmtCurrency(ticket.quote_amount)}</Text>
               </View>
             )}
             {ticket.completed_at && (

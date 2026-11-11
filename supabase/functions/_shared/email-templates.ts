@@ -294,7 +294,6 @@ export interface StatusChangeEmailData {
     technician?: string;
     scheduledDate?: string;
     timeWindow?: string;
-    quoteAmount?: number;
   };
 }
 
@@ -326,8 +325,7 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
       message = 'Work is now in progress on your request.';
       break;
     case 'waiting_approval':
-      message = `Pro Roto has completed their assessment and needs your approval to proceed.`;
-      if (d.quoteAmount) message += ` Estimated cost: <strong>$${esc(d.quoteAmount.toFixed(2))}</strong>.`;
+      message = `Pro Roto has assessed the problem and needs your approval before continuing.`;
       message += ' Pro Roto will call you to confirm — or call us if you have questions.';
       break;
     case 'completed':

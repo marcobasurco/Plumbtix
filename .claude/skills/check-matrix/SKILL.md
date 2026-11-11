@@ -13,10 +13,11 @@ Compare the three copies of the transition matrix:
    `supabase/functions/update-ticket/index.ts`.
 3. Frontend: `TRANSITION_MATRIX` in `shared/types/transitions.ts`.
 
-Also confirm the field rules agree: `quote_amount`/`invoice_number` are
-`proroto_admin`-only and technician/scheduling fields are
-`proroto_admin`/`pm_admin`-only in both `update-ticket` and the
-`protect_ticket_columns()` trigger (migration 00027).
+Also confirm the field rules agree: technician/scheduling fields are
+`proroto_admin`-only in both `update-ticket` and the
+`protect_ticket_columns()` trigger (migration 00028), and `update-ticket`
+accepts no money fields at all (`quote_amount` retired in 00033,
+`invoice_number` in 00032; the trigger still locks both legacy columns).
 
 Output a table: current status → allowed targets per role, with one column
 per copy, and mark any cell that differs. State clearly either "all three

@@ -17,49 +17,45 @@ interface ActionPanelProps {
   currentStatus: TicketStatus;
   /** Currently assigned technician (roster FK) — dropdown pre-selects this */
   currentTechnicianId: string | null;
-  /** Quote on the work order, if any — shown on Pro Roto's approval buttons */
-  quoteAmount?: number | null;
   onUpdated: () => void;
 }
-
-const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 /**
  * What the button *does*, not where the row ends up. A property manager on a
  * phone should read "I've added the info" — not "New" — and a dispatcher
- * should read "Customer approved — schedule", not "Scheduled". Quote
- * approvals happen by phone, so the approval buttons are Pro Roto's only.
+ * should read "Customer approved — schedule", not "Scheduled". Estimates are
+ * sent from Pro Roto's estimating software and approved by phone — no dollar
+ * amounts live here — so the approval buttons are Pro Roto's only.
  * Falls back to the status label for any pair not listed here, so a new
  * transition can't render an empty button.
  */
-function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole, quote: number | null | undefined): string {
+function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole): string {
   const isPm = role === 'pm_admin' || role === 'pm_user';
-  const quoteText = quote != null ? ` (${currency.format(quote)})` : '';
-  if (to === 'cancelled') return from === 'waiting_approval' ? `Customer declined${quoteText}` : 'Cancel work order';
+  if (to === 'cancelled') return from === 'waiting_approval' ? 'Customer declined' : 'Cancel work order';
   if (to === 'needs_info') return isPm ? 'Need more info from reporter' : 'Ask for more info';
   if (from === 'needs_info' && to === 'new') return isPm ? "I've added the info" : 'Info received';
   if (to === 'scheduled') {
-    if (from === 'waiting_approval') return `Customer approved${quoteText} — schedule`;
+    if (from === 'waiting_approval') return 'Customer approved — schedule';
     if (from === 'dispatched') return 'Back to scheduled';
     return 'Schedule';
   }
   if (to === 'dispatched') return 'Dispatch technician';
   if (to === 'on_site') return 'Technician on site';
-  if (to === 'in_progress') return from === 'waiting_approval' ? `Customer approved${quoteText} — resume` : 'Start work';
+  if (to === 'in_progress') return from === 'waiting_approval' ? 'Customer approved — resume' : 'Start work';
   if (to === 'waiting_approval') return 'Waiting on customer approval';
   if (to === 'completed') return 'Mark completed';
   return STATUS_LABELS[to];
 }
 
-export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quoteAmount: quote, onUpdated }: ActionPanelProps) {
+export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUpdated }: ActionPanelProps) {
   const { role } = useAuth();
   const isAdmin = role === 'proroto_admin';
-  // Only Pro Roto dispatches (migration 00028): technician, scheduling and
-  // billing are editable by proroto_admin alone. PM roles see the values in
+  // Only Pro Roto dispatches (migration 00028): technician and scheduling
+  // are editable by proroto_admin alone. PM roles see the values in
   // the "Work details" card on the page instead.
   const canEditFields = isAdmin;
   const ids = {
-    tech: useId(), date: useId(), window: useId(), quote: useId(),
+    tech: useId(), date: useId(), window: useId(),
   };
 
   const [submitting, setSubmitting] = useState(false);
@@ -79,7 +75,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
   }, [currentTechnicianId]);
   const [scheduledDate, setScheduledDate] = useState('');
   const [timeWindow, setTimeWindow] = useState('');
-  const [quoteAmount, setQuoteAmount] = useState('');
   const [declineReason, setDeclineReason] = useState('');
 
   // Load the roster for the assignment dropdown (proroto_admin only)
@@ -111,9 +106,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
       if (scheduledDate) payload.scheduled_date = scheduledDate;
       if (timeWindow.trim()) payload.scheduled_time_window = timeWindow.trim();
     }
-    // Quote: proroto_admin only
-    if (isAdmin && quoteAmount) payload.quote_amount = parseFloat(quoteAmount);
-
     if (targetStatus === 'cancelled' && declineReason.trim()) {
       payload.decline_reason = declineReason.trim();
     }
@@ -123,7 +115,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     if (result.ok) {
       setSuccess(`Work order is now ${STATUS_LABELS[targetStatus].toLowerCase()}.`);
       setScheduledDate(''); setTimeWindow('');
-      setQuoteAmount(''); setDeclineReason('');
+      setDeclineReason('');
       onUpdated();
     } else {
       setError(result.error.message);
@@ -143,7 +135,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     if (technicianId !== (currentTechnicianId ?? '')) { payload.technician_id = technicianId || null; hasChanges = true; }
     if (scheduledDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
     if (timeWindow.trim()) { payload.scheduled_time_window = timeWindow.trim(); hasChanges = true; }
-    if (quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
 
     if (!hasChanges) {
       setError('Nothing to save yet — change a field first.');
@@ -155,7 +146,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     if (result.ok) {
       setSuccess('Changes saved.');
       setScheduledDate(''); setTimeWindow('');
-      setQuoteAmount('');
       onUpdated();
     } else {
       setError(result.error.message);
@@ -187,7 +177,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
       ) : allowed.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {currentStatus === 'waiting_approval'
-            ? <>Pro Roto will call you to go over the quote{quote != null ? ` (${currency.format(quote)})` : ''} before any work continues. Nothing to do here.</>
+            ? <>Pro Roto will call you to go over the estimate before any work continues. Nothing to do here.</>
             : <>Nothing for you to do right now — it's {STATUS_LABELS[currentStatus].toLowerCase()}. You'll be notified when that changes.</>}
         </p>
       ) : (
@@ -210,7 +200,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   }`}
                 >
-                  {actionLabel(currentStatus, target, role, quote)}
+                  {actionLabel(currentStatus, target, role)}
                 </button>
               );
             })}
@@ -218,10 +208,10 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
         </div>
       )}
 
-      {/* Editable fields — Pro Roto only: scheduling + billing */}
+      {/* Editable fields — Pro Roto only: scheduling */}
       {canEditFields && !terminal && (
         <div className="border-t border-border pt-4 mt-2">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduling & quote</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduling</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -240,11 +230,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
             <div>
               <label htmlFor={ids.window} className={labelClass}>Time window</label>
               <input id={ids.window} type="text" value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} placeholder="e.g. 9am–12pm" className={fieldClass} />
-            </div>
-
-            <div>
-              <label htmlFor={ids.quote} className={labelClass}>Quote amount ($)</label>
-              <input id={ids.quote} type="number" inputMode="decimal" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" className={fieldClass} />
             </div>
           </div>
 
