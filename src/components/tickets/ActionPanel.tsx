@@ -5,7 +5,7 @@ import { fetchTechnicians } from '@/lib/technicians';
 import type { Technician } from '@shared/types/database';
 import type { UpdateTicketRequest } from '@shared/types/api';
 import { getAllowedTransitions, isTerminalStatus } from '@shared/types/transitions';
-import { STATUS_LABELS } from '@shared/types/enums';
+import { STATUS_LABELS, ARRIVAL_WINDOWS } from '@shared/types/enums';
 import type { TicketStatus, UserRole } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -228,8 +228,13 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
               <input id={ids.date} type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label htmlFor={ids.window} className={labelClass}>Time window</label>
-              <input id={ids.window} type="text" value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} placeholder="e.g. 9am–12pm" className={fieldClass} />
+              <label htmlFor={ids.window} className={labelClass}>Arrival window (2 hours)</label>
+              <select id={ids.window} value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} className={fieldClass}>
+                <option value="">— Choose a window —</option>
+                {ARRIVAL_WINDOWS.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
             </div>
           </div>
 

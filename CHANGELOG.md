@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Arrival window is a drop-down
+- Pro Roto's "Time window" text box on the work order is now an
+  **Arrival window (2 hours)** drop-down: twelve two-hour windows around the
+  clock (`ARRIVAL_WINDOWS` in `shared/types/enums.ts`). Pro Roto picks it after
+  scheduling the job in its dispatch software, so the property manager and
+  staff know a technician is assigned and when to expect them. Frontend only.
+
 ### Dollar amounts removed (migration 00033)
 - PlumbTix is not a billing system: it collects the situations property
   managers and staff report and dispatches to them. Estimates are sent from
