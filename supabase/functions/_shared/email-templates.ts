@@ -369,6 +369,52 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
 }
 
 // =============================================================================
+// Template: Schedule Changed (→ PM company, no status change)
+// =============================================================================
+
+export interface ScheduleChangeEmailData {
+  ticketNumber: number;
+  ticketId: string;
+  issueType: string;
+  buildingName: string;
+  unitNumber: string;
+  recipientName: string;
+  technician?: string;
+  scheduledDate?: string;
+  timeWindow?: string;
+}
+
+/** Pro Roto switched the technician, date or arrival window on a work order
+ *  that was already scheduled. Shows the schedule as it stands now. */
+export function scheduleChangeEmail(data: ScheduleChangeEmailData): { subject: string; html: string } {
+  const issueLabelText = data.issueType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const ticketUrl = `${getAppUrl()}/dashboard/tickets/${encodeURIComponent(data.ticketId)}`;
+
+  return {
+    subject: `Work order #${data.ticketNumber} — Schedule updated`,
+    html: layout({
+      preheader: `New schedule for ${issueLabelText} at ${data.buildingName}`,
+      title: `Work order #${data.ticketNumber} schedule updated`,
+      body: `
+        <p style="margin:0 0 12px">Hi ${esc(data.recipientName)},</p>
+        <p style="margin:0 0 16px">Pro Roto has updated the schedule for this work order. Here is the current plan:</p>
+        ${detailTable([
+          ['Technician', data.technician ? esc(data.technician) : 'To be assigned'],
+          ['Date', data.scheduledDate ? esc(data.scheduledDate) : 'To be confirmed'],
+          ['Arrival window', data.timeWindow ? esc(data.timeWindow) : 'To be confirmed'],
+          ['Work order', `#${esc(data.ticketNumber)}`],
+          ['Issue', esc(issueLabelText)],
+          ['Building', esc(data.buildingName)],
+          ['Unit / Space', esc(data.unitNumber)],
+        ])}
+      `,
+      ctaUrl: ticketUrl,
+      ctaLabel: 'View work order',
+    }),
+  };
+}
+
+// =============================================================================
 // Template: New Comment (→ ticket participants)
 // =============================================================================
 

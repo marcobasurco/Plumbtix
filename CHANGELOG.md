@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### "Schedule updated" email
+- When Pro Roto switches the technician, date or arrival window on a work
+  order that is already scheduled (status unchanged), the property side now
+  gets a **Schedule updated** email with the current plan. Recipients: every
+  Admin in the company plus the Staff assigned to that building. Edge
+  functions: `update-ticket`, `_shared/notifications.ts`,
+  `_shared/email-templates.ts`.
+
 ### Pro Roto sees and changes the schedule in place
 - The Scheduling section on a work order now starts with **Scheduled now:
   technician · date · arrival window**, and the date and window fields are
