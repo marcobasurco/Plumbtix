@@ -43,7 +43,8 @@ jobs:
           echo "Deploying all edge functions with --no-verify-jwt..."
           supabase functions deploy \
             --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} \
-            --no-verify-jwt
+            --no-verify-jwt \
+            --yes   # newer CLI asks for confirmation; CI has no terminal to answer
           echo "✅ All functions deployed successfully"
 
       - name: Verify deployment
