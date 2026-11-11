@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### QR code on screen for public sharing
+- The Public Sharing card on a work order now shows the QR code for the
+  public page whenever sharing is on, so it can be scanned straight off the
+  screen. It is the same code already printed on the work order PDF.
+  Generated in the browser; frontend only.
+
 ### "Schedule updated" email
 - When Pro Roto switches the technician, date or arrival window on a work
   order that is already scheduled (status unchanged), the property side now

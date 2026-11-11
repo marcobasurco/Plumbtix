@@ -3,13 +3,13 @@
 // =============================================================================
 // Ticket detail sidebar card for proroto_admin / pm_admin:
 //   • Toggle public sharing on/off (revocable, token-based)
-//   • Copy the public link
+//   • Show the QR code on screen (scan it straight off the glass) + copy the link
 //   • Regenerate token (burns all previously shared links/QRs)
 // The printed work order's QR code points at this same public URL and is
 // only rendered while sharing is enabled.
 // =============================================================================
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { togglePublicSharing } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,21 @@ export function SharingCard({ ticketId, publicToken, publicEnabled, onChanged }:
   const [regenBusy, setRegenBusy] = useState(false);
 
   const shareUrl = publicEnabled && publicToken ? publicTicketUrl(publicToken) : null;
+
+  // On-screen QR for the public page — same code that is printed on the work
+  // order. Generated in the browser (the link never leaves the device); the
+  // library is loaded only when sharing is on.
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setQrDataUrl(null);
+    if (!shareUrl) return;
+    import('qrcode')
+      .then((QRCode) => QRCode.toDataURL(shareUrl, { width: 480, margin: 2, errorCorrectionLevel: 'M' }))
+      .then((url) => { if (!cancelled) setQrDataUrl(url); })
+      .catch((e) => console.warn('[SharingCard] QR generation failed:', e));
+    return () => { cancelled = true; };
+  }, [shareUrl]);
 
   const handleToggle = async (enabled: boolean) => {
     setBusy(true);
@@ -109,6 +124,21 @@ export function SharingCard({ ticketId, publicToken, publicEnabled, onChanged }:
 
         {shareUrl && (
           <>
+            {qrDataUrl && (
+              <figure className="flex flex-col items-center gap-1.5">
+                {/* White plate in both themes: phone cameras need dark-on-white */}
+                <img
+                  src={qrDataUrl}
+                  alt="QR code that opens the public page for this work order"
+                  width={192}
+                  height={192}
+                  className="h-48 w-48 rounded-md border border-border bg-white"
+                />
+                <figcaption className="text-xs text-muted-foreground text-center">
+                  Scan with a phone camera to open the public page
+                </figcaption>
+              </figure>
+            )}
             <div className="rounded-md border border-border bg-muted/40 px-2.5 py-2">
               <p className="text-xs font-mono break-all select-all">{shareUrl}</p>
             </div>
@@ -124,16 +154,17 @@ export function SharingCard({ ticketId, publicToken, publicEnabled, onChanged }:
               </Button>
             </div>
             <p className="text-[11px] leading-snug text-muted-foreground">
-              The QR code on printed work orders opens this page — a limited, read-only
-              view with no contact info, gate codes, or pricing. Turning sharing off
-              revokes the link and removes the QR from new printouts.
+              This QR code is also printed on the work order (Print / Download PDF).
+              It opens a limited, read-only page with no contact info or gate codes.
+              Turning sharing off revokes the link and removes the QR from the screen
+              and from new printouts.
             </p>
           </>
         )}
 
         {!publicEnabled && (
           <p className="text-[11px] leading-snug text-muted-foreground">
-            Enable to generate a shareable link and print QR codes on work orders.
+            Enable to get a shareable link and a QR code, shown here and printed on the work order.
             You can revoke access at any time.
           </p>
         )}
