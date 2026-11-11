@@ -100,6 +100,17 @@ export const SEVERITY_LABELS: Record<TicketSeverity, string> = {
   standard: 'Standard',
 };
 
+/**
+ * Arrival windows Pro Roto can pick when scheduling: two hours each, around
+ * the clock (emergencies are dispatched at any hour), daytime first. The text
+ * is stored as-is in tickets.scheduled_time_window and shown on the work
+ * order, PDF, public page and "scheduled" email.
+ */
+export const ARRIVAL_WINDOWS: readonly string[] = [
+  '8am–10am', '10am–12pm', '12pm–2pm', '2pm–4pm', '4pm–6pm', '6pm–8pm',
+  '8pm–10pm', '10pm–12am', '12am–2am', '2am–4am', '4am–6am', '6am–8am',
+];
+
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   new: 'New',
   needs_info: 'Needs Info',
