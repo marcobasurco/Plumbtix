@@ -66,6 +66,12 @@ function getAllowedTransitions(current: string, role: UserRole): readonly string
   return TRANSITION_MATRIX[current]?.[role] ?? [];
 }
 
+// Statuses in which a technician/date/window change is worth an email to the
+// property side: the job has been scheduled and is still open.
+const SCHEDULE_NOTICE_STATUSES: readonly string[] = [
+  'scheduled', 'dispatched', 'on_site', 'in_progress', 'waiting_approval',
+];
+
 // ─── Validation schema ───
 
 const UpdateTicketSchema = z.object({
@@ -280,6 +286,53 @@ Deno.serve(async (req: Request) => {
           }
         } catch (emailErr) {
           console.error('[update-ticket] Email notification error (non-blocking):', emailErr);
+        }
+      })());
+    }
+
+    // ─── 11. Schedule changed on an already-scheduled work order ───
+    // Status emails (step 10) only go out when the status moves. If Pro Roto
+    // switches the technician, date or arrival window afterwards, tell the
+    // property side what the schedule is now. Not sent before the job is
+    // scheduled (the "scheduled" status email carries the first schedule).
+    const statusUnchanged = !targetStatus || targetStatus === ticket.status;
+    const scheduleChanged =
+      (updated.assigned_technician ?? null) !== (ticket.assigned_technician ?? null) ||
+      (updated.scheduled_date ?? null) !== (ticket.scheduled_date ?? null) ||
+      (updated.scheduled_time_window ?? null) !== (ticket.scheduled_time_window ?? null);
+
+    if (statusUnchanged && scheduleChanged && SCHEDULE_NOTICE_STATUSES.includes(ticket.status)) {
+      runInBackground((async () => {
+        try {
+          const svc = createServiceClient();
+          const [buildingRes, spaceRes, creatorRes] = await Promise.all([
+            svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', ticket.building_id).single(),
+            svc.from('spaces').select('space_type, unit_number, common_area_type, label').eq('id', ticket.space_id).single(),
+            svc.from('users').select('id, full_name, email').eq('id', ticket.created_by_user_id).single(),
+          ]);
+
+          if (buildingRes.data && spaceRes.data && creatorRes.data) {
+            const { notifyScheduleChange } = await import('../_shared/notifications.ts');
+            await notifyScheduleChange(svc, {
+              ticket_number: updated.ticket_number ?? ticket.ticket_number,
+              id: ticket_id,
+              issue_type: ticket.issue_type,
+              severity: ticket.severity,
+              status: ticket.status,
+              description: ticket.description,
+              assigned_technician: updated.assigned_technician ?? null,
+              scheduled_date: updated.scheduled_date ?? null,
+              scheduled_time_window: updated.scheduled_time_window ?? null,
+              quote_amount: null,
+              invoice_number: null,
+              building: buildingRes.data,
+              space: spaceRes.data,
+              location_note: ticket.location_note ?? null,
+              created_by: creatorRes.data,
+            }, ticket.building_id);
+          }
+        } catch (emailErr) {
+          console.error('[update-ticket] Schedule change email error (non-blocking):', emailErr);
         }
       })());
     }
