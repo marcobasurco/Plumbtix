@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Pro Roto sees and changes the schedule in place
+- The Scheduling section on a work order now starts with **Scheduled now:
+  technician · date · arrival window**, and the date and window fields are
+  pre-filled with the current values (they used to open blank), so switching
+  the technician or the time is: change the field, **Save schedule**.
+- Dispatch board cards show the arrival window next to the date.
+- Fix: the dispatch board showed scheduled dates one day early in Pacific
+  time (`new Date('YYYY-MM-DD')` is UTC midnight).
+
 ### Arrival window is a drop-down
 - Pro Roto's "Time window" text box on the work order is now an
   **Arrival window (2 hours)** drop-down: twelve two-hour windows around the

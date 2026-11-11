@@ -483,6 +483,9 @@ export function TicketDetail() {
             ticketId={ticket.id}
             currentStatus={ticket.status as TicketStatus}
             currentTechnicianId={ticket.technician_id}
+            currentTechnicianName={ticket.assigned_technician}
+            currentScheduledDate={ticket.scheduled_date}
+            currentTimeWindow={ticket.scheduled_time_window}
             onUpdated={handleUpdated}
           />
           {(role === 'proroto_admin' || role === 'pm_admin') && (

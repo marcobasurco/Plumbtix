@@ -42,6 +42,7 @@ interface DispatchTicket {
   description: string | null;
   assigned_technician: string | null;
   scheduled_date: string | null;
+  scheduled_time_window: string | null;
   created_at: string;
   building: { id: string; name: string | null; address_line1: string; company_id: string } | null;
   space: { id: string; unit_number: string | null; common_area_type: string | null } | null;
@@ -52,6 +53,14 @@ const ACTIVE_STATUSES: TicketStatus[] = [
   'new', 'needs_info', 'scheduled', 'dispatched',
   'on_site', 'in_progress', 'waiting_approval',
 ];
+/** 'YYYY-MM-DD' → 'Nov 12'. Built from the parts: new Date('YYYY-MM-DD') is
+ *  UTC midnight, which shows as the day BEFORE in California. */
+function formatDay(ymd: string): string {
+  const [y, m, d] = ymd.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return ymd;
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 const TERMINAL_STATUSES: TicketStatus[] = ['completed', 'invoiced', 'cancelled'];
 
 const STATUS_COLORS: Record<TicketStatus, { bg: string; border: string; text: string; dot: string }> = {
@@ -120,7 +129,8 @@ function MobileTicketCard({ ticket, isUpdating, onNavigate, onTransition }: {
           {ticket.scheduled_date && (
             <div className="dispatch-card-meta">
               <Calendar className="h-3 w-3 shrink-0" />
-              {new Date(ticket.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {formatDay(ticket.scheduled_date)}
+              {ticket.scheduled_time_window && ` · ${ticket.scheduled_time_window}`}
             </div>
           )}
         </div>
@@ -178,7 +188,7 @@ function KanbanCard({ ticket, isUpdating, onNavigate, onTransition }: {
         )}
         {ticket.scheduled_date && (
           <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '1px' }}>
-            📅 {new Date(ticket.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            📅 {formatDay(ticket.scheduled_date)}{ticket.scheduled_time_window && ` · ${ticket.scheduled_time_window}`}
           </div>
         )}
       </div>
@@ -277,7 +287,7 @@ export function DispatchBoard() {
       const [ticketResult, companyResult] = await Promise.all([
         supabase.from('tickets').select(`
             id, ticket_number, status, severity, issue_type, description,
-            assigned_technician, scheduled_date, created_at,
+            assigned_technician, scheduled_date, scheduled_time_window, created_at,
             building:buildings(id, name, address_line1, company_id),
             space:spaces(id, unit_number, common_area_type),
             created_by:users!tickets_created_by_user_id_fkey(id, full_name)
