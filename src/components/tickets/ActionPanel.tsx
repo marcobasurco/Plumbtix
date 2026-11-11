@@ -17,6 +17,10 @@ interface ActionPanelProps {
   currentStatus: TicketStatus;
   /** Currently assigned technician (roster FK) — dropdown pre-selects this */
   currentTechnicianId: string | null;
+  /** Current schedule — shown to Pro Roto and pre-filled so it can be changed */
+  currentTechnicianName?: string | null;
+  currentScheduledDate?: string | null;   // YYYY-MM-DD
+  currentTimeWindow?: string | null;
   onUpdated: () => void;
 }
 
@@ -47,7 +51,20 @@ function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole): stri
   return STATUS_LABELS[to];
 }
 
-export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUpdated }: ActionPanelProps) {
+/** 'YYYY-MM-DD' → 'Thu, Nov 12' without the UTC shift `new Date(string)` causes */
+function formatDay(ymd: string): string {
+  const [y, m, d] = ymd.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return ymd;
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+export function ActionPanel({
+  ticketId, currentStatus, currentTechnicianId,
+  currentTechnicianName = null, currentScheduledDate = null, currentTimeWindow = null,
+  onUpdated,
+}: ActionPanelProps) {
+  const currentDate = currentScheduledDate ? currentScheduledDate.slice(0, 10) : '';
+  const currentWindow = currentTimeWindow ?? '';
   const { role } = useAuth();
   const isAdmin = role === 'proroto_admin';
   // Only Pro Roto dispatches (migration 00028): technician and scheduling
@@ -73,8 +90,12 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
   useEffect(() => {
     setTechnicianId(currentTechnicianId ?? '');
   }, [currentTechnicianId]);
-  const [scheduledDate, setScheduledDate] = useState('');
-  const [timeWindow, setTimeWindow] = useState('');
+  // Date and window also mirror the CURRENT schedule, so Pro Roto sees what
+  // is booked and changes it in place; only a real change is sent.
+  const [scheduledDate, setScheduledDate] = useState(currentDate);
+  const [timeWindow, setTimeWindow] = useState(currentWindow);
+  useEffect(() => { setScheduledDate(currentDate); }, [currentDate]);
+  useEffect(() => { setTimeWindow(currentWindow); }, [currentWindow]);
   const [declineReason, setDeclineReason] = useState('');
 
   // Load the roster for the assignment dropdown (proroto_admin only)
@@ -103,8 +124,8 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
     // Attach scheduling fields if set (proroto_admin only)
     if (canEditFields) {
       if (technicianId !== (currentTechnicianId ?? '')) payload.technician_id = technicianId || null;
-      if (scheduledDate) payload.scheduled_date = scheduledDate;
-      if (timeWindow.trim()) payload.scheduled_time_window = timeWindow.trim();
+      if (scheduledDate && scheduledDate !== currentDate) payload.scheduled_date = scheduledDate;
+      if (timeWindow && timeWindow !== currentWindow) payload.scheduled_time_window = timeWindow;
     }
     if (targetStatus === 'cancelled' && declineReason.trim()) {
       payload.decline_reason = declineReason.trim();
@@ -114,7 +135,6 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
 
     if (result.ok) {
       setSuccess(`Work order is now ${STATUS_LABELS[targetStatus].toLowerCase()}.`);
-      setScheduledDate(''); setTimeWindow('');
       setDeclineReason('');
       onUpdated();
     } else {
@@ -133,8 +153,8 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
     let hasChanges = false;
 
     if (technicianId !== (currentTechnicianId ?? '')) { payload.technician_id = technicianId || null; hasChanges = true; }
-    if (scheduledDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
-    if (timeWindow.trim()) { payload.scheduled_time_window = timeWindow.trim(); hasChanges = true; }
+    if (scheduledDate && scheduledDate !== currentDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
+    if (timeWindow && timeWindow !== currentWindow) { payload.scheduled_time_window = timeWindow; hasChanges = true; }
 
     if (!hasChanges) {
       setError('Nothing to save yet — change a field first.');
@@ -144,8 +164,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
 
     const result = await updateTicket(payload as UpdateTicketRequest);
     if (result.ok) {
-      setSuccess('Changes saved.');
-      setScheduledDate(''); setTimeWindow('');
+      setSuccess('Schedule saved.');
       onUpdated();
     } else {
       setError(result.error.message);
@@ -211,7 +230,20 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
       {/* Editable fields — Pro Roto only: scheduling */}
       {canEditFields && !terminal && (
         <div className="border-t border-border pt-4 mt-2">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduling</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Scheduling</p>
+          <p className="text-sm mb-3">
+            {currentTechnicianName || currentDate || currentWindow ? (
+              <>
+                <span className="text-muted-foreground">Scheduled now: </span>
+                <strong className="text-foreground">
+                  {[currentTechnicianName || 'No technician yet', currentDate ? formatDay(currentDate) : 'no date yet', currentWindow || 'no arrival window yet'].join(' · ')}
+                </strong>
+                <span className="text-muted-foreground"> — change any field below and save.</span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">Nothing scheduled yet. Pick a technician, date and arrival window.</span>
+            )}
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -231,6 +263,10 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
               <label htmlFor={ids.window} className={labelClass}>Arrival window (2 hours)</label>
               <select id={ids.window} value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} className={fieldClass}>
                 <option value="">— Choose a window —</option>
+                {/* A window typed before the drop-down existed stays selectable */}
+                {currentWindow && !ARRIVAL_WINDOWS.includes(currentWindow) && (
+                  <option value={currentWindow}>{currentWindow}</option>
+                )}
                 {ARRIVAL_WINDOWS.map((w) => (
                   <option key={w} value={w}>{w}</option>
                 ))}
@@ -241,7 +277,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, onUp
           <Button size="sm" onClick={handleFieldUpdate} disabled={submitting} className="mt-3 min-h-[44px] sm:min-h-0">
             {submitting ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Saving…</>
-            ) : 'Save changes'}
+            ) : 'Save schedule'}
           </Button>
         </div>
       )}
