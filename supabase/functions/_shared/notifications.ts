@@ -344,7 +344,6 @@ export async function notifyStatusChange(
         technician: ticket.assigned_technician || undefined,
         scheduledDate: ticket.scheduled_date || undefined,
         timeWindow: ticket.scheduled_time_window || undefined,
-        quoteAmount: ticket.quote_amount || undefined,
       },
     };
 

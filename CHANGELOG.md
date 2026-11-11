@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Dollar amounts removed (migration 00033)
+- PlumbTix is not a billing system: it collects the situations property
+  managers and staff report and dispatches to them. Estimates are sent from
+  Pro Roto's estimating software. The "Quote amount ($)" field, the Quote row
+  on the work order and PDF, the amounts on the approval buttons and the
+  "Estimated cost" line in the approval email are gone. `update-ticket` no
+  longer accepts `quote_amount`; the column stays for historic rows only.
+- "Waiting for Approval" stays as a status (a job can pause while the customer
+  decides); the transition matrix is unchanged.
+- Supersedes the "Quote amount stays" note below.
+
 ### Invoicing removed (migration 00032)
 - Invoices are created in ServiceTitan; PlumbTix reports problems and
   dispatches to them. A work order now ends at **Completed**: the

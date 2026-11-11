@@ -14,7 +14,8 @@
 //
 // Restricted fields:
 //   - assigned_technician, technician_id, scheduled_date, scheduled_time_window: proroto_admin ONLY (00028)
-//   - quote_amount: proroto_admin ONLY (invoice_number retired in 00032 — invoices live in ServiceTitan)
+//   - no money fields: quote_amount retired in 00033 (estimates are sent from Pro Roto's
+//     estimating software), invoice_number retired in 00032 (invoices live in ServiceTitan)
 //
 // Transition matrix enforcement:
 //   - Edge Function validates FIRST (returns friendly error message)
@@ -74,7 +75,6 @@ const UpdateTicketSchema = z.object({
   technician_id: z.string().regex(UUID_REGEX, 'Invalid technician_id').nullable().optional(),
   scheduled_date: z.string().optional(),
   scheduled_time_window: z.string().max(100).optional(),
-  quote_amount: z.number().min(0).nullable().optional(),
   decline_reason: z.string().max(2000).optional(),
 });
 
@@ -113,7 +113,6 @@ Deno.serve(async (req: Request) => {
     technician_id,
     scheduled_date,
     scheduled_time_window,
-    quote_amount,
     decline_reason,
   } = parsed.data;
 
@@ -146,22 +145,12 @@ Deno.serve(async (req: Request) => {
 
     // ─── 6. Check restricted fields ───
     // Scheduling fields: proroto_admin ONLY (only Pro Roto dispatches, 00028)
-    // Financial fields: proroto_admin ONLY
     const schedulingFields: string[] = [];
-    const financialFields: string[] = [];
 
     if (assigned_technician !== undefined) schedulingFields.push('assigned_technician');
     if (technician_id !== undefined) schedulingFields.push('technician_id');
     if (scheduled_date !== undefined) schedulingFields.push('scheduled_date');
     if (scheduled_time_window !== undefined) schedulingFields.push('scheduled_time_window');
-    if (quote_amount !== undefined) financialFields.push('quote_amount');
-
-    // Financial fields: proroto_admin only
-    if (financialFields.length > 0 && !isProRotoAdmin(role)) {
-      return forbidden(
-        `Only Pro Roto admin can modify: ${financialFields.join(', ')}`,
-      );
-    }
 
     // Scheduling fields: proroto_admin only — only Pro Roto dispatches
     if (schedulingFields.length > 0 && !isProRotoAdmin(role)) {
@@ -206,7 +195,6 @@ Deno.serve(async (req: Request) => {
     }
     if (scheduled_date !== undefined) updatePayload.scheduled_date = scheduled_date;
     if (scheduled_time_window !== undefined) updatePayload.scheduled_time_window = scheduled_time_window;
-    if (quote_amount !== undefined) updatePayload.quote_amount = quote_amount;
 
     if (Object.keys(updatePayload).length === 0) {
       return err('NO_CHANGES', 'No fields to update', 400);

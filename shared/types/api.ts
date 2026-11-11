@@ -71,7 +71,6 @@ export interface UpdateTicketRequest {
   technician_id?: string | null;
   scheduled_date?: string;
   scheduled_time_window?: string;
-  quote_amount?: number;
   decline_reason?: string;  // required when PM declines waiting_approval → cancelled
 }
 export interface UpdateTicketResponse {
