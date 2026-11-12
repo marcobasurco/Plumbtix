@@ -1,9 +1,9 @@
 // =============================================================================
 // Pro Roto App — Brand logo
 // =============================================================================
-// The registered Pro Roto mark (public/pro-roto-logo.svg). It is drawn in the
-// brand's own blue and red, so it always sits on a white plate — that keeps it
-// legible on the dark sidebar and in dark mode. Never recolor or crop the mark.
+// The registered Pro Roto mark (public/pro-roto-logo.svg), shown directly on
+// the page background in the brand's own blue and red. Never recolor, crop or
+// stretch the mark.
 // =============================================================================
 
 import { cn } from '@/lib/utils';

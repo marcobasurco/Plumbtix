@@ -200,16 +200,11 @@
   color: hsl(var(--sidebar-primary-foreground));
   letter-spacing: -0.025em; display: flex; align-items: center; gap: 10px;
 }
-/* Pro Roto mark on a white plate (see BrandLogo.tsx). White is deliberate in
-   both themes: the mark's own blue and red need a white ground. */
-.brand-logo {
-  display: inline-flex; align-items: center; justify-content: center;
-  flex-shrink: 0; background: #fff; border-radius: var(--radius-md);
-  box-shadow: 0 0 0 1px hsl(var(--border)), 0 1px 3px hsl(var(--foreground) / 0.08);
-}
+/* Pro Roto mark (see BrandLogo.tsx), shown directly on the page — no plate. */
+.brand-logo { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .brand-logo img { display: block; height: 100%; width: auto; object-fit: contain; } /* width follows height: the mark is never stretched */
-.brand-logo-sm { height: 32px; padding: 3px 5px; }
-.brand-logo-md { height: 48px; padding: 5px 8px; }
+.brand-logo-sm { height: 32px; }
+.brand-logo-md { height: 48px; }
 .sidebar-user { padding: 14px 20px; border-bottom: 1px solid hsl(var(--sidebar-border)); }
 .sidebar-user-name { font-size: var(--text-sm); font-weight: 500; color: hsl(var(--sidebar-accent-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user-email { font-size: var(--text-xs); color: hsl(var(--sidebar-muted)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
