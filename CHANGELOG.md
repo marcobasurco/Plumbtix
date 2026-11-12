@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Information requests have a question and an answer box
+- "Ask for more info" / "Need more info from reporter" now opens a box:
+  **What do you need from the reporter?** The question is required, saved as a
+  comment ("Information needed: …") and included in the email.
+- While a work order is **Needs Info**, the Actions panel shows the question.
+  Admins and Staff get **Your answer** + **Send answer**, which posts the reply
+  as a comment, returns the work order to New and emails Pro Roto the answer
+  (replaces the bare "I've added the info" button). Pro Roto keeps "Info
+  received" for answers taken by phone.
+- `update-ticket` accepts `info_request` / `info_reply`; no migration, the
+  transition matrix is unchanged.
+
 ### QR code on screen for public sharing
 - The Public Sharing card on a work order now shows the QR code for the
   public page whenever sharing is on, so it can be scanned straight off the

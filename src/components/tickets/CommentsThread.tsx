@@ -28,9 +28,11 @@ function formatDateTime(iso: string): string {
 
 interface CommentsThreadProps {
   ticketId: string;
+  /** Bump to reload — e.g. after the action panel posts an info request/answer */
+  refreshKey?: number;
 }
 
-export function CommentsThread({ ticketId }: CommentsThreadProps) {
+export function CommentsThread({ ticketId, refreshKey = 0 }: CommentsThreadProps) {
   const { role } = useAuth();
   const isAdmin = role === 'proroto_admin';
 
@@ -59,7 +61,7 @@ export function CommentsThread({ ticketId }: CommentsThreadProps) {
   useEffect(() => {
     loadComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticketId]);
+  }, [ticketId, refreshKey]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

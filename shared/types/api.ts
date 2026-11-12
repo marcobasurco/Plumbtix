@@ -72,6 +72,10 @@ export interface UpdateTicketRequest {
   scheduled_date?: string;
   scheduled_time_window?: string;
   decline_reason?: string;  // required when PM declines waiting_approval → cancelled
+  /** With status 'needs_info': what the reporter must provide. Saved as a comment and emailed. */
+  info_request?: string;
+  /** With needs_info → new: the reporter's answer. Saved as a comment and emailed to Pro Roto. */
+  info_reply?: string;
 }
 export interface UpdateTicketResponse {
   ticket: Ticket;

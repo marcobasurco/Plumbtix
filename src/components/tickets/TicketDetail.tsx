@@ -462,7 +462,7 @@ export function TicketDetail() {
           {/* Comments */}
           <Card>
             <CardContent className="p-4">
-              <CommentsThread ticketId={ticket.id} />
+              <CommentsThread ticketId={ticket.id} refreshKey={refreshKey} />
 
               {/* Change history — database-recorded, proroto_admin only */}
               {/* Tech prep: what machinery lives in this building (parts intel) */}
