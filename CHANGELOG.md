@@ -9,6 +9,8 @@
   profile (`users.theme_preference`, **migration 00034 — run
   `supabase db push`**) and follows them to any computer or phone after
   they sign in. Signing out returns the screen to daylight.
+- Each member keeps their own theme: the database rejects a change to
+  anyone else's theme, including from company Admins and Pro Roto admins.
 - Theme logic lives in `src/lib/theme.ts` (with tests).
 
 ### Overview reads like Analytics
