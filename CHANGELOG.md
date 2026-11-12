@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### "Needs Info" is gone
+- Product decision (Marco): whoever opens a work order provides all the
+  information; if Pro Roto needs more, Pro Roto calls. Customers use the
+  system to report problems, nothing else.
+- Removed: the Needs Info column and "Move to" button on Dispatch; "Ask for
+  more info" / "Need more info from reporter" / "I've added the info" and
+  the question-and-answer boxes on the work order page; the "more
+  information is needed" emails; Needs Info in the status filter.
+- Customer Admins and Staff no longer change a work order's status at all
+  (Needs Info was their only status action). Every status change is Pro
+  Roto's: New → Scheduled → Dispatched → On Site → In Progress → Completed.
+- **Migration 00035 — run `supabase db push`.** The status stays in the
+  database for old records ("Needs Info (legacy)"); nothing can move into
+  it, and Pro Roto can move any old work order out of it.
+- `update-ticket` no longer accepts `info_request` / `info_reply`.
+
 ### Dispatch board looks like the rest of the app
 - The board's layout classes were never defined, so it rendered as an
   unstyled list (stacked filters, oversized search icon, columns in one long

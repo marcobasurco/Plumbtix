@@ -55,8 +55,10 @@ interface DispatchTicket {
   created_by: { id: string; full_name: string } | null;
 }
 
+// 'needs_info' is a legacy status (00035): it gets a column only while a
+// historic work order is still sitting in it (see `columns` below).
 const ACTIVE_STATUSES: TicketStatus[] = [
-  'new', 'needs_info', 'scheduled', 'dispatched',
+  'new', 'scheduled', 'dispatched',
   'on_site', 'in_progress', 'waiting_approval',
 ];
 /** 'YYYY-MM-DD' → 'Nov 12'. Built from the parts: new Date('YYYY-MM-DD') is
@@ -222,7 +224,13 @@ export function DispatchBoard() {
     return true;
   });
 
-  const columns = (showTerminal ? SELECTABLE_TICKET_STATUSES : ACTIVE_STATUSES) as readonly TicketStatus[];
+  const baseColumns = (showTerminal ? SELECTABLE_TICKET_STATUSES : ACTIVE_STATUSES) as readonly TicketStatus[];
+  // Legacy: show a Needs Info column only if a historic row is still in it,
+  // so Pro Roto can see it and move it out.
+  const hasLegacyNeedsInfo = filteredTickets.some((t) => t.status === 'needs_info');
+  const columns: readonly TicketStatus[] = hasLegacyNeedsInfo
+    ? ['new', 'needs_info', ...baseColumns.filter((s) => s !== 'new')]
+    : baseColumns;
   const grouped = new Map<TicketStatus, DispatchTicket[]>();
   for (const s of columns) grouped.set(s, []);
   for (const t of filteredTickets) grouped.get(t.status)?.push(t);

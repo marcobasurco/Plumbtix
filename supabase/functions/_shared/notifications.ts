@@ -354,7 +354,6 @@ export async function notifyStatusChange(
   oldStatus: string,
   newStatus: string,
   updatedByRole: string,
-  extra: { infoRequest?: string; infoReply?: string } = {},
 ): Promise<void> {
   try {
     const buildingName = ticket.building.name || ticket.building.address_line1;
@@ -373,8 +372,6 @@ export async function notifyStatusChange(
         technician: ticket.assigned_technician || undefined,
         scheduledDate: ticket.scheduled_date || undefined,
         timeWindow: ticket.scheduled_time_window || undefined,
-        infoRequest: extra.infoRequest,
-        infoReply: extra.infoReply,
       },
     };
 
@@ -411,22 +408,6 @@ export async function notifyStatusChange(
           { name: 'new_status', value: newStatus },
         ],
       });
-
-      // An Admin asked the reporter for more information: the reporter has
-      // to hear about it too, or the question sits unanswered.
-      if (newStatus === 'needs_info' && ticket.created_by?.email) {
-        const { subject: rSubject, html: rHtml } = statusChangeEmail({ ...baseData, recipientName: ticket.created_by.full_name });
-        emails.push({
-          to: ticket.created_by.email,
-          subject: rSubject,
-          html: rHtml,
-          tags: [
-            { name: 'type', value: 'status_change' },
-            { name: 'ticket_id', value: ticket.id },
-            { name: 'new_status', value: newStatus },
-          ],
-        });
-      }
     }
 
     if (emails.length > 0) {

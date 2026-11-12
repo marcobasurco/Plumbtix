@@ -1,12 +1,12 @@
 import { useState, useEffect, useId } from 'react';
 import { useAuth } from '@/lib/auth';
-import { updateTicket, getTicketComments } from '@/lib/api';
+import { updateTicket } from '@/lib/api';
 import { fetchTechnicians } from '@/lib/technicians';
 import type { Technician } from '@shared/types/database';
 import type { UpdateTicketRequest } from '@shared/types/api';
 import { getAllowedTransitions, isTerminalStatus } from '@shared/types/transitions';
-import { STATUS_LABELS, ARRIVAL_WINDOWS, INFO_REQUEST_PREFIX } from '@shared/types/enums';
-import type { TicketStatus, UserRole } from '@shared/types/enums';
+import { STATUS_LABELS, ARRIVAL_WINDOWS } from '@shared/types/enums';
+import type { TicketStatus } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
@@ -25,19 +25,18 @@ interface ActionPanelProps {
 }
 
 /**
- * What the button *does*, not where the row ends up. A property manager on a
- * phone should read "I've added the info" — not "New" — and a dispatcher
- * should read "Customer approved — schedule", not "Scheduled". Estimates are
+ * What the button *does*, not where the row ends up: a dispatcher should
+ * read "Customer approved — schedule", not "Scheduled". Only Pro Roto changes
+ * a status (00035) — customers see no buttons here. Estimates are
  * sent from Pro Roto's estimating software and approved by phone — no dollar
  * amounts live here — so the approval buttons are Pro Roto's only.
  * Falls back to the status label for any pair not listed here, so a new
  * transition can't render an empty button.
  */
-function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole): string {
-  const isPm = role === 'pm_admin' || role === 'pm_user';
+function actionLabel(from: TicketStatus, to: TicketStatus): string {
   if (to === 'cancelled') return from === 'waiting_approval' ? 'Customer declined' : 'Cancel work order';
-  if (to === 'needs_info') return isPm ? 'Need more info from reporter' : 'Ask for more info';
-  if (from === 'needs_info' && to === 'new') return isPm ? "I've added the info" : 'Info received';
+  // Legacy rows only (00035): a work order still in Needs Info can be put back
+  if (from === 'needs_info' && to === 'new') return 'Back to new';
   if (to === 'scheduled') {
     if (from === 'waiting_approval') return 'Customer approved — schedule';
     if (from === 'dispatched') return 'Back to scheduled';
@@ -72,7 +71,7 @@ export function ActionPanel({
   // the "Work details" card on the page instead.
   const canEditFields = isAdmin;
   const ids = {
-    tech: useId(), date: useId(), window: useId(), ask: useId(), answer: useId(),
+    tech: useId(), date: useId(), window: useId(),
   };
 
   const [submitting, setSubmitting] = useState(false);
@@ -98,28 +97,6 @@ export function ActionPanel({
   useEffect(() => { setTimeWindow(currentWindow); }, [currentWindow]);
   const [declineReason, setDeclineReason] = useState('');
 
-  // ── Information request ──
-  // Asking opens a box for WHAT is needed (saved as a comment + emailed).
-  // While the work order is Needs Info, the question is shown here with an
-  // answer box, so the reporter never has to hunt for where to reply.
-  const [askOpen, setAskOpen] = useState(false);
-  const [askText, setAskText] = useState('');
-  const [answerText, setAnswerText] = useState('');
-  const [question, setQuestion] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (currentStatus !== 'needs_info') { setQuestion(null); return; }
-    let cancelled = false;
-    getTicketComments(ticketId).then((res) => {
-      if (cancelled || !res.ok) return;
-      const asked = (res.data.comments as Array<{ comment_text: string; created_at: string }>)
-        .filter((c) => c.comment_text.startsWith(INFO_REQUEST_PREFIX))
-        .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-      setQuestion(asked ? asked.comment_text.slice(INFO_REQUEST_PREFIX.length) : null);
-    });
-    return () => { cancelled = true; };
-  }, [ticketId, currentStatus]);
-
   // Load the roster for the assignment dropdown (proroto_admin only)
   useEffect(() => {
     if (!canEditFields) return;
@@ -132,14 +109,8 @@ export function ActionPanel({
 
   const allowed = getAllowedTransitions(currentStatus, role);
   const terminal = isTerminalStatus(currentStatus);
-  // Property side answering an information request (Pro Roto keeps its buttons:
-  // the answer may have come by phone)
-  const answering = currentStatus === 'needs_info' && !isAdmin && allowed.includes('new');
 
-  const handleTransition = async (
-    targetStatus: TicketStatus,
-    info: { request?: string; reply?: string } = {},
-  ) => {
+  const handleTransition = async (targetStatus: TicketStatus) => {
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -158,18 +129,11 @@ export function ActionPanel({
     if (targetStatus === 'cancelled' && declineReason.trim()) {
       payload.decline_reason = declineReason.trim();
     }
-    if (info.request) payload.info_request = info.request;
-    if (info.reply) payload.info_reply = info.reply;
 
     const result = await updateTicket(payload as UpdateTicketRequest);
 
     if (result.ok) {
-      setSuccess(
-        info.request ? 'Request sent. The reporter has been emailed your question.'
-        : info.reply ? 'Answer sent to Pro Roto.'
-        : `Work order is now ${STATUS_LABELS[targetStatus].toLowerCase()}.`,
-      );
-      setAskOpen(false); setAskText(''); setAnswerText('');
+      setSuccess(`Work order is now ${STATUS_LABELS[targetStatus].toLowerCase()}.`);
       setDeclineReason('');
       onUpdated();
     } else {
@@ -224,51 +188,15 @@ export function ActionPanel({
         </div>
       )}
 
-      {/* Needs Info: the question, visible to everyone on the work order */}
-      {currentStatus === 'needs_info' && (
-        <div className="mb-3 text-sm px-3 py-2 rounded-md tone-warn tone-notice">
-          <p className="font-semibold">Information needed</p>
-          <p className="whitespace-pre-wrap break-words">
-            {question ?? 'More details are needed before this work order can move forward. See the comments below.'}
-          </p>
-        </div>
-      )}
-
       {terminal ? (
         <p className="text-sm text-muted-foreground">
           This work order is {STATUS_LABELS[currentStatus].toLowerCase()} and can't be changed.
         </p>
-      ) : answering ? (
-        /* Reporter side: one box, one button — answer and send it back */
-        <form
-          className="mb-4"
-          onSubmit={(e) => { e.preventDefault(); if (answerText.trim()) handleTransition('new', { reply: answerText.trim() }); }}
-        >
-          <label htmlFor={ids.answer} className={labelClass}>Your answer</label>
-          <textarea
-            id={ids.answer}
-            value={answerText}
-            onChange={(e) => setAnswerText(e.target.value)}
-            rows={4}
-            maxLength={2000}
-            required
-            placeholder="Type the information here…"
-            className={`${fieldClass} resize-y`}
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Need to add a photo? Use Attachments, then send your answer.
-          </p>
-          <Button type="submit" disabled={submitting || !answerText.trim()} className="mt-3 w-full sm:w-auto min-h-[44px]">
-            {submitting
-              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Sending…</>
-              : 'Send answer'}
-          </Button>
-        </form>
       ) : allowed.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {currentStatus === 'waiting_approval'
             ? <>Pro Roto will call you to go over the estimate before any work continues. Nothing to do here.</>
-            : <>Nothing for you to do right now — it's {STATUS_LABELS[currentStatus].toLowerCase()}. You'll be notified when that changes.</>}
+            : <>Nothing for you to do here — Pro Roto has this work order and will call if anything more is needed. You'll be notified as it moves along.</>}
         </p>
       ) : (
         <div className="mb-4">
@@ -282,7 +210,7 @@ export function ActionPanel({
                 <button
                   key={target}
                   type="button"
-                  onClick={() => destructive ? setConfirmCancel(true) : target === 'needs_info' ? setAskOpen(true) : handleTransition(target)}
+                  onClick={() => destructive ? setConfirmCancel(true) : handleTransition(target)}
                   disabled={submitting}
                   className={`px-4 py-2.5 text-sm font-semibold rounded-lg min-h-[44px] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     destructive
@@ -290,44 +218,11 @@ export function ActionPanel({
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   }`}
                 >
-                  {actionLabel(currentStatus, target, role)}
+                  {actionLabel(currentStatus, target)}
                 </button>
               );
             })}
           </div>
-
-          {askOpen && (
-            <form
-              className="mt-3 p-3 rounded-lg border border-border"
-              onSubmit={(e) => { e.preventDefault(); if (askText.trim()) handleTransition('needs_info', { request: askText.trim() }); }}
-            >
-              <label htmlFor={ids.ask} className={labelClass}>What do you need from the reporter?</label>
-              <textarea
-                id={ids.ask}
-                value={askText}
-                onChange={(e) => setAskText(e.target.value)}
-                rows={3}
-                maxLength={2000}
-                required
-                autoFocus
-                placeholder="e.g. Which restroom on the 2nd floor? Is the water still running?"
-                className={`${fieldClass} resize-y`}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                The reporter gets this by email and answers on the work order.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                <Button type="submit" disabled={submitting || !askText.trim()} className="min-h-[44px]">
-                  {submitting
-                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Sending…</>
-                    : 'Send request'}
-                </Button>
-                <Button type="button" variant="outline" disabled={submitting} className="min-h-[44px]" onClick={() => { setAskOpen(false); setAskText(''); }}>
-                  Never mind
-                </Button>
-              </div>
-            </form>
-          )}
         </div>
       )}
 
