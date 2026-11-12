@@ -1,5 +1,7 @@
 # Work Orders — Step 4 Verification: Ticket List + Ticket Detail
 
+> **Historic document.** The status rules described here are out of date: since migrations 00028 and 00035 only Pro Roto changes a status, and "Needs Info" is a retired status. See `shared/types/transitions.ts` for the current matrix.
+
 ## Files Added/Changed in Step 4
 
 | File | Lines | Status |

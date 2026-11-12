@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // CRITICAL: This matrix MUST match the Postgres trigger enforce_ticket_status_transition
-// (migration 00005, last changed in 00032). If you change one, you MUST change both.
+// (migration 00005, last changed in 00035). If you change one, you MUST change both.
 //
 // Layers:
 //   1. Postgres trigger (00005) — database seatbelt, rejects invalid UPDATEs
@@ -22,22 +22,21 @@ export const TRANSITION_MATRIX: Record<
   TicketStatus,
   Partial<Record<UserRole, readonly TicketStatus[]>>
 > = {
-  // Only Pro Roto dispatches (migration 00028): PM roles report and answer
-  // information requests. Scheduling, assignment, cancelling and quote
-  // approval (taken by phone) are Pro Roto's.
+  // Only Pro Roto changes a status (migrations 00028, 00035). Customer roles
+  // report problems, add comments and photos, and watch progress. If Pro Roto
+  // needs more information, Pro Roto calls — there is no "Needs Info" step.
   new: {
-    proroto_admin: ['needs_info', 'scheduled', 'cancelled'],
-    pm_admin:      ['needs_info'],
+    proroto_admin: ['scheduled', 'cancelled'],
   },
 
+  // LEGACY (00035): nothing moves into needs_info any more. A historic row
+  // still in it can be moved out by Pro Roto.
   needs_info: {
     proroto_admin: ['new', 'scheduled', 'cancelled'],
-    pm_admin:      ['new'],
-    pm_user:       ['new'],
   },
 
   scheduled: {
-    proroto_admin: ['dispatched', 'needs_info', 'cancelled'],
+    proroto_admin: ['dispatched', 'cancelled'],
   },
 
   dispatched: {

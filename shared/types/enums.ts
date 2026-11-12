@@ -69,10 +69,12 @@ export const TICKET_STATUSES = [
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 
 /**
- * Statuses a work order can still reach. 'invoiced' is kept in the enum and
- * the database for historic rows only — invoices live in ServiceTitan (00032).
+ * Statuses a work order can still reach. Two are kept in the enum and the
+ * database for historic rows only:
+ *   • 'invoiced'   — invoices live in ServiceTitan (00032).
+ *   • 'needs_info' — if Pro Roto needs more information, Pro Roto calls (00035).
  */
-export const LEGACY_TICKET_STATUSES: readonly TicketStatus[] = ['invoiced'];
+export const LEGACY_TICKET_STATUSES: readonly TicketStatus[] = ['needs_info', 'invoiced'];
 export const SELECTABLE_TICKET_STATUSES: readonly TicketStatus[] =
   TICKET_STATUSES.filter((s) => !LEGACY_TICKET_STATUSES.includes(s));
 
@@ -111,17 +113,9 @@ export const ARRIVAL_WINDOWS: readonly string[] = [
   '8pm–10pm', '10pm–12am', '12am–2am', '2am–4am', '4am–6am', '6am–8am',
 ];
 
-/**
- * Prefix of the comment update-ticket writes when someone asks the reporter
- * for more information. The work order screen finds the latest one to show
- * the question next to the answer box. MUST match INFO_REQUEST_PREFIX in
- * supabase/functions/update-ticket/index.ts.
- */
-export const INFO_REQUEST_PREFIX = 'Information needed: ';
-
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   new: 'New',
-  needs_info: 'Needs Info',
+  needs_info: 'Needs Info (legacy)',
   scheduled: 'Scheduled',
   dispatched: 'Dispatched',
   on_site: 'On Site',
