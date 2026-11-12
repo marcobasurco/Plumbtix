@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { BrandLogo } from '@/components/BrandLogo';
 import { STATUS_LABELS, SEVERITY_LABELS, ISSUE_TYPE_LABELS, formatTicketLocation } from '@shared/types/enums';
 import type { TicketStatus, TicketSeverity, IssueType } from '@shared/types/enums';
 
@@ -192,9 +193,7 @@ export function PublicTicketView() {
       <header className="border-b border-border bg-card">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-xs font-bold">P</span>
-            </div>
+            <BrandLogo />
             <span className="text-sm font-semibold text-foreground">Pro Roto App</span>
             <span className="text-xs text-muted-foreground">· Pro Roto Inc.</span>
           </div>

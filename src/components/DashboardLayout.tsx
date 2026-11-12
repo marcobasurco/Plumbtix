@@ -29,6 +29,7 @@ import {
   FileSpreadsheet, ChevronRight, Settings, Plus, Siren,
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
+import { BrandLogo } from '@/components/BrandLogo';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -154,9 +155,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
       {/* Brand */}
       <div className="sidebar-brand">
         <h1>
-          <span className="logo-icon">
-            <Wrench className="h-4 w-4" />
-          </span>
+          <BrandLogo />
           Pro Roto App
         </h1>
       </div>

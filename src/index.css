@@ -200,13 +200,16 @@
   color: hsl(var(--sidebar-primary-foreground));
   letter-spacing: -0.025em; display: flex; align-items: center; gap: 10px;
 }
-.sidebar-brand h1 .logo-icon {
-  width: 30px; height: 30px; color: #fff;
-  background: hsl(var(--sidebar-primary));
-  border-radius: var(--radius-md);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; box-shadow: 0 2px 8px hsl(var(--sidebar-primary) / 0.25);
+/* Pro Roto mark on a white plate (see BrandLogo.tsx). White is deliberate in
+   both themes: the mark's own blue and red need a white ground. */
+.brand-logo {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; background: #fff; border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px hsl(var(--border)), 0 1px 3px hsl(var(--foreground) / 0.08);
 }
+.brand-logo img { display: block; height: 100%; width: auto; object-fit: contain; } /* width follows height: the mark is never stretched */
+.brand-logo-sm { height: 32px; padding: 3px 5px; }
+.brand-logo-md { height: 48px; padding: 5px 8px; }
 .sidebar-user { padding: 14px 20px; border-bottom: 1px solid hsl(var(--sidebar-border)); }
 .sidebar-user-name { font-size: var(--text-sm); font-weight: 500; color: hsl(var(--sidebar-accent-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user-email { font-size: var(--text-xs); color: hsl(var(--sidebar-muted)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -450,7 +453,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .login-page::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, hsl(var(--primary) / 0.06) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, hsl(var(--primary) / 0.04) 0%, transparent 50%); pointer-events: none; }
 .login-card { width: 100%; max-width: 400px; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius-xl); padding: 36px 32px 32px; box-shadow: var(--shadow-lg); position: relative; z-index: 1; }
 .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.login-logo-icon { width: 36px; height: 36px; background: hsl(var(--primary)); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 2px 8px hsl(var(--primary) / 0.3); }
 .login-logo-text { font-size: var(--text-xl); font-weight: 700; color: hsl(var(--foreground)); letter-spacing: -0.02em; }
 .login-subtitle { font-size: var(--text-sm); color: hsl(var(--muted-foreground)); margin-bottom: 28px; }
 .login-links { text-align: center; font-size: var(--text-xs); color: hsl(var(--muted-foreground)); margin-top: 16px; padding-top: 16px; border-top: 1px solid hsl(var(--border)); }

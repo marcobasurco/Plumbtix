@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Wrench, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -34,10 +35,8 @@ export function ForgotPasswordPage() {
   return (
     <div className="login-page">
       <div className="w-full max-w-[400px] relative z-10">
-        <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
-            <Wrench className="h-5 w-5 text-white" />
-          </div>
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <BrandLogo size="md" />
           <div>
             <div className="text-xl font-bold tracking-tight">Pro Roto App</div>
             <div className="text-xs text-muted-foreground -mt-0.5">Work Order Management</div>
