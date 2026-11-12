@@ -27,6 +27,7 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
+import { applyTheme, resetTheme, getTheme, normalizeTheme } from '@/lib/theme';
 import type { User } from '@shared/types/database';
 import type { UserRole } from '@shared/types/enums';
 
@@ -109,12 +110,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     if (!newSession?.user) {
+      // Nobody signed in (sign-in screen, sign-out, expired session):
+      // always daylight, and forget the last person's choice on this device.
+      resetTheme();
       setProfile(null);
       setLoading(false);
       return;
     }
 
     const userProfile = await fetchProfile(newSession.user.id);
+    // The person's saved choice wins on every device. Until migration 00034
+    // is applied the column is absent, so keep what this browser remembers.
+    if (userProfile) {
+      applyTheme(userProfile.theme_preference
+        ? normalizeTheme(userProfile.theme_preference)
+        : getTheme());
+    }
     setProfile(userProfile);
     setLoading(false);
   }, [fetchProfile]);
@@ -166,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     await supabase.auth.signOut();
     await clearRuntimeCaches();
+    resetTheme();
     setSession(null);
     setProfile(null);
     setError(null);

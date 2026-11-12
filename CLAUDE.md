@@ -54,7 +54,7 @@ The database is the authorization layer. Edge functions validate first for frien
 
 ## Migrations
 
-- Files in `supabase/migrations/`, numbered `000NN_description.sql`. Next number: 00034.
+- Files in `supabase/migrations/`, numbered `000NN_description.sql`. Next number: 00035.
 - Applied migrations are immutable. Fix forward with a new file. New migrations may `DROP POLICY IF EXISTS` / `CREATE POLICY` to replace earlier policies — the old "LOCKED sections" rule is retired.
 - Never change the schema in the Supabase dashboard. If it happens, run `supabase db diff` and commit the result before any other work.
 - Write migrations idempotently (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP ... IF EXISTS`). End each with commented verification queries.
@@ -76,9 +76,10 @@ Colors come only from the tokens in `src/index.css` ("calm water" palette) and t
 
 ## Frontend conventions
 
-- Direct PostgREST writes are sanctioned exceptions only: `equipment` CRUD, notification `read_at`, self-profile updates (phone, SMS flag), and the Import page's `users`/`occupants` updates. Everything else goes through an edge function via `src/lib/api.ts`.
+- Direct PostgREST writes are sanctioned exceptions only: `equipment` CRUD, notification `read_at`, self-profile updates (phone, SMS flag, theme), and the Import page's `users`/`occupants` updates. Everything else goes through an edge function via `src/lib/api.ts`.
 - Three route trees: `/admin/*` (proroto_admin), `/dashboard/*` (pm roles), `/my/*` (resident). Guard with `RoleGate`.
 - The `notifications` table uses `read_at` (timestamp), not a boolean.
+- Theme (Marco, Nov 2026): daylight is the default and the sign-in screen is always daylight — do not follow the device's `prefers-color-scheme`. A person's choice is saved in `users.theme_preference` (00034), can be changed only by that person (`trg_protect_user_theme` — not by company Admins or Pro Roto admins), and is applied after sign-in; all of it goes through `src/lib/theme.ts` (`applyTheme` / `resetTheme` / `useTheme`) and `public/theme-init.js`.
 
 ## Deploying a change
 

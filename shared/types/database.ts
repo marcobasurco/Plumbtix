@@ -37,6 +37,7 @@ export interface User {
   company_id: string | null;           // UUID → companies(id) ON DELETE SET NULL
   avatar_url: string | null;           // TEXT
   sms_notifications_enabled: boolean;  // BOOLEAN NOT NULL DEFAULT FALSE
+  theme_preference: 'light' | 'dark';  // TEXT NOT NULL DEFAULT 'light' CHECK (light|dark) — 00034
   created_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
   updated_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
 }
