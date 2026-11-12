@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+### Analytics page is readable
+- The page's layout classes were never defined, so the summary numbers
+  rendered as an unstyled stack ("1 / Open work orders / 10 total"). Rebuilt
+  with the design tokens: four summary tiles in a row (two per row on phones).
+- Every number now has its label above it and a sentence under it saying
+  what it counts ("Not finished yet, out of 10 reported in total", "New work
+  orders since November 1"). The unclear "~10/bldg" figure is gone.
+- "Work orders reported each month" is a bar chart with the count on each
+  bar (the smoothed line suggested values between months). Month labels no
+  longer look like dates ("Oct", not "Oct 26").
+- Issue types, urgency and status are plain lists with counts, percentages
+  and bars: "What was reported", "How urgent they were", "Where they stand
+  now". Urgency is always a word plus a color.
+- Filters have labels (Company, Building); tables say "Open now / This month
+  / All time"; building and company names are real buttons (keyboard
+  accessible); friendlier error with "Try again".
+
 ### Pro Roto logo replaces the wrench icon
 - The registered Pro Roto logo now sits next to the app name on the sign-in,
   forgot/reset password, invitation and resident sign-up pages, in the
