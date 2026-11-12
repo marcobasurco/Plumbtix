@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Dispatch board looks like the rest of the app
+- The board's layout classes were never defined, so it rendered as an
+  unstyled list (stacked filters, oversized search icon, columns in one long
+  page). Rebuilt with the same cards and tokens as Overview and Analytics.
+- Status columns sit side by side; each work order is a card showing number,
+  urgency, problem, location, technician and scheduled time.
+- The arrow buttons ("→ Scheduled") are now a labelled "Move to" row.
+- Filters have labels (Company, Building, Search) in one row; "Closed (9)"
+  is "Show closed (9)"; the header says how many are open and closed.
+- Phones: statuses with nothing in them collapse into one line.
+- Status and urgency colors use the shared badges (no hard-coded colors),
+  so dark mode is correct.
+
 ### Daylight by default; dark mode is saved on the profile
 - The app opens in daylight (light) for everyone. The sign-in screen is
   always daylight; the device's own dark-mode setting is no longer followed.
