@@ -111,6 +111,14 @@ export const ARRIVAL_WINDOWS: readonly string[] = [
   '8pm–10pm', '10pm–12am', '12am–2am', '2am–4am', '4am–6am', '6am–8am',
 ];
 
+/**
+ * Prefix of the comment update-ticket writes when someone asks the reporter
+ * for more information. The work order screen finds the latest one to show
+ * the question next to the answer box. MUST match INFO_REQUEST_PREFIX in
+ * supabase/functions/update-ticket/index.ts.
+ */
+export const INFO_REQUEST_PREFIX = 'Information needed: ';
+
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   new: 'New',
   needs_info: 'Needs Info',

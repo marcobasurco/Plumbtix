@@ -294,6 +294,10 @@ export interface StatusChangeEmailData {
     technician?: string;
     scheduledDate?: string;
     timeWindow?: string;
+    /** → needs_info: what the reporter is being asked for */
+    infoRequest?: string;
+    /** needs_info → new: the reporter's answer */
+    infoReply?: string;
   };
 }
 
@@ -338,7 +342,17 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
       message = 'This work order has been cancelled.';
       break;
     case 'needs_info':
-      message = 'Additional information is needed before we can proceed. Please check the work order for details.';
+      message = 'More information is needed before this work order can move forward.';
+      if (d.infoRequest) message += `<br><br><strong>What is needed:</strong><br>${escMultiline(d.infoRequest)}`;
+      message += '<br><br>Open the work order and type your answer in the box at the top.';
+      break;
+    case 'new':
+      if (data.oldStatus === 'needs_info') {
+        message = 'The requested information has been added to this work order.';
+        if (d.infoReply) message += `<br><br><strong>Answer:</strong><br>${escMultiline(d.infoReply)}`;
+      } else {
+        message = `The status has been updated to ${esc(newLabelText)}.`;
+      }
       break;
     default:
       message = `The status has been updated to ${esc(newLabelText)}.`;

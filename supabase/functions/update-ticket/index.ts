@@ -72,6 +72,10 @@ const SCHEDULE_NOTICE_STATUSES: readonly string[] = [
   'scheduled', 'dispatched', 'on_site', 'in_progress', 'waiting_approval',
 ];
 
+// Prefix of the comment written for an information request. MUST match
+// INFO_REQUEST_PREFIX in shared/types/enums.ts (the screen looks for it).
+const INFO_REQUEST_PREFIX = 'Information needed: ';
+
 // ─── Validation schema ───
 
 const UpdateTicketSchema = z.object({
@@ -82,6 +86,8 @@ const UpdateTicketSchema = z.object({
   scheduled_date: z.string().optional(),
   scheduled_time_window: z.string().max(100).optional(),
   decline_reason: z.string().max(2000).optional(),
+  info_request: z.string().trim().min(1).max(2000).optional(),
+  info_reply: z.string().trim().min(1).max(2000).optional(),
 });
 
 Deno.serve(async (req: Request) => {
@@ -120,6 +126,8 @@ Deno.serve(async (req: Request) => {
     scheduled_date,
     scheduled_time_window,
     decline_reason,
+    info_request,
+    info_reply,
   } = parsed.data;
 
   try {
@@ -246,6 +254,30 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ─── 9b. Information request / answer → visible comment ───
+    // Asking (→ needs_info) records WHAT is needed; answering (needs_info →
+    // new) records the reply. Both land in the thread so the conversation is
+    // in one place, and both ride along on the status email (step 10).
+    const infoRequestText = info_request && targetStatus === 'needs_info' && ticket.status !== 'needs_info'
+      ? info_request : undefined;
+    const infoReplyText = info_reply && targetStatus === 'new' && ticket.status === 'needs_info'
+      ? info_reply : undefined;
+    const infoComment = infoRequestText
+      ? `${INFO_REQUEST_PREFIX}${infoRequestText}`
+      : infoReplyText;
+
+    if (infoComment) {
+      // Service role: ticket_comments has ALL revoked for authenticated (00006).
+      // The caller's right to this ticket was just proven by the RLS update above.
+      const svc = createServiceClient();
+      const { error: infoErr } = await svc
+        .from('ticket_comments')
+        .insert({ ticket_id, user_id: userId, comment_text: infoComment, is_internal: false });
+      if (infoErr) {
+        console.warn('[update-ticket] Info request/reply comment failed:', infoErr.message);
+      }
+    }
+
     console.log(
       '[update-ticket] Updated: ticket=%s, user=%s, role=%s, status=%s→%s',
       ticket_id, userId, role,
@@ -282,7 +314,7 @@ Deno.serve(async (req: Request) => {
               space: spaceRes.data,
               location_note: ticket.location_note ?? null,
               created_by: creatorRes.data,
-            }, ticket.status, targetStatus, role);
+            }, ticket.status, targetStatus, role, { infoRequest: infoRequestText, infoReply: infoReplyText });
           }
         } catch (emailErr) {
           console.error('[update-ticket] Email notification error (non-blocking):', emailErr);
