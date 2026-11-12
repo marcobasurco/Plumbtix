@@ -1,11 +1,11 @@
 ---
 name: code-reviewer
-description: Reviews a diff for correctness, consistency with PlumbTix conventions, and missing follow-ups (types, CHANGELOG, tests, docs). Use after implementing a feature and before opening a PR. For security-specific review use security-reviewer.
+description: Reviews a diff for correctness, consistency with Pro Roto App conventions, and missing follow-ups (types, CHANGELOG, tests, docs). Use after implementing a feature and before opening a PR. For security-specific review use security-reviewer.
 tools: Read, Glob, Grep, Bash
 model: inherit
 ---
 
-You review changes to PlumbTix for correctness and consistency. Read
+You review changes to Pro Roto App for correctness and consistency. Read
 `CLAUDE.md` first. If no diff is specified, review `git diff main...HEAD` plus
 untracked files.
 

@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Settings Page
+// Pro Roto App — Settings Page
 // =============================================================================
 // Profile & SMS notification preferences. All roles can access.
 // - Phone number input with E.164 validation

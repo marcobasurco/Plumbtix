@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — E2E Test: Public Ticket Sharing
+// Pro Roto App — E2E Test: Public Ticket Sharing
 // =============================================================================
 import { test, expect } from '@playwright/test';
 
@@ -14,7 +14,7 @@ test.describe('Public Ticket Sharing — always-on', () => {
   test('not-found view offers sign-in link without requiring login', async ({ page }) => {
     await page.goto(`/p/${UNKNOWN_TOKEN}`);
     await expect(page).toHaveURL(new RegExp(`/p/${UNKNOWN_TOKEN}`));
-    await expect(page.locator('text=Sign in to PlumbTix')).toBeVisible();
+    await expect(page.locator('text=Sign in to Pro Roto App')).toBeVisible();
   });
 
   test('malformed token renders not-found, not a crash', async ({ page }) => {

@@ -1,5 +1,5 @@
 # =============================================================================
-# PlumbTix — CI/CD Pipeline
+# Pro Roto App — CI/CD Pipeline
 # =============================================================================
 # On PR: lint, typecheck, test, build (+ e2e)
 # On merge to main: lint, typecheck, test, build

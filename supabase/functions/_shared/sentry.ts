@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function Shared: Sentry Error Reporting
+// Pro Roto App — Edge Function Shared: Sentry Error Reporting
 // =============================================================================
 // Central error reporting for all edge functions. Two integration points:
 //   • response.ts serverError() — every 500 any function returns is reported
@@ -35,7 +35,7 @@ if (dsn) {
     enabled = true;
 
     if (Deno.env.get('SENTRY_BOOT_PING') === 'true') {
-      Sentry.captureMessage('PlumbTix edge boot ping — Sentry pipeline OK', 'info');
+      Sentry.captureMessage('Pro Roto App edge boot ping — Sentry pipeline OK', 'info');
     }
   } catch (e) {
     // Reporting must never break the function itself

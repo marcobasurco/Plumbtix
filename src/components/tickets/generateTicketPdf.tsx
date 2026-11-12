@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — PDF Generation Helpers
+// Pro Roto App — PDF Generation Helpers
 // =============================================================================
 // Fetches ticket supporting data, renders TicketPdfDocument via
 // @react-pdf/renderer, and provides:

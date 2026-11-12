@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Renamed: PlumbTix is now Pro Roto App
+- The product name is **Pro Roto App** everywhere people see it: sign-in and
+  password pages, app header, welcome tour, public work-order page, PDFs,
+  reports, browser title and the installed-app name.
+- Docs, Claude Code agents and skills use the new name; the design-system
+  skill is now `proroto-ui`.
+- Browser storage keys and the service-worker cache were renamed
+  (`proroto-theme`, `proroto_tour_completed`, `proroto.report-draft.v1`,
+  cache `proroto-app-v3`). One-time effect: the light/dark choice resets and an
+  unsent draft report saved before the update is not restored.
+- Applied migrations (00021, 00032, 00033) still say PlumbTix in comments —
+  applied migrations are never edited. No database change.
+
 ### Information requests have a question and an answer box
 - "Ask for more info" / "Need more info from reporter" now opens a box:
   **What do you need from the reporter?** The question is required, saved as a
@@ -45,7 +58,7 @@
   staff know a technician is assigned and when to expect them. Frontend only.
 
 ### Dollar amounts removed (migration 00033)
-- PlumbTix is not a billing system: it collects the situations property
+- Pro Roto App is not a billing system: it collects the situations property
   managers and staff report and dispatches to them. Estimates are sent from
   Pro Roto's estimating software. The "Quote amount ($)" field, the Quote row
   on the work order and PDF, the amounts on the approval buttons and the
@@ -56,7 +69,7 @@
 - Supersedes the "Quote amount stays" note below.
 
 ### Invoicing removed (migration 00032)
-- Invoices are created in ServiceTitan; PlumbTix reports problems and
+- Invoices are created in ServiceTitan; Pro Roto App reports problems and
   dispatches to them. A work order now ends at **Completed**: the
   `completed → invoiced` transition, the "Mark invoiced" button, the invoice
   number field and the Invoice rows on the work order, PDF and emails are

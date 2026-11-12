@@ -133,7 +133,7 @@ export function ResetPasswordPage() {
             <Wrench className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="text-xl font-bold tracking-tight">PlumbTix</div>
+            <div className="text-xl font-bold tracking-tight">Pro Roto App</div>
             <div className="text-xs text-muted-foreground -mt-0.5">Work Order Management</div>
           </div>
         </div>

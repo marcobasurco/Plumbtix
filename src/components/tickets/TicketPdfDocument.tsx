@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Programmatic PDF Work Order (@react-pdf/renderer)
+// Pro Roto App — Programmatic PDF Work Order (@react-pdf/renderer)
 // =============================================================================
 // Generates a crisp, vector-based PDF with perfect typography, multi-page
 // support, embedded images, and QR code. NO html2canvas, no blank/black pages.
@@ -217,7 +217,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
   return (
     <Document
       title={`Work Order #${ticket.ticket_number}`}
-      author="PlumbTix — Pro Roto Inc."
+      author="Pro Roto Inc."
       subject={`Work Order ${ticket.ticket_number}`}
     >
       <Page size="LETTER" style={s.page} wrap>
@@ -226,7 +226,7 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
         <View style={s.header} fixed>
           <View style={s.headerLeft}>
             {logoUrl && <Image src={logoUrl} style={s.logo} />}
-            <Text style={s.title}>PlumbTix — Work Order</Text>
+            <Text style={s.title}>Pro Roto App — Work Order</Text>
             <Text style={s.subtitle}>Pro Roto Inc. · CA License #947961</Text>
             <Text style={s.subtitle}>(650) 338-8332 · proroto.com</Text>
             {companyName !== 'Pro Roto Inc.' && (
@@ -484,8 +484,8 @@ export function TicketPdfDocument({ ticket, userRole, data }: Props) {
         <View style={s.footer} fixed>
           <Text style={s.footerText}>
             {isResident
-              ? `Resident Copy \u00B7 Printed ${printDate} \u00B7 PlumbTix \u00B7 Pro Roto Inc.`
-              : `Printed ${printDate} \u00B7 PlumbTix \u00B7 Pro Roto Inc. \u00B7 CA Lic #947961 \u00B7 Confidential`}
+              ? `Resident Copy \u00B7 Printed ${printDate} \u00B7 Pro Roto App \u00B7 Pro Roto Inc.`
+              : `Printed ${printDate} \u00B7 Pro Roto App \u00B7 Pro Roto Inc. \u00B7 CA Lic #947961 \u00B7 Confidential`}
           </Text>
           <Text
             style={s.footerRight}

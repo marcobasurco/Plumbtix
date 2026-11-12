@@ -1,5 +1,5 @@
-# PlumbTix — Deployment Runbook
-# Run these commands from your local machine in the plumbtix project root.
+# Pro Roto App — Deployment Runbook
+# Run these commands from your local machine in the proroto-app project root.
 # Each phase has a CHECKPOINT — do not proceed until it passes.
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -7,7 +7,7 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 # 1a. Go to https://supabase.com/dashboard → New Project
-#     Name:     plumbtix
+#     Name:     proroto-app
 #     Password: <generate and SAVE this>
 #     Region:   West US (closest to Bay Area)
 #     Wait for project to finish provisioning (~2 min)
@@ -167,15 +167,15 @@ curl -s -w "\nHTTP %{http_code}\n" \
 # 6a. Push to GitHub (if not already)
 git init
 git add .
-git commit -m "PlumbTix v1.0 — Steps 0-7"
-git remote add origin https://github.com/YOUR_ORG/plumbtix.git
+git commit -m "Pro Roto App v1.0 — Steps 0-7"
+git remote add origin https://github.com/YOUR_ORG/proroto-app.git
 git branch -M main
 git push -u origin main
 
 # 6b. Create Netlify site
 #     Option A — Dashboard (easiest):
 #       https://app.netlify.com → Add new site → Import existing project
-#       Connect GitHub → select plumbtix repo
+#       Connect GitHub → select proroto-app repo
 #       Build settings auto-detected from netlify.toml:
 #         Build command:    npm ci && npm run build
 #         Publish dir:      dist

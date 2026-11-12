@@ -1,11 +1,11 @@
 ---
 name: deploy
-description: Walk through the PlumbTix production deploy checklist — CI status, migration history, supabase db push, edge-function deploy, post-deploy verification. Only run when Marco asks to deploy.
+description: Walk through the Pro Roto App production deploy checklist — CI status, migration history, supabase db push, edge-function deploy, post-deploy verification. Only run when Marco asks to deploy.
 disable-model-invocation: true
 allowed-tools: Bash(git *) Bash(gh *) Bash(npx supabase@latest migration list*) Bash(supabase migration list*) Read
 ---
 
-Run the PlumbTix deploy checklist. Stop and ask before every step that
+Run the Pro Roto App deploy checklist. Stop and ask before every step that
 changes production; never skip a step because an earlier one looked fine.
 
 1. **Branch state.** `git status` must be clean and `git log origin/main..HEAD`

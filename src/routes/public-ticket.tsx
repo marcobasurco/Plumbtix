@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Public Ticket View
+// Pro Roto App — Public Ticket View
 // =============================================================================
 // Standalone page for QR code / shareable links. No login required.
 // Shows limited, resident-safe ticket data.
@@ -175,7 +175,7 @@ export function PublicTicketView() {
             to="/login"
             className="text-sm text-primary hover:underline"
           >
-            Sign in to PlumbTix →
+            Sign in to Pro Roto App →
           </Link>
         </div>
       </div>
@@ -195,7 +195,7 @@ export function PublicTicketView() {
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <span className="text-primary-foreground text-xs font-bold">P</span>
             </div>
-            <span className="text-sm font-semibold text-foreground">PlumbTix</span>
+            <span className="text-sm font-semibold text-foreground">Pro Roto App</span>
             <span className="text-xs text-muted-foreground">· Pro Roto Inc.</span>
           </div>
           <Link
@@ -328,7 +328,7 @@ export function PublicTicketView() {
               Managed by <span className="font-medium text-foreground">{bld.company.name}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Powered by PlumbTix · Pro Roto Inc. · (650) 338-8332
+              Pro Roto App · Pro Roto Inc. · (650) 338-8332
             </p>
           </div>
         )}
