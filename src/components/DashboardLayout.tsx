@@ -7,9 +7,11 @@
 //   • Mobile: sidebar as sheet overlay with hamburger trigger
 // =============================================================================
 
-import { useState, type ReactNode, useEffect } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/lib/supabaseClient';
+import { applyTheme, useTheme, type Theme } from '@/lib/theme';
 import { ROLE_LABELS } from '@shared/types/enums';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -95,18 +97,20 @@ export function DashboardLayout({ title: _title, children }: Props) {
   const root = roleRoot(role);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Dark mode from localStorage
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const stored = localStorage.getItem('proroto-theme');
-    if (stored) return stored === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem('proroto-theme', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
+  // Theme: daylight by default; the person's choice is saved on their profile
+  // (users.theme_preference) so it follows them to any device. See lib/theme.ts.
+  const darkMode = useTheme() === 'dark';
+  const toggleTheme = async () => {
+    const next: Theme = darkMode ? 'light' : 'dark';
+    applyTheme(next); // switch immediately
+    if (!profile) return;
+    // Sanctioned self-profile write (like phone / SMS settings).
+    const { error } = await supabase
+      .from('users')
+      .update({ theme_preference: next })
+      .eq('id', profile.id);
+    if (error) console.error('[theme] Could not save the theme choice:', error.message);
+  };
 
   // Build nav
   const nav = role === 'proroto_admin' ? [...CORE_NAV, ...ADMIN_EXTRA]
@@ -265,7 +269,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setDarkMode(!darkMode)}
+                    onClick={toggleTheme}
                     className="h-11 w-11 sm:h-9 sm:w-9"
                     aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                   >
@@ -299,7 +303,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
                     <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
                     Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setDarkMode(!darkMode)}>
+                  <DropdownMenuItem onClick={toggleTheme}>
                     {darkMode ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
                     {darkMode ? 'Light mode' : 'Dark mode'}
                   </DropdownMenuItem>

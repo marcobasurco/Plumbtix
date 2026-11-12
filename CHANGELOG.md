@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Daylight by default; dark mode is saved on the profile
+- The app opens in daylight (light) for everyone. The sign-in screen is
+  always daylight; the device's own dark-mode setting is no longer followed.
+- A person who switches to dark keeps it: the choice is saved on their
+  profile (`users.theme_preference`, **migration 00034 — run
+  `supabase db push`**) and follows them to any computer or phone after
+  they sign in. Signing out returns the screen to daylight.
+- Theme logic lives in `src/lib/theme.ts` (with tests).
+
 ### Overview reads like Analytics
 - Summary tiles: label on top, big number, a sentence saying what it counts;
   each still opens the matching list. "Emergencies" is now "Open
