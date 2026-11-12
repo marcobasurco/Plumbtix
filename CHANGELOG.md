@@ -7,8 +7,9 @@
   forgot/reset password, invitation and resident sign-up pages, in the
   sidebar, and on the public work-order page (new `BrandLogo` component,
   `public/pro-roto-logo.svg`).
-- The logo always keeps its original proportions and colors and sits
-  directly on the page (no background plate).
+- The logo always keeps its original proportions and colors. In light mode
+  it sits directly on the page; in dark mode it gets a white plate so the
+  blue lettering stays readable.
 - Invitation and resident sign-up pages now say "Pro Roto App" (they still
   said "Work Orders").
 

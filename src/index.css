@@ -200,11 +200,19 @@
   color: hsl(var(--sidebar-primary-foreground));
   letter-spacing: -0.025em; display: flex; align-items: center; gap: 10px;
 }
-/* Pro Roto mark (see BrandLogo.tsx), shown directly on the page — no plate. */
-.brand-logo { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+/* Pro Roto mark (see BrandLogo.tsx). Light mode: directly on the page.
+   Dark mode: on a white plate, because the mark's blue lettering and drop
+   disappear on a dark ground. Overall height is the same in both themes. */
+.brand-logo {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; box-sizing: border-box;
+}
 .brand-logo img { display: block; height: 100%; width: auto; object-fit: contain; } /* width follows height: the mark is never stretched */
 .brand-logo-sm { height: 32px; }
 .brand-logo-md { height: 48px; }
+.dark .brand-logo { background: #fff; border-radius: var(--radius-md); }
+.dark .brand-logo-sm { padding: 3px 5px; }
+.dark .brand-logo-md { padding: 5px 8px; }
 .sidebar-user { padding: 14px 20px; border-bottom: 1px solid hsl(var(--sidebar-border)); }
 .sidebar-user-name { font-size: var(--text-sm); font-weight: 500; color: hsl(var(--sidebar-accent-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user-email { font-size: var(--text-xs); color: hsl(var(--sidebar-muted)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
