@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Overview reads like Analytics
+- Summary tiles: label on top, big number, a sentence saying what it counts;
+  each still opens the matching list. "Emergencies" is now "Open
+  emergencies" (it only ever counted open ones, which looked wrong next to
+  the all-time urgency list).
+- "By severity" → "All work orders by urgency" with counts and percentages,
+  and a note that it covers everything ever reported.
+- Pro Roto admins: the company table moved out of the narrow side column to
+  a full-width "By company" section with plain headers (Open now, All time,
+  Buildings, Locations, People with access).
+- "Work order volume" → "Work orders reported each month" with the count on
+  each bar; the status donut is now a plain list ("Where they stand now").
+- The greeting line says whose work orders it counts (all companies / your
+  buildings) and whether there are open emergencies.
+- Tiles, sections, count lists and the monthly chart are shared with
+  Analytics (`components/StatBlocks.tsx`); Analytics says "locations" like
+  the rest of the app.
+
 ### Analytics page is readable
 - The page's layout classes were never defined, so the summary numbers
   rendered as an unstyled stack ("1 / Open work orders / 10 total"). Rebuilt
