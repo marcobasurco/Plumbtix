@@ -1,6 +1,6 @@
 ---
 name: ux-audit
-description: Capture real screenshots of PlumbTix (phone + desktop, light/dark) with Playwright and have the ux-reviewer subagent critique them for usability, hierarchy, consistency, accessibility and mobile fit. Use for a full UX review of the app or specific routes.
+description: Capture real screenshots of Pro Roto App (phone + desktop, light/dark) with Playwright and have the ux-reviewer subagent critique them for usability, hierarchy, consistency, accessibility and mobile fit. Use for a full UX review of the app or specific routes.
 argument-hint: [--routes=/admin,/admin/tickets] [--dark] [--base=https://workorders.proroto.com]
 allowed-tools: Bash(node scripts/ux-shots.mjs*) Bash(npm run dev*) Bash(npx playwright install*) Read Glob Grep
 ---

@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Build or redesign a PlumbTix screen to a high design standard — plan tokens and layout against the real users first, avoid generic AI-generated patterns, stay inside the design system, meet the quality floor (mobile, focus, reduced motion, contrast), then self-critique with screenshots. Use for any new page, flow, report, or visual overhaul.
+description: Build or redesign a Pro Roto App screen to a high design standard — plan tokens and layout against the real users first, avoid generic AI-generated patterns, stay inside the design system, meet the quality floor (mobile, focus, reduced motion, contrast), then self-critique with screenshots. Use for any new page, flow, report, or visual overhaul.
 argument-hint: <what to build or redesign, and for whom>
 ---
 
@@ -9,7 +9,7 @@ Design brief: $ARGUMENTS
 Approach this as the design lead responsible for how a hospital system's
 facilities team experiences Pro Roto. The product is a tool people use
 while something is leaking; it must feel calm, fast, and certain. Load
-`plumbtix-ui` first — new work extends that system, it does not start a
+`proroto-ui` first — new work extends that system, it does not start a
 new one.
 
 ## 1. Ground it in the subject and the person

@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — E2E Test: Ticket Lifecycle
+// Pro Roto App — E2E Test: Ticket Lifecycle
 // =============================================================================
 // Tests the full flow: resident submits ticket → PM assigns → admin completes
 // Requires test accounts to be configured in the environment.

@@ -1,4 +1,4 @@
-# PlumbTix — project guide for Claude Code
+# Pro Roto App — project guide for Claude Code
 
 Multi-tenant work-order portal for Pro Roto, Inc. (California C-36 plumbing contractor).
 Property management companies, HOAs, and healthcare facilities submit plumbing tickets;
@@ -70,7 +70,7 @@ The database is the authorization layer. Edge functions validate first for frien
 
 ## Frontend quality bar
 
-Phones are a primary device (facilities staff report problems standing next to the leak). Every screen: works at 390 px with no horizontal scroll and the primary action visible; targets ≥ 44 px; visible focus; contrast ≥ 4.5:1; meaning never by color alone; dark-mode parity; reports print cleanly. Load the `plumbtix-ui` skill before UI work and use `/frontend-design` for new screens, `/ux-audit` to review real screenshots, `/a11y-review` before shipping forms or tables.
+Phones are a primary device (facilities staff report problems standing next to the leak). Every screen: works at 390 px with no horizontal scroll and the primary action visible; targets ≥ 44 px; visible focus; contrast ≥ 4.5:1; meaning never by color alone; dark-mode parity; reports print cleanly. Load the `proroto-ui` skill before UI work and use `/frontend-design` for new screens, `/ux-audit` to review real screenshots, `/a11y-review` before shipping forms or tables.
 
 Colors come only from the tokens in `src/index.css` ("calm water" palette) and the `.tone-*` utilities (info / active / warn / ok / danger / neutral) — no Tailwind palette colors (`bg-blue-100` etc.) in components; red is reserved for emergencies. The CSP is written at build time by `scripts/write-csp-headers.mjs` (production strict; deploy previews also allow Netlify's review toolbar).
 
@@ -98,6 +98,6 @@ Full assessment: see the "production-readiness-assessment" doc in the ProRoto ti
 - `.claude/settings.json` — permissions (safe git/npm/supabase reads pre-approved; `.env*` unreadable), hooks, stable update channel.
 - `.claude/hooks/` — `guard-bash.mjs` blocks destructive shell/SQL commands; `guard-edits.mjs` blocks edits to applied migrations and secrets; `lint-file.mjs` runs ESLint --fix after each TypeScript edit.
 - `.claude/agents/` — `security-reviewer`, `code-reviewer`, `migration-author`, `ux-reviewer` subagents.
-- `.claude/skills/` — slash commands `/new-migration`, `/deploy`, `/security-review`, `/new-edge-function`, `/check-matrix`, `/ux-audit`, `/design-review`, `/a11y-review`, `/frontend-design`; plus `plumbtix-ui` (design-system reference, loaded automatically for UI work).
+- `.claude/skills/` — slash commands `/new-migration`, `/deploy`, `/security-review`, `/new-edge-function`, `/check-matrix`, `/ux-audit`, `/design-review`, `/a11y-review`, `/frontend-design`; plus `proroto-ui` (design-system reference, loaded automatically for UI work).
 - `scripts/ux-shots.mjs` — Playwright capture of real screens (phone + desktop, light/dark) into `.claude/ux-shots/` (git-ignored) so Claude can review what users see. Needs `npx playwright install chromium` once and `E2E_ADMIN_EMAIL`/`E2E_ADMIN_PASSWORD` in the environment.
 - `.mcp.json` — Supabase MCP server (hosted, OAuth), scoped to this project and read-only: use it to inspect production schema, policies and logs; never to change data. Authenticate once with `/mcp` → supabase → Authenticate.

@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Service Worker (v2)
+// Pro Roto App — Service Worker (v2)
 // =============================================================================
 // v2 SECURITY CHANGE: API responses (Supabase REST + Edge Functions) are no
 // longer cached. v1 stored ticket data — names, addresses, unit numbers — in
@@ -7,12 +7,13 @@
 // API traffic is now network-only. The cache holds only the app shell and
 // hashed static assets.
 //
-// The CACHE_NAME bump to v2 makes the activate handler delete the old
-// 'plumbtix-v1' cache (and any cached ticket data in it) on every existing
-// user's next visit — retroactive cleanup, no user action needed.
+// Every CACHE_NAME change makes the activate handler delete all older caches
+// (including the pre-rename 'plumbtix-v1' / 'plumbtix-v2' caches, and any
+// ticket data v1 stored) on every existing user's next visit — retroactive
+// cleanup, no user action needed.
 // =============================================================================
 
-const CACHE_NAME = 'plumbtix-v2';
+const CACHE_NAME = 'proroto-app-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

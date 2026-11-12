@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# PlumbTix — Pre-deploy Validation
+# Pro Roto App — Pre-deploy Validation
 # =============================================================================
 # Run before deploying to catch common configuration issues.
 # Usage: bash scripts/pre-deploy-check.sh
@@ -16,7 +16,7 @@ NC='\033[0m'
 ERRORS=0
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  PlumbTix Pre-Deploy Validation"
+echo "  Pro Roto App Pre-Deploy Validation"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 

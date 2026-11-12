@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: delete-invitation
+// Pro Roto App — Edge Function: delete-invitation
 // =============================================================================
 // Route:  POST /functions/v1/delete-invitation
 // Auth:   proroto_admin or pm_admin (same company)

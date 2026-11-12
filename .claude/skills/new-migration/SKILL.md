@@ -1,6 +1,6 @@
 ---
 name: new-migration
-description: Create the next numbered Supabase migration file for a schema, policy, trigger, function, or storage change, following PlumbTix rules (idempotent, additive, verification queries). Use whenever the database must change.
+description: Create the next numbered Supabase migration file for a schema, policy, trigger, function, or storage change, following Pro Roto App rules (idempotent, additive, verification queries). Use whenever the database must change.
 argument-hint: [what the migration should do]
 ---
 

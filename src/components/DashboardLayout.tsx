@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — App Shell (DashboardLayout v3)
+// Pro Roto App — App Shell (DashboardLayout v3)
 // =============================================================================
 // Modern SaaS layout:
 //   • Left sidebar: logo, nav grouped by section, user card, sign-out
@@ -97,14 +97,14 @@ export function DashboardLayout({ title: _title, children }: Props) {
   // Dark mode from localStorage
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
-    const stored = localStorage.getItem('plumbtix-theme');
+    const stored = localStorage.getItem('proroto-theme');
     if (stored) return stored === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem('plumbtix-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('proroto-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
   // Build nav
@@ -157,7 +157,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
           <span className="logo-icon">
             <Wrench className="h-4 w-4" />
           </span>
-          PlumbTix
+          Pro Roto App
         </h1>
       </div>
 
@@ -251,7 +251,7 @@ export function DashboardLayout({ title: _title, children }: Props) {
 
               {/* Breadcrumb-style title */}
               <div className="flex items-center gap-1.5 text-sm">
-                <span className="text-muted-foreground font-medium hidden sm:inline">PlumbTix</span>
+                <span className="text-muted-foreground font-medium hidden sm:inline">Pro Roto App</span>
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 hidden sm:block" aria-hidden="true" />
                 <span className="content-header-title">{activeLabel}</span>
               </div>

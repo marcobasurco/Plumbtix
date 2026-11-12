@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Public Sharing Card (migration 00021)
+// Pro Roto App — Public Sharing Card (migration 00021)
 // =============================================================================
 // Ticket detail sidebar card for proroto_admin / pm_admin:
 //   • Toggle public sharing on/off (revocable, token-based)

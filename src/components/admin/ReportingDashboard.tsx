@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Reporting Dashboard (Admin Only, v0.8)
+// Pro Roto App — Reporting Dashboard (Admin Only, v0.8)
 // =============================================================================
 // Professional reports with:
 //   • Date range, building, status, and severity filters
@@ -315,7 +315,7 @@ export function ReportingDashboard() {
       t.completed_at ? fmtDate(t.completed_at) : '—',
     ]);
     const dateRange = `${filters.dateFrom || 'all'}_to_${filters.dateTo || 'all'}`;
-    downloadCsv(`plumbtix-report-${dateRange}.csv`, headers, rows);
+    downloadCsv(`proroto-report-${dateRange}.csv`, headers, rows);
   }, [filtered, filters]);
 
   const handlePrint = () => window.print();
@@ -579,7 +579,7 @@ export function ReportingDashboard() {
 
       {/* ── Print footer ── */}
       <div className="hidden print:block text-center text-xs text-gray-400 mt-8 pt-4 border-t">
-        PlumbTix Reporting Dashboard · Pro Roto Inc. · Printed {new Date().toLocaleDateString()}
+        Pro Roto App Reporting Dashboard · Pro Roto Inc. · Printed {new Date().toLocaleDateString()}
       </div>
     </PageTransition>
   );

@@ -1,6 +1,6 @@
 ---
 name: new-edge-function
-description: Scaffold a new Supabase edge function for PlumbTix with the project's auth, validation, response and background-work conventions, plus the frontend API wrapper and shared types. Use when a new server-side write or privileged read is needed.
+description: Scaffold a new Supabase edge function for Pro Roto App with the project's auth, validation, response and background-work conventions, plus the frontend API wrapper and shared types. Use when a new server-side write or privileged read is needed.
 argument-hint: <function-name> [what it does]
 ---
 

@@ -85,7 +85,7 @@ const EMPTY_DRAFT: Draft = {
   schedType: 'asap', schedDate: '', schedTime: '',
 };
 
-const DRAFT_KEY = 'plumbtix.report-draft.v1';
+const DRAFT_KEY = 'proroto.report-draft.v1';
 let fileSeq = 0;
 
 const SEVERITY_HELP: Record<TicketSeverity, string> = {

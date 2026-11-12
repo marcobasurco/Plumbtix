@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: escalate-emergencies
+// Pro Roto App — Edge Function: escalate-emergencies
 // =============================================================================
 // Route:  POST /functions/v1/escalate-emergencies
 // Auth:   Bearer ESCALATION_CRON_SECRET (called by pg_cron every minute via

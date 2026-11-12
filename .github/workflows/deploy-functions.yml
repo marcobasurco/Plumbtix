@@ -1,5 +1,5 @@
 # =============================================================================
-# PlumbTix — Deploy Edge Functions
+# Pro Roto App — Deploy Edge Functions
 # =============================================================================
 # Triggers on push to main when any edge function file changes.
 # ALWAYS deploys with --no-verify-jwt to prevent Kong gateway JWT rejection.

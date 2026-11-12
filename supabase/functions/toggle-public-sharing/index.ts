@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: toggle-public-sharing
+// Pro Roto App — Edge Function: toggle-public-sharing
 // =============================================================================
 // Route:  POST /functions/v1/toggle-public-sharing
 // Auth:   JWT required — proroto_admin or pm_admin only
