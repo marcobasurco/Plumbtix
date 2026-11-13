@@ -15,10 +15,9 @@ Source of truth: `src/index.css` (tokens + layout classes), `tailwind.config.ts`
 - **Theme:** "Shift" (Nov 2026). Light = Day Shift, dark = Night Shift; the
   layout is identical in both. Square corners, borders instead of shadows,
   2 px ink rules (`--rule`) under page headers and around action bars.
-- **Type:** Barlow (`--font-sans`) for text; Barlow Condensed
-  (`--font-display`, Tailwind `font-display`) for `h1`/`h2`, page titles and
-  big numbers; JetBrains Mono for work-order numbers, times, codes and
-  tabular data (`--font-mono`). Scale: `--text-xs` 0.75rem · `sm` 0.8125
+- **Type:** Inter (`--font-sans`) for text and headings — the Barlow fonts
+  from the Shift mockups were dropped (Marco, Nov 2026). JetBrains Mono for
+  work-order numbers, times, codes and tabular data (`--font-mono`). Scale: `--text-xs` 0.75rem · `sm` 0.8125
   · `base` 0.875 (body) · `md` 0.9375 · `lg` 1.0625 · `xl` 1.25 (page title)
   · `2xl` 1.5 · `3xl` 2. Body line-height 1.625. Page titles are 700 weight
   with `-0.02em` tracking.

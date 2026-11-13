@@ -4,9 +4,10 @@
 
 ### "Shift" theme — foundation (Day Shift / Night Shift)
 - New visual identity chosen from the November 2026 mockups: **Day Shift**
-  (light) and **Night Shift** (dark) share one layout. Barlow / Barlow
-  Condensed type, square corners, borders instead of shadows, heavy rules
-  under headers.
+  (light) and **Night Shift** (dark) share one layout. Square corners,
+  borders instead of shadows, heavy rules under headers. The font stays
+  Inter at the sizes the app already had (the mockups' Barlow fonts were
+  tried on the preview and dropped).
 - Emergencies are a solid red block with white text, the same in both themes
   (`--emergency`). Phone work-order cards use it now; the desktop table,
   work-order header and wizard follow in the next round.

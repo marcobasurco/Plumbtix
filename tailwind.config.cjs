@@ -5,8 +5,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Barlow', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Barlow Condensed', 'Arial Narrow', 'Barlow', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'SF Mono', 'monospace'],
       },
       colors: {
