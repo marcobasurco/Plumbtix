@@ -385,7 +385,7 @@ export function CompanyDetail() {
                 {buildings.length} building{buildings.length !== 1 ? 's' : ''}
               </div>
               <Button size="sm" onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)}>
-                <Plus className="h-3.5 w-3.5" /> Add Building
+                <Plus className="h-3.5 w-3.5" /> Add building
               </Button>
             </div>
             {buildings.length === 0 ? (
@@ -394,7 +394,7 @@ export function CompanyDetail() {
                 <div className="text-sm font-semibold mb-1">No buildings yet</div>
                 <div className="text-xs text-muted-foreground">Add this company's first building.</div>
                 <Button size="sm" className="mt-3" onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)}>
-                  <Plus className="h-3.5 w-3.5" /> Add Building
+                  <Plus className="h-3.5 w-3.5" /> Add building
                 </Button>
               </div>
             ) : (
