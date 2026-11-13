@@ -385,7 +385,7 @@ export function CompanyDetail() {
                 {buildings.length} building{buildings.length !== 1 ? 's' : ''}
               </div>
               <Button size="sm" onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)}>
-                <Plus className="h-3.5 w-3.5" /> Add Building
+                <Plus className="h-3.5 w-3.5" /> Add building
               </Button>
             </div>
             {buildings.length === 0 ? (
@@ -394,7 +394,7 @@ export function CompanyDetail() {
                 <div className="text-sm font-semibold mb-1">No buildings yet</div>
                 <div className="text-xs text-muted-foreground">Add this company's first building.</div>
                 <Button size="sm" className="mt-3" onClick={() => navigate(`/admin/companies/${companyId}/buildings/new`)}>
-                  <Plus className="h-3.5 w-3.5" /> Add Building
+                  <Plus className="h-3.5 w-3.5" /> Add building
                 </Button>
               </div>
             ) : (
@@ -419,7 +419,7 @@ export function CompanyDetail() {
                 {users.length} user{users.length !== 1 ? 's' : ''}
               </div>
               <Button size="sm" onClick={() => { resetInvite(); setInviteOpen(true); }}>
-                <UserPlus className="h-3.5 w-3.5" /> Invite User
+                <UserPlus className="h-3.5 w-3.5" /> Invite user
               </Button>
             </div>
             {users.length === 0 ? (
@@ -428,7 +428,7 @@ export function CompanyDetail() {
                 <div className="text-sm font-semibold mb-1">No users yet</div>
                 <div className="text-xs text-muted-foreground">Invite someone to manage this company.</div>
                 <Button size="sm" className="mt-3" onClick={() => { resetInvite(); setInviteOpen(true); }}>
-                  <UserPlus className="h-3.5 w-3.5" /> Invite User
+                  <UserPlus className="h-3.5 w-3.5" /> Invite user
                 </Button>
               </div>
             ) : (
@@ -492,11 +492,11 @@ export function CompanyDetail() {
         )}
       </div>
 
-      {/* ── Edit Company Dialog ── */}
+      {/* ── Edit company Dialog ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Company</DialogTitle>
+            <DialogTitle>Edit company</DialogTitle>
             <DialogDescription>Update the company name and URL slug.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave}>
@@ -514,18 +514,18 @@ export function CompanyDetail() {
             <DialogFooter className="mt-2">
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={saving}>
-                {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Save Changes'}
+                {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Save changes'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* ── Invite User Dialog ── */}
+      {/* ── Invite user Dialog ── */}
       <Dialog open={inviteOpen} onOpenChange={(open: boolean) => { if (!open) resetInvite(); setInviteOpen(open); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Invite User</DialogTitle>
+            <DialogTitle>Invite user</DialogTitle>
             <DialogDescription>
               Send an invitation to join <strong>{company.name}</strong>. They'll receive a link to create their account.
             </DialogDescription>

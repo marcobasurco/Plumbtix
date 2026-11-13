@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchSpaceEquipment, deleteEquipment, type EquipmentSyncRow } from '@/lib/equipment';
 import { EquipmentForm } from './EquipmentForm';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Wrench, Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -10,12 +11,14 @@ export function SpaceEquipmentList({ spaceId, spaceLabel, canWrite = false }:
   const [rows, setRows] = useState<EquipmentSyncRow[] | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<EquipmentSyncRow | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<EquipmentSyncRow | null>(null);
 
   const load = useCallback(() => { fetchSpaceEquipment(spaceId).then(setRows); }, [spaceId]);
   useEffect(() => { load(); }, [load]);
 
-  const remove = async (e: EquipmentSyncRow) => {
-    if (!window.confirm(`Delete "${e.name}"? This cannot be undone.`)) return;
+  // Asked through the app's own dialog (ConfirmDialog), not a browser pop-up.
+  const remove = (e: EquipmentSyncRow) => setPendingDelete(e);
+  const confirmRemove = async (e: EquipmentSyncRow) => {
     try { await deleteEquipment(e.id); toast.success('Equipment deleted'); load(); }
     catch (err) { toast.error(err instanceof Error ? err.message : 'Delete failed'); }
   };
@@ -74,6 +77,16 @@ export function SpaceEquipmentList({ spaceId, spaceLabel, canWrite = false }:
 
       <EquipmentForm spaceId={spaceId} spaceLabel={spaceLabel} existing={editing}
         open={formOpen} onClose={() => setFormOpen(false)} onSaved={load} />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+        title="Delete equipment?"
+        description={pendingDelete ? `"${pendingDelete.name}" will be removed from this location. This cannot be undone.` : ''}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => { const e = pendingDelete; setPendingDelete(null); if (e) confirmRemove(e); }}
+      />
     </div>
   );
 }

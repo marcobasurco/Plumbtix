@@ -126,7 +126,7 @@ export function TechniciansPage() {
           </p>
         </div>
         <Button onClick={() => setShowForm((v) => !v)}>
-          {showForm ? <><X className="h-4 w-4" /> Cancel</> : <><Plus className="h-4 w-4" /> Add Technician</>}
+          {showForm ? <><X className="h-4 w-4" /> Cancel</> : <><Plus className="h-4 w-4" /> Add technician</>}
         </Button>
       </div>
 
@@ -135,7 +135,7 @@ export function TechniciansPage() {
       {showForm && (
         <Card className="mb-4">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold">New Technician</CardTitle>
+            <CardTitle className="text-sm font-bold">New technician</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

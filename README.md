@@ -94,6 +94,7 @@ All schema changes live in `supabase/migrations/` and are applied in order
 | `00033` | Dollar amounts removed: `quote_amount` is no longer written or shown (estimates come from Pro Roto's estimating software); column kept only for historic rows |
 | `00034` | Light/dark theme saved on the user's profile (`users.theme_preference`); only the person can change it |
 | `00035` | "Needs Info" leaves the workflow: no transitions into it; customer roles change no status; the enum value stays for historic rows |
+| `00036` | Customer logins locked at the database: may only insert a plain new work order and may not update one; attachments deletable only by the uploader while open (Pro Roto any), deletions logged; `technicians` Pro Roto-only; `check_rate_limit` service-role only. Proof: `scripts/security-tests/` |
 
 **Phone numbers** are stored as E.164 (`+16505551234`) everywhere and shown as
 `(650) 555-1234`. Use `normalizePhone` / `formatPhone` / `telHref` from

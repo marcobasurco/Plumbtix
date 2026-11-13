@@ -102,13 +102,19 @@ export const DEFAULT_SEVERITY: Record<IssueType, TicketSeverity> = {
   other_plumbing:       'standard',
 };
 
+// MUST match EMERGENCY_KEYWORDS + the matcher in supabase/functions/create-ticket.
 export const EMERGENCY_KEYWORDS = [
-  'leak', 'flood', 'flooding', 'water damage', 'burst', 'dripping',
-  'sewage', 'sewer', 'backup', 'overflow', 'raw sewage',
-  'gas', 'gas smell', 'rotten egg', 'gas leak',
+  // Whole words / phrases only, and only wording that means "this cannot
+  // wait" on its own. Ordinary words (leak, dripping, backup, gas, sewer,
+  // overflow) are NOT here: a "dripping faucet" or a "gasket" must not page
+  // the on-call person at night. The reporter's own urgency choice and the
+  // problem type (active leak, sewer backup, gas smell) still set Emergency.
+  'flood', 'flooded', 'flooding', 'burst', 'bursting', 'gushing', 'sewage',
+  'gas leak', 'gas smell', 'smell gas', 'smell of gas', 'smells like gas', 'rotten egg', 'rotten eggs',
+  'overflowing', 'water damage',
 ] as const;
 
 export function detectEmergencyKeywords(description: string): boolean {
   const lower = description.toLowerCase();
-  return EMERGENCY_KEYWORDS.some((kw) => lower.includes(kw));
+  return EMERGENCY_KEYWORDS.some((kw) => new RegExp(`(^|[^a-z])${kw}([^a-z]|$)`).test(lower));
 }

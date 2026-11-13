@@ -179,7 +179,7 @@ export function TicketReportDocument() {
               address={[g.b.address_line1, g.b.city, g.b.state].filter(Boolean).join(', ')}
               company={g.b.company?.name}
               contact={g.b.onsite_contact_name} />
-            <ReportSection title={`Service Tickets (${g.items.length})`}>
+            <ReportSection title={`Work orders (${g.items.length})`}>
               {g.items.map(t => <TicketItem key={t.id} t={t} />)}
             </ReportSection>
           </div>

@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+### Fixes from the pre-testing review (2026-11-12)
+- **Notifications follow building access.** Emergency texts, status emails
+  and comment emails to the customer now go to the company's Admins plus the
+  Staff assigned to that building — not everyone in the company. Pro Roto
+  admins are texted first.
+- **New work orders are emailed to every Pro Roto admin** as well as the
+  `PROROTO_NOTIFY_EMAILS` / `dispatch@proroto.com` list.
+- **Fewer false emergencies.** Words are matched whole and the list is
+  shorter: "dripping faucet", "gasket", "no leak", "backup water heater" no
+  longer become emergencies. Flooding, burst, sewage, gas smell, overflowing
+  and water damage still do, as do the reporter's own choice and the problem
+  type.
+- **Paging cannot repeat.** The sweep claims a work order before it texts or
+  calls.
+- **Migration 00036 — run `supabase db push`.** Customer logins can no longer
+  change a work order directly in the database (urgency, description,
+  completion…) or insert one that skips the normal report; customers delete
+  only their own photos, while the work order is open, and deletions show in
+  History; technician contact details are Pro Roto-only; the rate limiter is
+  service-role only. Tested on a local database
+  (`scripts/security-tests/`).
+- Deleting an occupant now really checks for their open work orders (the
+  check used a column that does not exist and was silently skipped).
+- Comment emails label the author Admin / Staff (were "Property Manager" /
+  "Resident").
+- Wording: "work order" instead of "ticket" on the public page, Reports,
+  Buildings and error messages; buttons and titles in sentence case; the two
+  browser pop-ups replaced by the app's confirm dialog.
+- Overview tiles line up (contents start at the top).
+- Removed: unused monthly-price calculation, a second unused Tailwind config,
+  two stray preview images.
+
 ### "Needs Info" is gone
 - Product decision (Marco): whoever opens a work order provides all the
   information; if Pro Roto needs more, Pro Roto calls. Customers use the

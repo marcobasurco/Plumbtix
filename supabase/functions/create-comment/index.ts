@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (ticketErr || !ticket) {
-      return notFound('Ticket not found or access denied');
+      return notFound('Work order not found or access denied');
     }
 
     // ─── 6. INSERT via SERVICE ROLE (bypasses REVOKE from 00006) ───
@@ -101,7 +101,7 @@ Deno.serve(async (req: Request) => {
 
     if (insertErr) {
       if (insertErr.message?.includes('foreign key')) {
-        return err('INVALID_REFERENCE', 'Ticket not found', 400);
+        return err('INVALID_REFERENCE', 'Work order not found', 400);
       }
       console.error('[create-comment] Insert failed:', insertErr.message);
       return serverError('Failed to create comment');

@@ -14,6 +14,7 @@ import { togglePublicSharing } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 import { Link2, Copy, RefreshCw, Loader2, Globe, EyeOff } from 'lucide-react';
 
@@ -34,6 +35,7 @@ interface SharingCardProps {
 export function SharingCard({ ticketId, publicToken, publicEnabled, onChanged }: SharingCardProps) {
   const [busy, setBusy] = useState(false);
   const [regenBusy, setRegenBusy] = useState(false);
+  const [confirmRegen, setConfirmRegen] = useState(false);
 
   const shareUrl = publicEnabled && publicToken ? publicTicketUrl(publicToken) : null;
 
@@ -77,9 +79,6 @@ export function SharingCard({ ticketId, publicToken, publicEnabled, onChanged }:
   };
 
   const handleRegenerate = async () => {
-    if (!window.confirm(
-      'Regenerate the public link?\n\nEvery previously shared link and printed QR code for this work order will stop working.'
-    )) return;
     setRegenBusy(true);
     try {
       const res = await togglePublicSharing({ ticket_id: ticketId, enabled: true, regenerate: true });
@@ -146,7 +145,7 @@ export function SharingCard({ ticketId, publicToken, publicEnabled, onChanged }:
               <Button variant="outline" size="sm" className="gap-1.5 flex-1" onClick={handleCopy} disabled={busy || regenBusy}>
                 <Copy className="h-3.5 w-3.5" /> Copy link
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleRegenerate} disabled={busy || regenBusy}>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setConfirmRegen(true)} disabled={busy || regenBusy}>
                 {regenBusy
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   : <RefreshCw className="h-3.5 w-3.5" />}
@@ -169,6 +168,15 @@ export function SharingCard({ ticketId, publicToken, publicEnabled, onChanged }:
           </p>
         )}
       </CardContent>
+      <ConfirmDialog
+        open={confirmRegen}
+        onOpenChange={setConfirmRegen}
+        title="Make a new public link?"
+        description="Every link already shared and every QR code already printed for this work order will stop working."
+        confirmLabel="Make new link"
+        variant="destructive"
+        onConfirm={() => { setConfirmRegen(false); handleRegenerate(); }}
+      />
     </Card>
   );
 }

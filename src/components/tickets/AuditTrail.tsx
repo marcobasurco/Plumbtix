@@ -15,7 +15,7 @@ import { History, ShieldCheck, ArrowRight, Plus } from 'lucide-react';
 
 // Human labels for audited fields
 const FIELD_LABELS: Record<string, string> = {
-  __created__: 'Ticket created',
+  __created__: 'Work order created',
   status: 'Status',
   severity: 'Severity',
   issue_type: 'Issue type',
@@ -24,7 +24,11 @@ const FIELD_LABELS: Record<string, string> = {
   assigned_technician: 'Assigned technician',
   scheduled_date: 'Scheduled date',
   scheduled_time_window: 'Time window',
-  quote_amount: 'Quote amount',
+  quote_amount: 'Quote (legacy)',
+  acknowledged: 'Emergency acknowledged',
+  escalation_exhausted: 'On-call paging ended with no response',
+  attachment_deleted: 'File deleted',
+  location_note: 'Location note',
   invoice_number: 'Invoice number',
   decline_reason: 'Decline reason',
   public_enabled: 'Public sharing',

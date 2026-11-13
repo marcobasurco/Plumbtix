@@ -291,6 +291,7 @@ export async function fetchStatusLog(ticketId: string) {
 
 export interface AttachmentRow {
   id: string;
+  uploaded_by_user_id: string;
   file_path: string;
   file_name: string;
   file_type: string | null;
@@ -312,6 +313,7 @@ export async function fetchAttachments(ticketId: string) {
     .from('ticket_attachments')
     .select(`
       id,
+      uploaded_by_user_id,
       file_path,
       file_name,
       file_type,

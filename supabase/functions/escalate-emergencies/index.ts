@@ -14,8 +14,9 @@
 //   4. after two rounds with no acknowledgement: mark exhausted and email
 //      everyone at Pro Roto.
 //
-// Idempotent per minute: a ticket is only touched when next_escalation_at is
-// due, and that is pushed forward before the next sweep.
+// Idempotent: a ticket is only touched when next_escalation_at is due, and each
+// page is claimed (step + next time written, conditional on the step we read)
+// before any text, call or email goes out.
 // =============================================================================
 
 import { handleCors } from '../_shared/cors.ts';
@@ -116,6 +117,29 @@ Deno.serve(async (req: Request) => {
 
       const exhausted = roster.length === 0 || step > roster.length * MAX_ROUNDS;
 
+      // Claim this page BEFORE sending anything: move the work order's step
+      // and next-page time first, and only if nobody else moved it since we
+      // read it. If one sweep runs past the minute, the next sweep finds the
+      // work order already claimed and does not page the same person twice.
+      const claim = exhausted
+        ? { escalation_exhausted_at: nowIso, next_escalation_at: null, escalation_step: step }
+        : { escalation_step: step, next_escalation_at: new Date(Date.now() + roster[(step - 1) % roster.length].wait_minutes * 60000).toISOString() };
+      const { data: claimed, error: claimErr } = await svc.from('tickets')
+        .update(claim)
+        .eq('id', t.id)
+        .eq('escalation_step', t.escalation_step ?? 0)
+        .is('acknowledged_at', null)
+        .select('id');
+      if (claimErr) {
+        // Not claimed → nothing sent; the next sweep (one minute) tries again.
+        console.error('[escalate] claim failed for ticket #%d:', t.ticket_number, claimErr.message);
+        continue;
+      }
+      if (!claimed || claimed.length === 0) {
+        console.log('[escalate] ticket #%d already handled by another sweep or acknowledged — skipped', t.ticket_number);
+        continue;
+      }
+
       if (exhausted) {
         const { subject, html } = escalationEmail({
           ticketNumber: t.ticket_number, ticketId: t.id, buildingName, location,
@@ -125,7 +149,6 @@ Deno.serve(async (req: Request) => {
         const recipients = Array.from(new Set([...proRotoEmails(), ...roster.map((r) => r.user?.email).filter((e): e is string => !!e)]));
         const res = await sendEmail({ to: recipients, subject, html, tags: [{ name: 'type', value: 'escalation_exhausted' }, { name: 'ticket_id', value: t.id }] });
         await logPage(svc, { ticket_id: t.id, step, user_id: null, channel: 'email', ok: res.ok, detail: res.ok ? `exhausted → ${recipients.length} recipients` : res.error });
-        await svc.from('tickets').update({ escalation_exhausted_at: nowIso, next_escalation_at: null, escalation_step: step }).eq('id', t.id);
         console.warn('[escalate] EXHAUSTED ticket #%d after %d pages', t.ticket_number, step - 1);
         processed++;
         continue;
@@ -170,12 +193,6 @@ Deno.serve(async (req: Request) => {
         body: `${buildingName}, ${location} — unacknowledged for ${minutesOpen} min. Tap to acknowledge.`,
         ticket_id: t.id,
       });
-
-      const nextAt = new Date(Date.now() + target.wait_minutes * 60000).toISOString();
-      const { error: updErr } = await svc.from('tickets')
-        .update({ escalation_step: step, next_escalation_at: nextAt })
-        .eq('id', t.id);
-      if (updErr) console.error('[escalate] ticket update failed:', updErr.message);
 
       console.log('[escalate] ticket #%d page %d → %s (next in %d min)', t.ticket_number, step, name, target.wait_minutes);
       processed++;

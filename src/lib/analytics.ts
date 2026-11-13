@@ -55,9 +55,6 @@ export interface AnalyticsSummary {
   total_tickets: number;
   open_tickets: number;
   tickets_this_month: number;
-  mrr_cents: number;
-  active_trials: number;
-  active_paid: number;
   avg_tickets_per_company: number;
   avg_tickets_per_building: number;
   ticket_trend: { month: string; count: number }[];
@@ -200,7 +197,7 @@ export async function fetchAnalyticsSummary(
     else return emptySummary();
   }
 
-  const [ticketsRes, companiesRes, buildingsRes, spacesRes, usersRes, subsRes] =
+  const [ticketsRes, companiesRes, buildingsRes, spacesRes, usersRes] =
     await Promise.all([
       tQuery,
       supabase.from('companies').select('id'),
@@ -216,7 +213,6 @@ export async function fetchAnalyticsSummary(
       companyId
         ? supabase.from('users').select('id').eq('company_id', companyId)
         : supabase.from('users').select('id'),
-      supabase.from('company_subscriptions').select('tier, status, monthly_price_cents, trial_ends_at'),
     ]);
 
   const tickets = (ticketsRes.data ?? []) as Array<{
@@ -224,9 +220,6 @@ export async function fetchAnalyticsSummary(
     issue_type: string; created_at: string; building_id: string;
   }>;
 
-  const subs = (subsRes.data ?? []) as Array<{
-    tier: string; status: string; monthly_price_cents: number; trial_ends_at: string | null;
-  }>;
 
   const totalCompanies = companiesRes.data?.length ?? 0;
   const totalBuildings = buildingsRes.data?.length ?? 0;
@@ -237,9 +230,6 @@ export async function fetchAnalyticsSummary(
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const ticketsThisMonth = tickets.filter(t => t.created_at >= startOfMonth).length;
 
-  const mrrCents = subs.filter(s => s.status === 'active').reduce((sum, s) => sum + (s.monthly_price_cents ?? 0), 0);
-  const activeTrials = subs.filter(s => s.status === 'trialing').length;
-  const activePaid = subs.filter(s => s.status === 'active').length;
 
   // Status breakdown
   const statusMap = new Map<TicketStatus, number>();
@@ -280,9 +270,6 @@ export async function fetchAnalyticsSummary(
     total_tickets: totalTickets,
     open_tickets: openTickets,
     tickets_this_month: ticketsThisMonth,
-    mrr_cents: mrrCents,
-    active_trials: activeTrials,
-    active_paid: activePaid,
     avg_tickets_per_company: totalCompanies > 0 ? Math.round(totalTickets / totalCompanies) : 0,
     avg_tickets_per_building: totalBuildings > 0 ? +(totalTickets / totalBuildings).toFixed(1) : 0,
     ticket_trend: Array.from(monthMap.entries()).map(([month, count]) => ({ month, count })),
@@ -296,7 +283,6 @@ function emptySummary(): AnalyticsSummary {
   return {
     total_companies: 0, total_buildings: 0, total_spaces: 0, total_users: 0,
     total_tickets: 0, open_tickets: 0, tickets_this_month: 0,
-    mrr_cents: 0, active_trials: 0, active_paid: 0,
     avg_tickets_per_company: 0, avg_tickets_per_building: 0,
     ticket_trend: [], status_breakdown: [], severity_breakdown: [], top_issue_types: [],
   };

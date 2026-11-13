@@ -302,7 +302,7 @@ export function ReportingDashboard() {
 
   // ── CSV export ──
   const handleExportCsv = useCallback(() => {
-    const headers = ['Ticket ID', 'Status', 'Severity', 'Issue Type', 'Technician', 'Building', 'Company', 'Created', 'Completed'];
+    const headers = ['Work order', 'Status', 'Severity', 'Issue Type', 'Technician', 'Building', 'Company', 'Created', 'Completed'];
     const rows = filtered.map(t => [
       t.id.slice(0, 8),
       STATUS_LABELS[t.status] ?? t.status,
@@ -532,7 +532,7 @@ export function ReportingDashboard() {
                 <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="type" tick={{ fontSize: 10 }} width={120} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#6366f1" name="Tickets" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="count" fill="#6366f1" name="Work orders" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (

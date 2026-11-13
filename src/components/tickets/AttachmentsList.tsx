@@ -12,6 +12,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchAttachments, getAttachmentUrl, type AttachmentRow } from '@/lib/tickets';
 import { registerAttachment, deleteAttachment } from '@/lib/api';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/auth';
+import type { TicketStatus } from '@shared/types/enums';
 import { shouldCompress, compressVideo } from '@/lib/videoCompressor';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -73,13 +75,23 @@ interface UploadingFile {
 
 interface AttachmentsListProps {
   ticketId: string;
+  /** Current status; photos on a closed work order are part of the record. */
+  ticketStatus?: TicketStatus;
 }
+
+const CLOSED_STATUSES: readonly TicketStatus[] = ['completed', 'invoiced', 'cancelled'];
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function AttachmentsList({ ticketId }: AttachmentsListProps) {
+export function AttachmentsList({ ticketId, ticketStatus }: AttachmentsListProps) {
+  const { role, profile } = useAuth();
+  // Mirrors the database rule (migration 00036): Pro Roto can delete any file;
+  // everyone else only a file they uploaded, and only while the work order is open.
+  const closed = !!ticketStatus && CLOSED_STATUSES.includes(ticketStatus);
+  const canDelete = (att: { uploaded_by_user_id?: string | null }) =>
+    role === 'proroto_admin' || (!closed && !!profile?.id && att.uploaded_by_user_id === profile.id);
   const [items, setItems] = useState<AttachmentWithUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -300,7 +312,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             ) : (
               <Plus className="h-3.5 w-3.5" />
             )}
-            {isUploading ? 'Processing…' : 'Add Files'}
+            {isUploading ? 'Processing…' : 'Add files'}
           </Button>
         </div>
       </div>
@@ -368,7 +380,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
       {/* ─── Empty state ─── */}
       {!loading && !error && items.length === 0 && uploading.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No attachments yet. Tap "Add Files" to upload photos or videos.
+          No attachments yet. Tap "Add files" to upload photos or videos.
         </p>
       )}
 
@@ -426,7 +438,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                     <p className="text-[9px] text-white/70">{formatFileSize(att.file_size)}</p>
                   </div>
                 </button>
-                <button
+                {canDelete(att) && <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setPendingDelete(att); }}
                   disabled={deleting === att.id}
@@ -441,7 +453,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
                   ) : (
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
                   )}
-                </button>
+                </button>}
               </div>
             );
           })}
@@ -474,10 +486,10 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
           ) : (
             <span className="text-xs text-destructive">Error</span>
           )}
-          <Button
+          {canDelete(att) && <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 h-10 w-10 p-0 text-muted-foreground hover:text-destructive"
+            className="shrink-0 h-11 w-11 p-0 text-muted-foreground hover:text-destructive"
             disabled={deleting === att.id}
             onClick={() => setPendingDelete(att)}
             aria-label={`Delete ${att.file_name}`}
@@ -487,7 +499,7 @@ export function AttachmentsList({ ticketId }: AttachmentsListProps) {
             ) : (
               <Trash2 className="h-4 w-4" aria-hidden="true" />
             )}
-          </Button>
+          </Button>}
         </div>
       ))}
 

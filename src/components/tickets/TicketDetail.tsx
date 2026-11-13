@@ -498,7 +498,7 @@ export function TicketDetail() {
           )}
           <Card>
             <CardContent className="p-4">
-              <AttachmentsList ticketId={ticket.id} />
+              <AttachmentsList ticketId={ticket.id} ticketStatus={ticket.status} />
             </CardContent>
           </Card>
         </div>

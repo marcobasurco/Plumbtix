@@ -30,10 +30,16 @@ const DEFAULT_SEVERITY: Record<string, string> = {
   other_plumbing: 'standard',
 };
 
+// MUST match shared/types/transitions.ts (EMERGENCY_KEYWORDS + detectEmergencyKeywords).
 const EMERGENCY_KEYWORDS = [
-  'leak', 'flood', 'flooding', 'water damage', 'burst', 'dripping',
-  'sewage', 'sewer', 'backup', 'overflow', 'raw sewage',
-  'gas', 'gas smell', 'rotten egg', 'gas leak',
+  // Whole words / phrases only, and only wording that means "this cannot
+  // wait" on its own. Ordinary words (leak, dripping, backup, gas, sewer,
+  // overflow) are NOT here: a "dripping faucet" or a "gasket" must not page
+  // the on-call person at night. The reporter's own urgency choice and the
+  // problem type (active leak, sewer backup, gas smell) still set Emergency.
+  'flood', 'flooded', 'flooding', 'burst', 'bursting', 'gushing', 'sewage',
+  'gas leak', 'gas smell', 'smell gas', 'smell of gas', 'smells like gas', 'rotten egg', 'rotten eggs',
+  'overflowing', 'water damage',
 ];
 
 const CreateTicketSchema = z.object({
@@ -95,7 +101,7 @@ Deno.serve(async (req: Request) => {
 
   if (description) {
     const lower = description.toLowerCase();
-    const hasEmergencyKeyword = EMERGENCY_KEYWORDS.some((kw) => lower.includes(kw));
+    const hasEmergencyKeyword = EMERGENCY_KEYWORDS.some((kw) => new RegExp(`(^|[^a-z])${kw}([^a-z]|$)`).test(lower));
     if (hasEmergencyKeyword && SEVERITY_RANK['emergency'] < SEVERITY_RANK[finalSeverity]) {
       finalSeverity = 'emergency';
       severityEscalated = true;
@@ -122,13 +128,13 @@ Deno.serve(async (req: Request) => {
 
     if (insertErr) {
       if (insertErr.message?.includes('row-level security')) {
-        return err('FORBIDDEN', 'You do not have access to create a ticket for this building/space', 403);
+        return err('FORBIDDEN', 'You do not have access to report a problem for this building or location', 403);
       }
       if (insertErr.message?.includes('foreign key')) {
         return err('INVALID_REFERENCE', 'Invalid building or space', 400);
       }
       console.error('[create-ticket] Insert failed:', insertErr.message);
-      return serverError('Failed to create ticket');
+      return serverError('Could not create the work order');
     }
 
     console.log('[create-ticket] Created: ticket=%s, number=%d', ticket.id, ticket.ticket_number);
@@ -172,6 +178,6 @@ Deno.serve(async (req: Request) => {
     return ok({ ticket, severity_escalated: severityEscalated }, 201);
   } catch (e) {
     console.error('[create-ticket] Unexpected error:', e);
-    return serverError('Unexpected error during ticket creation');
+    return serverError('Unexpected error while creating the work order');
   }
 });

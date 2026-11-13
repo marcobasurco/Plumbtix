@@ -139,7 +139,7 @@ export function ResetPasswordPage() {
 
         <Card className="shadow-lg border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Set New Password</CardTitle>
+            <CardTitle className="text-lg">Set New password</CardTitle>
             <CardDescription>
               {success ? 'Your password has been updated!' : 'Choose a strong password for your account.'}
             </CardDescription>
@@ -181,7 +181,7 @@ export function ResetPasswordPage() {
                 )}
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="password">New Password</Label>
+                    <Label htmlFor="password">New password</Label>
                     <Input id="password" type="password" value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required minLength={PASSWORD_MIN_LENGTH} autoFocus placeholder="••••••••"
