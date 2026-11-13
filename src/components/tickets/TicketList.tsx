@@ -10,7 +10,7 @@ function UnacknowledgedBadge({ ticket }: { ticket: Pick<TicketListRow, 'severity
   if (ticket.severity !== 'emergency' || ticket.acknowledged_at) return null;
   if (['completed', 'invoiced', 'cancelled'].includes(ticket.status)) return null;
   return (
-    <span className="inline-flex items-center rounded-full border border-destructive/50 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+    <span className="inline-flex items-center rounded-sm border border-destructive/50 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
       {ticket.escalation_exhausted_at ? 'No response' : 'Unacknowledged'}
     </span>
   );

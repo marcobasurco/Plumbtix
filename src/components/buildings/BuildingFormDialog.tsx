@@ -244,12 +244,12 @@ export function BuildingFormDialog({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? 'Edit Building' : 'New Building'}
+            {isEdit ? 'Edit building' : 'New building'}
           </DialogTitle>
           <DialogDescription>
             {isEdit
               ? 'Update the building address and site access details.'
-              : 'Add a new building to manage spaces and tickets.'}
+              : 'Add a building so work orders can be reported for it.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -494,9 +494,9 @@ export function BuildingFormDialog({
                 Saving…
               </>
             ) : isEdit ? (
-              'Save Changes'
+              'Save changes'
             ) : (
-              'Add Building'
+              'Add building'
             )}
           </Button>
         </DialogFooter>

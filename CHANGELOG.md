@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### "Shift" theme — foundation (Day Shift / Night Shift)
+- New visual identity chosen from the November 2026 mockups: **Day Shift**
+  (light) and **Night Shift** (dark) share one layout. Square corners,
+  borders instead of shadows, heavy rules under headers. The font stays
+  Inter at the sizes the app already had (the mockups' Barlow fonts were
+  tried on the preview and dropped).
+- Emergencies are a solid red block with white text, the same in both themes
+  (`--emergency`). Phone work-order cards use it now; the desktop table,
+  work-order header and wizard follow in the next round.
+- Tokens only: every screen picks the theme up from `src/index.css`. No
+  database, edge-function or permission changes.
+
 ### "Needs Info" is gone
 - Product decision (Marco): whoever opens a work order provides all the
   information; if Pro Roto needs more, Pro Roto calls. Customers use the

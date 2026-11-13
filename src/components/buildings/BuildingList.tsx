@@ -1,7 +1,7 @@
 // =============================================================================
 // Work Orders — Building List
 // =============================================================================
-// Grid of building cards with search, "New Building" button (opens Dialog),
+// Grid of building cards with search, "New building" button (opens Dialog),
 // and company picker for proroto_admin.
 // =============================================================================
 
@@ -98,7 +98,7 @@ export function BuildingList() {
         {canCreate && (
           <Button onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4" />
-            New Building
+            New building
           </Button>
         )}
       </div>
@@ -127,18 +127,18 @@ export function BuildingList() {
         <div className="flex flex-col items-center justify-center text-center py-16 px-4">
           <Building2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
           <div className="text-base font-semibold mb-1">
-            {search ? 'No buildings match your search' : 'No buildings found'}
+            {search ? 'No buildings match your search' : 'No buildings yet'}
           </div>
           <div className="text-sm text-muted-foreground max-w-sm">
             {search
               ? 'Try a different search term.'
               : canCreate
-                ? 'Add your first building to start managing spaces and tickets.'
+                ? 'Add your first building so work orders can be reported for it.'
                 : 'No buildings are available for your account.'}
           </div>
           {canCreate && !search && (
             <Button size="sm" className="mt-4" onClick={() => setFormOpen(true)}>
-              <Plus className="h-3.5 w-3.5" /> Add Building
+              <Plus className="h-3.5 w-3.5" /> Add building
             </Button>
           )}
         </div>

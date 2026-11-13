@@ -13,7 +13,7 @@ const SEVERITY_TONE: Record<TicketSeverity, string> = {
 export function SeverityBadge({ severity }: { severity: TicketSeverity }) {
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
+      'inline-flex items-center gap-1 rounded-sm px-2.5 py-0.5 text-xs font-medium whitespace-nowrap',
       SEVERITY_TONE[severity] ?? 'tone-neutral',
     )}>
       {severity === 'emergency' && <Zap className="h-3 w-3" aria-hidden="true" />}

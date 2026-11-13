@@ -87,7 +87,7 @@ export function TicketFilters({ filters, onChange }: TicketFiltersProps) {
             onClick={() => update(c.patch)}
             aria-pressed={c.active}
             className={
-              'min-h-[44px] sm:min-h-[36px] px-3.5 rounded-full border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
+              'min-h-[44px] sm:min-h-[36px] px-3.5 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
               (c.active
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-background text-foreground border-input hover:bg-accent')

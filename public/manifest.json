@@ -4,8 +4,8 @@
   "description": "Work Order Management for Plumbing Services",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f6f8fa",
-  "theme_color": "#2972a3",
+  "background_color": "#f4f6f8",
+  "theme_color": "#0f5e93",
   "orientation": "any",
   "icons": [
     {
