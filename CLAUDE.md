@@ -85,7 +85,7 @@ Colors come only from the tokens in `src/index.css` ("calm water" palette) and t
 
 1. Branch from `main`, open a PR; CI must be green.
 2. Merge. Netlify and the function workflow deploy automatically.
-3. If the PR contains migrations: `supabase migration list` then `supabase db push` — ideally BEFORE merging, from the PR branch, so production never runs new screens against old tables.
+3. If the PR contains migrations: `supabase migration list` then `supabase db push` — ideally BEFORE merging, from the PR branch, so production never runs new screens against old tables. Without a computer: after merging, GitHub → Actions → **Database migration** → Run workflow (`check` lists what is pending and changes nothing; `apply` + typing APPLY runs it on production; `.github/workflows/db-migrate.yml`, needs the `SUPABASE_DB_PASSWORD` secret).
 4. Verify with the queries at the end of the migration file and a quick app walk-through (login → Settings save → ticket with photo → PDF).
 
 ## Roadmap context (Oct 2026)

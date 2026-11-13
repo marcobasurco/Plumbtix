@@ -1,0 +1,121 @@
+# =============================================================================
+# Pro Roto App — Database migration (run by hand)
+# =============================================================================
+# Does what `supabase db push` does from a developer machine, so a migration
+# can be applied from a phone: GitHub → Actions → "Database migration" →
+# Run workflow.
+#
+# It NEVER runs on its own (no push / schedule trigger). Two choices:
+#   check  (default)  lists which migration files are not applied yet.
+#                     Changes nothing.
+#   apply             applies them to PRODUCTION, in order. To avoid a
+#                     mis-tap, you must also type APPLY in the confirm box.
+#
+# It always reads the migration files from the `main` branch: merge the pull
+# request first, then run this.
+#
+# Required GitHub Secrets:
+#   SUPABASE_ACCESS_TOKEN  — already used by "Deploy Edge Functions"
+#   SUPABASE_PROJECT_REF   — already used by "Deploy Edge Functions"
+#   SUPABASE_DB_PASSWORD   — the database password (Supabase dashboard →
+#                            Project Settings → Database). Add once under
+#                            repo Settings → Secrets and variables → Actions.
+# =============================================================================
+
+name: Database migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'check = list what is pending (changes nothing) · apply = run pending migrations on PRODUCTION'
+        type: choice
+        options:
+          - check
+          - apply
+        default: check
+      confirm:
+        description: 'Only for apply: type APPLY (capital letters)'
+        type: string
+        required: false
+        default: ''
+
+# Never two migration runs at once.
+concurrency:
+  group: db-migrate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: ${{ inputs.action == 'apply' && 'Apply migrations to production' || 'Check pending migrations' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+    steps:
+      - name: Only from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run this from the main branch (it is set to '${GITHUB_REF_NAME}'). Merge the pull request first."
+          exit 1
+
+      - name: Confirm box must say APPLY
+        if: inputs.action == 'apply' && inputs.confirm != 'APPLY'
+        run: |
+          echo "::error::Nothing was changed. To apply, choose 'apply' AND type APPLY in the confirm box."
+          exit 1
+
+      - name: Database password is set
+        run: |
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::The SUPABASE_DB_PASSWORD secret is missing. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Connect to the project
+        run: supabase link --project-ref "$PROJECT_REF"
+
+      - name: What is applied and what is pending
+        run: |
+          echo "Left column = file in the repo, right column = applied in production."
+          supabase migration list --linked
+          echo
+          echo "---- would be applied ----"
+          supabase db push --linked --dry-run
+
+      - name: Apply pending migrations
+        if: inputs.action == 'apply'
+        run: |
+          # --yes answers the CLI's "apply these migrations?" question (no terminal here).
+          supabase db push --linked --yes
+
+      - name: After
+        if: inputs.action == 'apply'
+        run: supabase migration list --linked
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ inputs.action }}" = "apply" ] && [ "${{ job.status }}" = "success" ]; then
+            echo "### Migrations applied to production" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "### Check only — nothing was changed" >> "$GITHUB_STEP_SUMMARY"
+            echo "See the step \"What is applied and what is pending\"." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Did not finish — see the failed step" >> "$GITHUB_STEP_SUMMARY"
+            echo "A migration runs inside the database; if a file failed, the files before it stay applied and it can be run again after the fix." >> "$GITHUB_STEP_SUMMARY"
+          fi
