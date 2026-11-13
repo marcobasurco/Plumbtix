@@ -1,6 +1,6 @@
 ---
 name: a11y-review
-description: WCAG 2.1 AA accessibility audit of PlumbTix screens or components — contrast, keyboard access, focus visibility, labels, error identification, touch targets, screen-reader names/roles, reduced motion. Use before shipping UI and for any enterprise accessibility questionnaire.
+description: WCAG 2.1 AA accessibility audit of Pro Roto App screens or components — contrast, keyboard access, focus visibility, labels, error identification, touch targets, screen-reader names/roles, reduced motion. Use before shipping UI and for any enterprise accessibility questionnaire.
 argument-hint: [route, component path, or "all"]
 allowed-tools: Read Glob Grep Bash(node *)
 ---
@@ -8,7 +8,7 @@ allowed-tools: Read Glob Grep Bash(node *)
 Audit for accessibility: $ARGUMENTS (default: the main flows — login,
 dashboard, ticket list, create-ticket wizard, ticket detail, settings).
 
-Load `plumbtix-ui`. Work from the component source (and screenshots in
+Load `proroto-ui`. Work from the component source (and screenshots in
 `.claude/ux-shots/` if present). Check against WCAG 2.1 AA:
 
 - **Perceivable** — 1.1.1 alt text on meaningful images (attachments,

@@ -37,6 +37,7 @@ export interface User {
   company_id: string | null;           // UUID → companies(id) ON DELETE SET NULL
   avatar_url: string | null;           // TEXT
   sms_notifications_enabled: boolean;  // BOOLEAN NOT NULL DEFAULT FALSE
+  theme_preference: 'light' | 'dark';  // TEXT NOT NULL DEFAULT 'light' CHECK (light|dark) — 00034
   created_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
   updated_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()
 }
@@ -137,7 +138,7 @@ export interface Ticket {
   assigned_technician: string | null;  // VARCHAR(255)
   scheduled_date: string | null;       // DATE
   scheduled_time_window: string | null; // VARCHAR(100)
-  quote_amount: number | null;         // NUMERIC(10,2)
+  quote_amount: number | null;         // NUMERIC(10,2) — DEPRECATED (00033), no longer written or shown
   invoice_number: string | null;       // VARCHAR(100)
   completed_at: string | null;         // TIMESTAMPTZ
   created_at: string;                  // TIMESTAMPTZ NOT NULL DEFAULT NOW()

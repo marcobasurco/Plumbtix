@@ -1,4 +1,4 @@
-# PlumbTix — project guide for Claude Code
+# Pro Roto App — project guide for Claude Code
 
 Multi-tenant work-order portal for Pro Roto, Inc. (California C-36 plumbing contractor).
 Property management companies, HOAs, and healthcare facilities submit plumbing tickets;
@@ -31,19 +31,19 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests and build on every P
 
 `proroto_admin` (Pro Roto, all companies) · `pm_admin` — shown as **Admin** (invites Admins/Staff, sets Staff building access, reports problems) · `pm_user` — shown as **Staff** (reports problems for entitled buildings via `building_entitlements`) · `resident` (own space only). Residents/occupants are an HOA concept — healthcare customers use the PM roles only.
 
-Product decisions (Marco, Oct 2026): **only Pro Roto dispatches** — scheduling, technician assignment, cancelling and quotes are `proroto_admin`-only; **quote approvals happen by phone** and Pro Roto records them; PM roles only triage information (`new → needs_info`, `needs_info → new`). **No invoicing** — invoices live in ServiceTitan; a work order ends at `completed` (00032; `invoiced` / `invoice_number` are legacy, read-only). In UI copy say **work order**, never "ticket" (identifiers in code stay `ticket*`).
+Product decisions (Marco, Oct 2026): **only Pro Roto dispatches** — scheduling, technician assignment and cancelling are `proroto_admin`-only; **customer approvals happen by phone** and Pro Roto records them; **No "Needs Info" step** (Marco, Nov 2026) — whoever opens a work order provides all the information; if Pro Roto needs more, Pro Roto calls. Customers use the system as little as possible: to report problems. PM roles change no status at all (00035; `needs_info` is a legacy status like `invoiced` — never offer it, never add an ask/answer flow). **No invoicing** — invoices live in ServiceTitan; a work order ends at `completed` (00032; `invoiced` / `invoice_number` are legacy, read-only). **No dollar amounts at all** (Marco, Nov 2026) — this is not a billing system; estimates are sent from Pro Roto's estimating software, so `quote_amount` is legacy too (00033: never written or shown). Don't add prices, totals or `$` anywhere in screens, PDFs, emails or SMS. In UI copy say **work order**, never "ticket" (identifiers in code stay `ticket*`).
 
 ## Security invariants — do not weaken
 
 The database is the authorization layer. Edge functions validate first for friendly errors; RLS, grants and triggers are what actually enforce. Anything an edge function forbids must also be impossible through PostgREST or the Storage API.
 
 1. `users.role`, `company_id`, `email`, `id` cannot change from an end-user session (`trg_protect_user_identity`, 00027). `pm_admin` may move *other* staff between `pm_admin`/`pm_user` in their own company only. `INSERT`/`DELETE` on `users` are revoked from `authenticated`; accounts are created only by `accept-invitation` / `claim-resident` (service role).
-2. Tickets: `DELETE` revoked from `authenticated`. `trg_protect_ticket_columns` mirrors `update-ticket`: `quote_amount`/`invoice_number` AND technician/scheduling fields are `proroto_admin`-only (00028); identity fields immutable. `trg_protect_escalation_cols` (00030): acknowledgement/escalation columns are `proroto_admin` or service role only. `ticket_audit_log` is `ON DELETE RESTRICT` — history is never cascaded away.
+2. Tickets: `DELETE` revoked from `authenticated`. `trg_protect_ticket_columns` mirrors `update-ticket`: technician/scheduling fields are `proroto_admin`-only, as are the legacy `quote_amount`/`invoice_number` columns, which `update-ticket` no longer accepts (00028, 00032, 00033); identity fields immutable. `trg_protect_escalation_cols` (00030): acknowledgement/escalation columns are `proroto_admin` or service role only. `ticket_audit_log` is `ON DELETE RESTRICT` — history is never cascaded away.
 3. Storage `ticket-attachments`: a file is accessible exactly when its ticket is visible to the caller (policies `ticket_files_*` use `EXISTS (SELECT 1 FROM public.tickets WHERE id::text = split_part(name,'/',2))`, evaluated under the caller's own RLS). Path convention `tickets/{ticket_id}/{filename}`. Never widen these to `bucket_id = ...` alone.
 4. `ticket_comments` has all PostgREST privileges revoked (00006); reads/writes go through `get-ticket-comments` / `create-comment`, which filter `is_internal`.
 5. Public sharing columns (`public_token`, `public_enabled`) are writable only via `toggle-public-sharing` (service role; trigger 00022).
 6. Views must be `security_invoker = true` and revoked from `anon` (`v_company_analytics`).
-7. Status transitions: the matrix lives in THREE places that must stay identical — `enforce_ticket_status_transition()` (latest version in migration 00032), `TRANSITION_MATRIX` in `supabase/functions/update-ticket/index.ts`, and `shared/types/transitions.ts`. `pm_admin`: `new→needs_info`, `needs_info→new`; `pm_user`: `needs_info→new`; everything else is Pro Roto; `completed` is terminal.
+7. Status transitions: the matrix lives in THREE places that must stay identical — `enforce_ticket_status_transition()` (latest version in migration 00035), `TRANSITION_MATRIX` in `supabase/functions/update-ticket/index.ts`, and `shared/types/transitions.ts`. Only `proroto_admin` has transitions; `pm_admin`, `pm_user` and `resident` have none; `needs_info` is legacy (Pro Roto can move a historic row out, nothing moves in); `completed` is terminal.
 8. Password policy (12+ chars, upper/lower/digit/symbol) is set in the Supabase dashboard and mirrored in `supabase/functions/_shared/validation.ts` (`PasswordSchema`), `src/lib/password.ts`, and `supabase/config.toml`. Change all four together.
 9. Public self-signup is OFF in the dashboard and in `config.toml`. Do not re-enable.
 10. Email templates (`_shared/email-templates.ts`) HTML-escape every user-controlled value. Keep using `esc()` / `escMultiline()`.
@@ -54,7 +54,7 @@ The database is the authorization layer. Edge functions validate first for frien
 
 ## Migrations
 
-- Files in `supabase/migrations/`, numbered `000NN_description.sql`. Next number: 00033.
+- Files in `supabase/migrations/`, numbered `000NN_description.sql`. Next number: 00036.
 - Applied migrations are immutable. Fix forward with a new file. New migrations may `DROP POLICY IF EXISTS` / `CREATE POLICY` to replace earlier policies — the old "LOCKED sections" rule is retired.
 - Never change the schema in the Supabase dashboard. If it happens, run `supabase db diff` and commit the result before any other work.
 - Write migrations idempotently (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP ... IF EXISTS`). End each with commented verification queries.
@@ -70,15 +70,16 @@ The database is the authorization layer. Edge functions validate first for frien
 
 ## Frontend quality bar
 
-Phones are a primary device (facilities staff report problems standing next to the leak). Every screen: works at 390 px with no horizontal scroll and the primary action visible; targets ≥ 44 px; visible focus; contrast ≥ 4.5:1; meaning never by color alone; dark-mode parity; reports print cleanly. Load the `plumbtix-ui` skill before UI work and use `/frontend-design` for new screens, `/ux-audit` to review real screenshots, `/a11y-review` before shipping forms or tables.
+Phones are a primary device (facilities staff report problems standing next to the leak). Every screen: works at 390 px with no horizontal scroll and the primary action visible; targets ≥ 44 px; visible focus; contrast ≥ 4.5:1; meaning never by color alone; dark-mode parity; reports print cleanly. Load the `proroto-ui` skill before UI work and use `/frontend-design` for new screens, `/ux-audit` to review real screenshots, `/a11y-review` before shipping forms or tables.
 
-Colors come only from the tokens in `src/index.css` — the **"Shift" theme**: light = Day Shift, dark = Night Shift, same layout in both — and the `.tone-*` utilities (info / active / warn / ok / danger / neutral). No Tailwind palette colors (`bg-blue-100` etc.) in components. Red is reserved for emergencies, and an emergency is a solid red block (`--emergency`, white text) that looks identical in both themes. Type: Barlow for text, Barlow Condensed (`--font-display`, Tailwind `font-display`) for headings and big numbers, JetBrains Mono for work-order numbers and times. Corners are square (4 px); panels are defined by borders, not shadows. Mockups: the "PlumbTix — visual directions" design canvas (direction B). The CSP is written at build time by `scripts/write-csp-headers.mjs` (production strict; deploy previews also allow Netlify's review toolbar).
+Colors come only from the tokens in `src/index.css` — the **"Shift" theme**: light = Day Shift, dark = Night Shift, same layout in both — and the `.tone-*` utilities (info / active / warn / ok / danger / neutral). No Tailwind palette colors (`bg-blue-100` etc.) in components. Red is reserved for emergencies, and an emergency is a solid red block (`--emergency`, white text) that looks identical in both themes. Type: Barlow for text, Barlow Condensed (`--font-display`, Tailwind `font-display`) for headings and big numbers, JetBrains Mono for work-order numbers and times. Corners are square (4 px); panels are defined by borders, not shadows. Mockups: the "visual directions" design canvas (direction B, made when the app was still called PlumbTix). The CSP is written at build time by `scripts/write-csp-headers.mjs` (production strict; deploy previews also allow Netlify's review toolbar).
 
 ## Frontend conventions
 
-- Direct PostgREST writes are sanctioned exceptions only: `equipment` CRUD, notification `read_at`, self-profile updates (phone, SMS flag), and the Import page's `users`/`occupants` updates. Everything else goes through an edge function via `src/lib/api.ts`.
+- Direct PostgREST writes are sanctioned exceptions only: `equipment` CRUD, notification `read_at`, self-profile updates (phone, SMS flag, theme), and the Import page's `users`/`occupants` updates. Everything else goes through an edge function via `src/lib/api.ts`.
 - Three route trees: `/admin/*` (proroto_admin), `/dashboard/*` (pm roles), `/my/*` (resident). Guard with `RoleGate`.
 - The `notifications` table uses `read_at` (timestamp), not a boolean.
+- Theme (Marco, Nov 2026): daylight is the default and the sign-in screen is always daylight — do not follow the device's `prefers-color-scheme`. A person's choice is saved in `users.theme_preference` (00034), can be changed only by that person (`trg_protect_user_theme` — not by company Admins or Pro Roto admins), and is applied after sign-in; all of it goes through `src/lib/theme.ts` (`applyTheme` / `resetTheme` / `useTheme`) and `public/theme-init.js`.
 
 ## Deploying a change
 
@@ -98,6 +99,6 @@ Full assessment: see the "production-readiness-assessment" doc in the ProRoto ti
 - `.claude/settings.json` — permissions (safe git/npm/supabase reads pre-approved; `.env*` unreadable), hooks, stable update channel.
 - `.claude/hooks/` — `guard-bash.mjs` blocks destructive shell/SQL commands; `guard-edits.mjs` blocks edits to applied migrations and secrets; `lint-file.mjs` runs ESLint --fix after each TypeScript edit.
 - `.claude/agents/` — `security-reviewer`, `code-reviewer`, `migration-author`, `ux-reviewer` subagents.
-- `.claude/skills/` — slash commands `/new-migration`, `/deploy`, `/security-review`, `/new-edge-function`, `/check-matrix`, `/ux-audit`, `/design-review`, `/a11y-review`, `/frontend-design`; plus `plumbtix-ui` (design-system reference, loaded automatically for UI work).
+- `.claude/skills/` — slash commands `/new-migration`, `/deploy`, `/security-review`, `/new-edge-function`, `/check-matrix`, `/ux-audit`, `/design-review`, `/a11y-review`, `/frontend-design`; plus `proroto-ui` (design-system reference, loaded automatically for UI work).
 - `scripts/ux-shots.mjs` — Playwright capture of real screens (phone + desktop, light/dark) into `.claude/ux-shots/` (git-ignored) so Claude can review what users see. Needs `npx playwright install chromium` once and `E2E_ADMIN_EMAIL`/`E2E_ADMIN_PASSWORD` in the environment.
 - `.mcp.json` — Supabase MCP server (hosted, OAuth), scoped to this project and read-only: use it to inspect production schema, policies and logs; never to change data. Authenticate once with `/mcp` → supabase → Authenticate.

@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — UX screenshot capture
+// Pro Roto App — UX screenshot capture
 // =============================================================================
 // Logs in and captures full-page screenshots of the app at phone and desktop
 // widths (light and, optionally, dark) so Claude Code can review real screens.
@@ -101,7 +101,7 @@ async function main() {
   for (const [vpName, vp] of Object.entries(VIEWPORTS)) {
     for (const theme of THEMES) {
       const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: !!vp.isMobile, hasTouch: !!vp.hasTouch, deviceScaleFactor: vp.deviceScaleFactor, colorScheme: theme });
-      await context.addInitScript((t) => { try { localStorage.setItem('plumbtix-theme', t); } catch { /* ignore */ } }, theme);
+      await context.addInitScript((t) => { try { localStorage.setItem('proroto-theme', t); } catch { /* ignore */ } }, theme);
       const page = await context.newPage();
       await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: theme });
 

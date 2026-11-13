@@ -42,11 +42,6 @@ function formatDateTime(iso: string): string {
   });
 }
 
-function formatCurrency(amount: number | null): string {
-  if (amount === null) return '—';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-}
-
 function BackToList({ onClick }: { onClick: () => void }) {
   return (
     <Button variant="ghost" size="sm" className="mb-4 -ml-2 gap-1 min-h-[44px] sm:min-h-0" onClick={onClick}>
@@ -404,7 +399,7 @@ export function TicketDetail() {
           </Card>
 
           {/* Work Details Card (only if there's data) */}
-          {(ticket.assigned_technician || ticket.scheduled_date || ticket.quote_amount !== null || ticket.completed_at) && (
+          {(ticket.assigned_technician || ticket.scheduled_date || ticket.completed_at) && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -422,9 +417,6 @@ export function TicketDetail() {
                     label="Scheduled"
                     value={`${ticket.scheduled_date}${ticket.scheduled_time_window ? ` (${ticket.scheduled_time_window})` : ''}`}
                   />
-                )}
-                {ticket.quote_amount !== null && (
-                  <InfoRow icon={<FileText className="h-4 w-4" />} label="Quote" value={formatCurrency(ticket.quote_amount)} />
                 )}
                 {ticket.completed_at && (
                   <InfoRow icon={<Clock className="h-4 w-4" />} label="Completed" value={formatDateTime(ticket.completed_at)} />
@@ -470,7 +462,7 @@ export function TicketDetail() {
           {/* Comments */}
           <Card>
             <CardContent className="p-4">
-              <CommentsThread ticketId={ticket.id} />
+              <CommentsThread ticketId={ticket.id} refreshKey={refreshKey} />
 
               {/* Change history — database-recorded, proroto_admin only */}
               {/* Tech prep: what machinery lives in this building (parts intel) */}
@@ -491,7 +483,9 @@ export function TicketDetail() {
             ticketId={ticket.id}
             currentStatus={ticket.status as TicketStatus}
             currentTechnicianId={ticket.technician_id}
-            quoteAmount={ticket.quote_amount}
+            currentTechnicianName={ticket.assigned_technician}
+            currentScheduledDate={ticket.scheduled_date}
+            currentTimeWindow={ticket.scheduled_time_window}
             onUpdated={handleUpdated}
           />
           {(role === 'proroto_admin' || role === 'pm_admin') && (

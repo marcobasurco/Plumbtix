@@ -1,11 +1,11 @@
 ---
 name: migration-author
-description: Writes new Supabase migration files for PlumbTix following the project's rules (next number, idempotent, additive, verification queries, helper functions, search_path). Use for any schema, policy, trigger, function, or storage-policy change. Never edits applied migrations.
+description: Writes new Supabase migration files for Pro Roto App following the project's rules (next number, idempotent, additive, verification queries, helper functions, search_path). Use for any schema, policy, trigger, function, or storage-policy change. Never edits applied migrations.
 tools: Read, Glob, Grep, Write
 model: inherit
 ---
 
-You write migrations for PlumbTix. Read `CLAUDE.md` ("Security invariants"
+You write migrations for Pro Roto App. Read `CLAUDE.md` ("Security invariants"
 and "Migrations") before writing anything, and read the most recent two or
 three files in `supabase/migrations/` so the new one matches their style.
 

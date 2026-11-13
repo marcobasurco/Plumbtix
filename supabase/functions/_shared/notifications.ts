@@ -19,6 +19,7 @@ import { sendSMSAndLog, normalizePhone } from './sms.ts';
 import {
   newTicketEmail,
   statusChangeEmail,
+  scheduleChangeEmail,
   commentEmail,
   invitationEmail,
   residentClaimEmail,
@@ -95,6 +96,33 @@ async function getCompanyPMEmails(
     return [];
   }
   return data ?? [];
+}
+
+/**
+ * PM recipients who can actually see one building: every Admin (pm_admin) in
+ * the company, plus Staff (pm_user) holding a building_entitlements row for
+ * it. Matches the buildings RLS, so Staff are never emailed about a building
+ * they have no access to.
+ */
+async function getBuildingPMRecipients(
+  svc: SupabaseClient,
+  companyId: string,
+  buildingId: string,
+): Promise<Array<{ id: string; email: string; full_name: string }>> {
+  const [usersRes, entRes] = await Promise.all([
+    svc.from('users').select('id, email, full_name, role')
+      .eq('company_id', companyId).in('role', ['pm_admin', 'pm_user']),
+    svc.from('building_entitlements').select('user_id').eq('building_id', buildingId),
+  ]);
+  if (usersRes.error || entRes.error) {
+    console.error('[notifications] Failed to fetch building recipients:',
+      usersRes.error?.message ?? entRes.error?.message);
+    return [];
+  }
+  const entitled = new Set((entRes.data ?? []).map((e: { user_id: string }) => e.user_id));
+  return (usersRes.data ?? []).filter(
+    (u: { id: string; role: string }) => u.role === 'pm_admin' || entitled.has(u.id),
+  );
 }
 
 /** Get all Pro Roto admin users (for emergency SMS) */
@@ -344,7 +372,6 @@ export async function notifyStatusChange(
         technician: ticket.assigned_technician || undefined,
         scheduledDate: ticket.scheduled_date || undefined,
         timeWindow: ticket.scheduled_time_window || undefined,
-        quoteAmount: ticket.quote_amount || undefined,
       },
     };
 
@@ -406,6 +433,58 @@ export async function notifyStatusChange(
   } catch (e) {
     console.error('[notifications] notifyStatusChange error:', e);
     reportError(e, { area: 'notifications', event: 'status_change' });
+  }
+}
+
+// =============================================================================
+// Notification: Schedule Changed (technician / date / arrival window)
+// =============================================================================
+
+/**
+ * Pro Roto changed the technician, date or arrival window on an already
+ * scheduled work order without changing its status. Tells the Admins and the
+ * Staff assigned to that building what the schedule is now.
+ */
+export async function notifyScheduleChange(
+  svc: SupabaseClient,
+  ticket: TicketContext,
+  buildingId: string,
+): Promise<void> {
+  try {
+    const buildingName = ticket.building.name || ticket.building.address_line1;
+    const recipients = await getBuildingPMRecipients(svc, ticket.building.company_id, buildingId);
+
+    const emails: EmailPayload[] = recipients.map((r) => {
+      const { subject, html } = scheduleChangeEmail({
+        ticketNumber: ticket.ticket_number,
+        ticketId: ticket.id,
+        issueType: ticket.issue_type,
+        buildingName,
+        unitNumber: formatLocation(ticket),
+        recipientName: r.full_name,
+        technician: ticket.assigned_technician || undefined,
+        scheduledDate: ticket.scheduled_date || undefined,
+        timeWindow: ticket.scheduled_time_window || undefined,
+      });
+      return {
+        to: r.email,
+        subject,
+        html,
+        tags: [
+          { name: 'type', value: 'schedule_change' },
+          { name: 'ticket_id', value: ticket.id },
+        ],
+      };
+    });
+
+    if (emails.length === 1) await sendEmail(emails[0]);
+    else if (emails.length > 1) await sendEmailBatch(emails);
+
+    console.log('[notifications] Schedule change email sent for #%d to %d recipients',
+      ticket.ticket_number, emails.length);
+  } catch (e) {
+    console.error('[notifications] notifyScheduleChange error:', e);
+    reportError(e, { area: 'notifications', event: 'schedule_change' });
   }
 }
 

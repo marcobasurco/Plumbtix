@@ -1,8 +1,10 @@
 // =============================================================================
 // Work Orders — Dashboard Overview
 // =============================================================================
-// Rich overview page with metric cards, charts, and recent activity.
-// Uses Recharts for data visualization and Lucide icons.
+// The first page everyone sees: what is open, what is an emergency, the
+// latest work orders, then reference numbers. Written to be read at a glance:
+// every number has its label above it and a sentence saying what it counts
+// (shared blocks in components/StatBlocks.tsx, same as Analytics).
 //
 // UX rules applied here (see the October 2026 UX review):
 //   • "Report a problem" is the first thing on the page for every role —
@@ -25,20 +27,20 @@ import {
   type IssueType,
 } from '@shared/types/enums';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts';
-import {
   TicketCheck, AlertTriangle, Building2, LayoutGrid,
-  TrendingUp, Clock, ArrowRight, Zap, CircleDot, Plus,
+  CheckCircle2, Clock, ArrowRight, Zap, CircleDot, Plus,
 } from 'lucide-react';
 import { useRealtimeTickets } from '@/hooks/useRealtime';
 import { Loading } from '@/components/Loading';
 import { ErrorBanner, friendlyError } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
+import {
+  SummaryTile, Section, CountRows, MonthlyBars, plural,
+  SEVERITY_ORDER, SEVERITY_BAR, type CountRow,
+} from '@/components/StatBlocks';
 
 // ---------------------------------------------------------------------------
-// Chart colors (data colors, deliberately fixed in both themes)
+// Badge colors for the recent list (data colors, fixed in both themes)
 // ---------------------------------------------------------------------------
 
 const STATUS_COLORS: Record<TicketStatus, string> = {
@@ -63,41 +65,6 @@ const SEVERITY_COLORS: Record<TicketSeverity, string> = {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-interface MetricCardProps {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  accent: string;
-  subtitle?: string;
-  onClick?: () => void;
-}
-
-function MetricCard({ label, value, icon, accent, subtitle, onClick }: MetricCardProps) {
-  const content = (
-    <>
-      <div className="metric-card-icon" style={{ background: accent + '14', color: accent }} aria-hidden="true">
-        {icon}
-      </div>
-      <div className="metric-card-content">
-        <div className="metric-card-value">{value}</div>
-        <div className="metric-card-label">{label}</div>
-        {subtitle && <div className="metric-card-subtitle">{subtitle}</div>}
-      </div>
-      {onClick && (
-        <div className="metric-card-arrow" aria-hidden="true">
-          <ArrowRight size={16} />
-        </div>
-      )}
-    </>
-  );
-  if (!onClick) return <div className="metric-card">{content}</div>;
-  return (
-    <button type="button" className="metric-card card-button" onClick={onClick}>
-      {content}
-    </button>
-  );
-}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -136,19 +103,7 @@ function SeverityIndicator({ severity }: { severity: TicketSeverity }) {
   );
 }
 
-// Custom tooltip for bar chart
-function BarTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{
-      background: 'var(--slate-800)', color: '#fff', padding: '8px 12px',
-      borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', fontWeight: 600,
-      boxShadow: 'var(--shadow-lg)',
-    }}>
-      {label}: {payload[0].value} work order{payload[0].value !== 1 ? 's' : ''}
-    </div>
-  );
-}
+const TH = 'py-2 px-3 text-xs font-semibold text-muted-foreground';
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -188,6 +143,21 @@ export function DashboardOverview() {
   if (!metrics) return null;
 
   const hasEmergencies = metrics.emergencyTickets > 0;
+  const total = metrics.totalTickets;
+  const isAdmin = role === 'proroto_admin';
+  const scope = isAdmin ? 'across all companies' : role === 'resident' ? 'for your home' : 'across your buildings';
+  const monthName = new Date().toLocaleDateString('en-US', { month: 'long' });
+
+  const urgencyRows: CountRow[] = SEVERITY_ORDER.map((sev) => ({
+    key: sev,
+    label: SEVERITY_LABELS[sev],
+    count: metrics.severityBreakdown.find((s) => s.severity === sev)?.count ?? 0,
+    barClass: SEVERITY_BAR[sev],
+    onClick: () => navigate(`${basePath}/tickets?severity=${sev}`),
+  }));
+  const statusRows: CountRow[] = [...metrics.statusBreakdown]
+    .sort((a, b) => b.count - a.count)
+    .map(({ status, count }) => ({ key: status, label: STATUS_LABELS[status], count }));
 
   return (
     <div className="animate-in">
@@ -199,8 +169,10 @@ export function DashboardOverview() {
           </h2>
           <p className="page-subtitle">
             {hasEmergencies
-              ? `${metrics.emergencyTickets} emergency work order${metrics.emergencyTickets === 1 ? '' : 's'} need${metrics.emergencyTickets === 1 ? 's' : ''} attention.`
-              : `${metrics.openTickets} open work order${metrics.openTickets === 1 ? '' : 's'} across your buildings.`}
+              ? `${metrics.emergencyTickets} open ${plural(metrics.emergencyTickets, 'emergency needs', 'emergencies need')} attention.`
+              : metrics.openTickets === 0
+                ? `No open work orders ${scope}.`
+                : `${metrics.openTickets} open work ${plural(metrics.openTickets, 'order', 'orders')} ${scope}. No open emergencies.`}
           </p>
         </div>
         {canReport && (
@@ -210,49 +182,49 @@ export function DashboardOverview() {
         )}
       </div>
 
-      {/* Metric cards */}
-      <div className="metric-grid">
-        <MetricCard
+      {/* Summary tiles — each opens the matching list */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <SummaryTile
           label="Open work orders"
           value={metrics.openTickets}
-          icon={<TicketCheck size={22} />}
-          accent="#2972a3"
-          subtitle={`${metrics.totalTickets} total`}
+          note={total === 0
+            ? 'Nothing has been reported yet'
+            : `Not finished yet, out of ${total} reported in total`}
+          icon={<TicketCheck className="h-4 w-4" />}
           onClick={() => navigate(`${basePath}/tickets?status=open`)}
         />
-        <MetricCard
-          label="Emergencies"
+        <SummaryTile
+          label="Open emergencies"
           value={metrics.emergencyTickets}
-          icon={<AlertTriangle size={22} />}
-          accent={hasEmergencies ? '#c2423c' : '#3f8a62'}
-          subtitle={hasEmergencies ? 'Needs attention' : 'All clear'}
+          note={hasEmergencies ? 'Need attention now' : 'None right now'}
+          icon={<AlertTriangle className="h-4 w-4" />}
+          alert={hasEmergencies}
           onClick={() => navigate(`${basePath}/tickets?severity=emergency`)}
         />
-        <MetricCard
+        <SummaryTile
           label="Completed this month"
           value={metrics.completedThisMonth}
-          icon={<TrendingUp size={22} />}
-          accent="#3f8a62"
+          note={`Finished since ${monthName} 1`}
+          icon={<CheckCircle2 className="h-4 w-4" />}
           onClick={() => navigate(`${basePath}/tickets?status=completed`)}
         />
-        <MetricCard
+        <SummaryTile
           label="Buildings"
           value={metrics.totalBuildings}
-          icon={<Building2 size={22} />}
-          accent="#4f9fb0"
-          subtitle={`${metrics.totalSpaces} locations`}
+          note={`${metrics.totalSpaces} ${plural(metrics.totalSpaces, 'location', 'locations')} inside them`}
+          icon={<Building2 className="h-4 w-4" />}
           onClick={() => navigate(`${basePath}/buildings`)}
         />
       </div>
 
-      {/* Recent work orders + severity breakdown */}
+      {/* Latest work orders + urgency */}
       <div className="dashboard-bottom">
         {/* Recent work orders */}
         <div className="card">
           <div className="card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Clock size={16} className="text-muted-foreground" aria-hidden="true" />
-              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Recent work orders</span>
+              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Latest work orders</span>
             </div>
             <Button variant="link" size="sm" onClick={() => navigate(`${basePath}/tickets`)}>
               View all <ArrowRight size={13} style={{ marginLeft: 2 }} aria-hidden="true" />
@@ -307,92 +279,25 @@ export function DashboardOverview() {
           )}
         </div>
 
-        {/* Severity breakdown mini cards */}
-        <div className="severity-sidebar">
-          <h3 className="text-sm font-bold text-foreground" style={{ marginBottom: 2 }}>By severity</h3>
-          {(['emergency', 'urgent', 'standard'] as TicketSeverity[]).map((sev) => {
-            const item = metrics.severityBreakdown.find((s) => s.severity === sev);
-            const count = item?.count ?? 0;
-            const total = metrics.totalTickets || 1;
-            const pct = Math.round((count / total) * 100);
-            const color = SEVERITY_COLORS[sev];
-            return (
-              <button
-                type="button"
-                key={sev}
-                className="severity-card card-button"
-                onClick={() => navigate(`${basePath}/tickets?severity=${sev}`)}
-                aria-label={`${SEVERITY_LABELS[sev]}: ${count} work orders, ${pct}% of total`}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span className="text-foreground" style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>
-                    {SEVERITY_LABELS[sev]}
-                  </span>
-                  <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)', color, letterSpacing: '-0.02em' }}>
-                    {count}
-                  </span>
-                </div>
-                <div className="severity-bar-track" aria-hidden="true">
-                  <div
-                    className="severity-bar-fill"
-                    style={{ width: `${Math.max(pct, 2)}%`, background: color }}
-                  />
-                </div>
-                <div className="text-xs text-muted" style={{ marginTop: 4 }}>{pct}% of total</div>
-              </button>
-            );
-          })}
+        <div className="flex flex-col gap-4">
+          <Section
+            title="All work orders by urgency"
+            hint="Everything ever reported, finished or not. Choose one to see the list.">
+            <CountRows rows={urgencyRows} total={total} />
+          </Section>
 
-          {/* Company Analytics (proroto_admin only) */}
-          {role === 'proroto_admin' && metrics.companyBreakdown.length > 0 && (
-            <div style={{ marginTop: 20 }}>
-              <h3 className="text-sm font-bold text-foreground" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <LayoutGrid size={14} aria-hidden="true" /> Company breakdown
-              </h3>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr className="border-b-2 border-border">
-                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600 }}>Company</th>
-                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Bldgs</th>
-                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Locations</th>
-                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Users</th>
-                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Open</th>
-                      <th scope="col" className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {metrics.companyBreakdown.map((c) => (
-                      <tr key={c.company_id} className="border-b border-border">
-                        <td className="text-foreground" style={{ padding: '6px 8px', fontWeight: 500 }}>{c.company_name}</td>
-                        <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.building_count}</td>
-                        <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.space_count}</td>
-                        <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.user_count}</td>
-                        <td className={c.open_tickets > 0 ? 'font-semibold' : 'text-muted-foreground'} style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600 }}>{c.open_tickets}</td>
-                        <td className="text-muted-foreground" style={{ textAlign: 'right', padding: '6px 8px' }}>{c.total_tickets}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Quick actions */}
-          <div style={{ marginTop: 20 }}>
-            <h3 className="text-sm font-bold text-foreground" style={{ marginBottom: 12 }}>
-              Quick actions
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`${basePath}/tickets`)}>
-                <TicketCheck size={14} aria-hidden="true" /> View work orders
+          <div className="card p-4">
+            <h3 className="text-base font-semibold text-foreground mb-3">Quick actions</h3>
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" className="w-full min-h-[44px]" onClick={() => navigate(`${basePath}/tickets`)}>
+                <TicketCheck className="h-4 w-4" aria-hidden="true" /> View work orders
               </Button>
-              <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`${basePath}/buildings`)}>
-                <Building2 size={14} aria-hidden="true" /> View buildings
+              <Button variant="outline" className="w-full min-h-[44px]" onClick={() => navigate(`${basePath}/buildings`)}>
+                <Building2 className="h-4 w-4" aria-hidden="true" /> View buildings
               </Button>
-              {role === 'proroto_admin' && (
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/admin/companies')}>
-                  <LayoutGrid size={14} aria-hidden="true" /> Manage companies
+              {isAdmin && (
+                <Button variant="outline" className="w-full min-h-[44px]" onClick={() => navigate('/admin/companies')}>
+                  <LayoutGrid className="h-4 w-4" aria-hidden="true" /> Manage companies
                 </Button>
               )}
             </div>
@@ -400,96 +305,55 @@ export function DashboardOverview() {
         </div>
       </div>
 
-      {/* Charts row — after the actionable content; on a phone these are
-          reference material, not the reason the person opened the app */}
-      <div className="dashboard-charts" style={{ marginTop: 24, marginBottom: 0 }}>
-        {/* Volume chart */}
-        <div className="card chart-card">
-          <div className="card-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <LayoutGrid size={16} className="text-muted-foreground" aria-hidden="true" />
-              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>Work order volume</span>
-            </div>
-            <span className="text-xs text-muted">Last 6 months</span>
+      {/* By company (Pro Roto admin only) — full width so names and numbers fit */}
+      {isAdmin && metrics.companyBreakdown.length > 0 && (
+        <Section className="mt-4"
+          title="By company"
+          hint="Each customer at a glance.">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-border">
+                  <th scope="col" className={`${TH} text-left`}>Company</th>
+                  <th scope="col" className={`${TH} text-right`}>Open now</th>
+                  <th scope="col" className={`${TH} text-right`}>All time</th>
+                  <th scope="col" className={`${TH} text-right`}>Buildings</th>
+                  <th scope="col" className={`${TH} text-right hidden sm:table-cell`}>Locations</th>
+                  <th scope="col" className={`${TH} text-right hidden sm:table-cell`}>People with access</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics.companyBreakdown.map((c) => (
+                  <tr key={c.company_id} className="border-b border-border">
+                    <td className="py-2 px-3 font-semibold text-foreground">{c.company_name}</td>
+                    <td className={`py-2 px-3 text-right tabular-nums ${c.open_tickets > 0 ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
+                      {c.open_tickets}
+                    </td>
+                    <td className="py-2 px-3 text-right tabular-nums">{c.total_tickets}</td>
+                    <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">{c.building_count}</td>
+                    <td className="py-2 px-3 text-right tabular-nums text-muted-foreground hidden sm:table-cell">{c.space_count}</td>
+                    <td className="py-2 px-3 text-right tabular-nums text-muted-foreground hidden sm:table-cell">{c.user_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="card-body" style={{ height: 260, padding: '12px 16px 4px' }}>
-            {metrics.ticketsByMonth.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={metrics.ticketsByMonth} barCategoryGap="20%">
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    axisLine={{ stroke: '#e2e8f0' }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                  />
-                  <Tooltip content={<BarTooltip />} cursor={{ fill: 'rgba(59, 130, 246, 0.06)' }} />
-                  <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48}>
-                    {metrics.ticketsByMonth.map((_, idx) => (
-                      <Cell key={idx} fill={idx === metrics.ticketsByMonth.length - 1 ? '#3b82f6' : '#dbeafe'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="chart-empty">No work orders yet</div>
-            )}
-          </div>
-        </div>
+        </Section>
+      )}
 
-        {/* Status breakdown pie */}
-        <div className="card chart-card">
-          <div className="card-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CircleDot size={16} className="text-muted-foreground" aria-hidden="true" />
-              <span style={{ fontWeight: 600, fontSize: 'var(--text-md)' }}>By status</span>
-            </div>
-          </div>
-          <div className="card-body" style={{ height: 260, padding: '4px 8px' }}>
-            {metrics.statusBreakdown.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={metrics.statusBreakdown}
-                    dataKey="count"
-                    nameKey="status"
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={48}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    strokeWidth={0}
-                  >
-                    {metrics.statusBreakdown.map((entry) => (
-                      <Cell
-                        key={entry.status}
-                        fill={STATUS_COLORS[entry.status] ?? '#94a3b8'}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(val: number, name: string) => [val, STATUS_LABELS[name as TicketStatus] ?? name]}
-                    contentStyle={{
-                      background: 'var(--slate-800)', border: 'none', borderRadius: 8,
-                      color: '#fff', fontSize: 12, fontWeight: 600,
-                    }}
-                  />
-                  <Legend
-                    formatter={(val: string) => STATUS_LABELS[val as TicketStatus] ?? val}
-                    wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="chart-empty">No work orders yet</div>
-            )}
-          </div>
-        </div>
+      {/* Reference numbers — after the actionable content; on a phone these
+          are background, not the reason the person opened the app */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <Section
+          title="Work orders reported each month"
+          hint="The last 6 months. The number above each bar is how many were reported that month.">
+          <MonthlyBars data={metrics.ticketsByMonth} />
+        </Section>
+        <Section
+          title="Where they stand now"
+          hint="Every work order, by its current status.">
+          <CountRows rows={statusRows} total={total} />
+        </Section>
       </div>
     </div>
   );

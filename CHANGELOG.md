@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-### "Shift" theme — foundation (design direction B)
+### "Shift" theme — foundation (Day Shift / Night Shift)
 - New visual identity chosen from the November 2026 mockups: **Day Shift**
   (light) and **Night Shift** (dark) share one layout. Barlow / Barlow
   Condensed type, square corners, borders instead of shadows, heavy rules
@@ -13,8 +13,160 @@
 - Tokens only: every screen picks the theme up from `src/index.css`. No
   database, edge-function or permission changes.
 
+### "Needs Info" is gone
+- Product decision (Marco): whoever opens a work order provides all the
+  information; if Pro Roto needs more, Pro Roto calls. Customers use the
+  system to report problems, nothing else.
+- Removed: the Needs Info column and "Move to" button on Dispatch; "Ask for
+  more info" / "Need more info from reporter" / "I've added the info" and
+  the question-and-answer boxes on the work order page; the "more
+  information is needed" emails; Needs Info in the status filter.
+- Customer Admins and Staff no longer change a work order's status at all
+  (Needs Info was their only status action). Every status change is Pro
+  Roto's: New → Scheduled → Dispatched → On Site → In Progress → Completed.
+- **Migration 00035 — run `supabase db push`.** The status stays in the
+  database for old records ("Needs Info (legacy)"); nothing can move into
+  it, and Pro Roto can move any old work order out of it.
+- `update-ticket` no longer accepts `info_request` / `info_reply`.
+
+### Dispatch board looks like the rest of the app
+- The board's layout classes were never defined, so it rendered as an
+  unstyled list (stacked filters, oversized search icon, columns in one long
+  page). Rebuilt with the same cards and tokens as Overview and Analytics.
+- Status columns sit side by side; each work order is a card showing number,
+  urgency, problem, location, technician and scheduled time.
+- The arrow buttons ("→ Scheduled") are now a labelled "Move to" row.
+- Filters have labels (Company, Building, Search) in one row; "Closed (9)"
+  is "Show closed (9)"; the header says how many are open and closed.
+- Phones: statuses with nothing in them collapse into one line.
+- Status and urgency colors use the shared badges (no hard-coded colors),
+  so dark mode is correct.
+
+### Daylight by default; dark mode is saved on the profile
+- The app opens in daylight (light) for everyone. The sign-in screen is
+  always daylight; the device's own dark-mode setting is no longer followed.
+- A person who switches to dark keeps it: the choice is saved on their
+  profile (`users.theme_preference`, **migration 00034 — run
+  `supabase db push`**) and follows them to any computer or phone after
+  they sign in. Signing out returns the screen to daylight.
+- Each member keeps their own theme: the database rejects a change to
+  anyone else's theme, including from company Admins and Pro Roto admins.
+- Theme logic lives in `src/lib/theme.ts` (with tests).
+
+### Overview reads like Analytics
+- Summary tiles: label on top, big number, a sentence saying what it counts;
+  each still opens the matching list. "Emergencies" is now "Open
+  emergencies" (it only ever counted open ones, which looked wrong next to
+  the all-time urgency list).
+- "By severity" → "All work orders by urgency" with counts and percentages,
+  and a note that it covers everything ever reported.
+- Pro Roto admins: the company table moved out of the narrow side column to
+  a full-width "By company" section with plain headers (Open now, All time,
+  Buildings, Locations, People with access).
+- "Work order volume" → "Work orders reported each month" with the count on
+  each bar; the status donut is now a plain list ("Where they stand now").
+- The greeting line says whose work orders it counts (all companies / your
+  buildings) and whether there are open emergencies.
+- Tiles, sections, count lists and the monthly chart are shared with
+  Analytics (`components/StatBlocks.tsx`); Analytics says "locations" like
+  the rest of the app.
+
+### Analytics page is readable
+- The page's layout classes were never defined, so the summary numbers
+  rendered as an unstyled stack ("1 / Open work orders / 10 total"). Rebuilt
+  with the design tokens: four summary tiles in a row (two per row on phones).
+- Every number now has its label above it and a sentence under it saying
+  what it counts ("Not finished yet, out of 10 reported in total", "New work
+  orders since November 1"). The unclear "~10/bldg" figure is gone.
+- "Work orders reported each month" is a bar chart with the count on each
+  bar (the smoothed line suggested values between months). Month labels no
+  longer look like dates ("Oct", not "Oct 26").
+- Issue types, urgency and status are plain lists with counts, percentages
+  and bars: "What was reported", "How urgent they were", "Where they stand
+  now". Urgency is always a word plus a color.
+- Filters have labels (Company, Building); tables say "Open now / This month
+  / All time"; building and company names are real buttons (keyboard
+  accessible); friendlier error with "Try again".
+
+### Pro Roto logo replaces the wrench icon
+- The registered Pro Roto logo now sits next to the app name on the sign-in,
+  forgot/reset password, invitation and resident sign-up pages, in the
+  sidebar, and on the public work-order page (new `BrandLogo` component,
+  `public/pro-roto-logo.svg`).
+- The logo always keeps its original proportions and colors. In light mode
+  it sits directly on the page; in dark mode it gets a white plate so the
+  blue lettering stays readable.
+- Invitation and resident sign-up pages now say "Pro Roto App" (they still
+  said "Work Orders").
+
+### Renamed: PlumbTix is now Pro Roto App
+- The product name is **Pro Roto App** everywhere people see it: sign-in and
+  password pages, app header, welcome tour, public work-order page, PDFs,
+  reports, browser title and the installed-app name.
+- Docs, Claude Code agents and skills use the new name; the design-system
+  skill is now `proroto-ui`.
+- Browser storage keys and the service-worker cache were renamed
+  (`proroto-theme`, `proroto_tour_completed`, `proroto.report-draft.v1`,
+  cache `proroto-app-v3`). One-time effect: the light/dark choice resets and an
+  unsent draft report saved before the update is not restored.
+- Applied migrations (00021, 00032, 00033) still say PlumbTix in comments —
+  applied migrations are never edited. No database change.
+
+### Information requests have a question and an answer box
+- "Ask for more info" / "Need more info from reporter" now opens a box:
+  **What do you need from the reporter?** The question is required, saved as a
+  comment ("Information needed: …") and included in the email.
+- While a work order is **Needs Info**, the Actions panel shows the question.
+  Admins and Staff get **Your answer** + **Send answer**, which posts the reply
+  as a comment, returns the work order to New and emails Pro Roto the answer
+  (replaces the bare "I've added the info" button). Pro Roto keeps "Info
+  received" for answers taken by phone.
+- `update-ticket` accepts `info_request` / `info_reply`; no migration, the
+  transition matrix is unchanged.
+
+### QR code on screen for public sharing
+- The Public Sharing card on a work order now shows the QR code for the
+  public page whenever sharing is on, so it can be scanned straight off the
+  screen. It is the same code already printed on the work order PDF.
+  Generated in the browser; frontend only.
+
+### "Schedule updated" email
+- When Pro Roto switches the technician, date or arrival window on a work
+  order that is already scheduled (status unchanged), the property side now
+  gets a **Schedule updated** email with the current plan. Recipients: every
+  Admin in the company plus the Staff assigned to that building. Edge
+  functions: `update-ticket`, `_shared/notifications.ts`,
+  `_shared/email-templates.ts`.
+
+### Pro Roto sees and changes the schedule in place
+- The Scheduling section on a work order now starts with **Scheduled now:
+  technician · date · arrival window**, and the date and window fields are
+  pre-filled with the current values (they used to open blank), so switching
+  the technician or the time is: change the field, **Save schedule**.
+- Dispatch board cards show the arrival window next to the date.
+- Fix: the dispatch board showed scheduled dates one day early in Pacific
+  time (`new Date('YYYY-MM-DD')` is UTC midnight).
+
+### Arrival window is a drop-down
+- Pro Roto's "Time window" text box on the work order is now an
+  **Arrival window (2 hours)** drop-down: twelve two-hour windows around the
+  clock (`ARRIVAL_WINDOWS` in `shared/types/enums.ts`). Pro Roto picks it after
+  scheduling the job in its dispatch software, so the property manager and
+  staff know a technician is assigned and when to expect them. Frontend only.
+
+### Dollar amounts removed (migration 00033)
+- Pro Roto App is not a billing system: it collects the situations property
+  managers and staff report and dispatches to them. Estimates are sent from
+  Pro Roto's estimating software. The "Quote amount ($)" field, the Quote row
+  on the work order and PDF, the amounts on the approval buttons and the
+  "Estimated cost" line in the approval email are gone. `update-ticket` no
+  longer accepts `quote_amount`; the column stays for historic rows only.
+- "Waiting for Approval" stays as a status (a job can pause while the customer
+  decides); the transition matrix is unchanged.
+- Supersedes the "Quote amount stays" note below.
+
 ### Invoicing removed (migration 00032)
-- Invoices are created in ServiceTitan; PlumbTix reports problems and
+- Invoices are created in ServiceTitan; Pro Roto App reports problems and
   dispatches to them. A work order now ends at **Completed**: the
   `completed → invoiced` transition, the "Mark invoiced" button, the invoice
   number field and the Invoice rows on the work order, PDF and emails are

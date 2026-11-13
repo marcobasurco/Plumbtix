@@ -294,7 +294,6 @@ export interface StatusChangeEmailData {
     technician?: string;
     scheduledDate?: string;
     timeWindow?: string;
-    quoteAmount?: number;
   };
 }
 
@@ -326,8 +325,7 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
       message = 'Work is now in progress on your request.';
       break;
     case 'waiting_approval':
-      message = `Pro Roto has completed their assessment and needs your approval to proceed.`;
-      if (d.quoteAmount) message += ` Estimated cost: <strong>$${esc(d.quoteAmount.toFixed(2))}</strong>.`;
+      message = `Pro Roto has assessed the problem and needs your approval before continuing.`;
       message += ' Pro Roto will call you to confirm — or call us if you have questions.';
       break;
     case 'completed':
@@ -339,9 +337,9 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
     case 'cancelled':
       message = 'This work order has been cancelled.';
       break;
-    case 'needs_info':
-      message = 'Additional information is needed before we can proceed. Please check the work order for details.';
-      break;
+    // 'needs_info' is a legacy status (00035): nothing moves into it, so it
+    // has no message of its own. A historic row moved back to 'new' uses the
+    // default line.
     default:
       message = `The status has been updated to ${esc(newLabelText)}.`;
   }
@@ -359,6 +357,52 @@ export function statusChangeEmail(data: StatusChangeEmailData): { subject: strin
         ${detailTable([
           ['Ticket', `#${esc(data.ticketNumber)}`],
           ['Status', statusBadge(data.newStatus)],
+          ['Issue', esc(issueLabelText)],
+          ['Building', esc(data.buildingName)],
+          ['Unit / Space', esc(data.unitNumber)],
+        ])}
+      `,
+      ctaUrl: ticketUrl,
+      ctaLabel: 'View work order',
+    }),
+  };
+}
+
+// =============================================================================
+// Template: Schedule Changed (→ PM company, no status change)
+// =============================================================================
+
+export interface ScheduleChangeEmailData {
+  ticketNumber: number;
+  ticketId: string;
+  issueType: string;
+  buildingName: string;
+  unitNumber: string;
+  recipientName: string;
+  technician?: string;
+  scheduledDate?: string;
+  timeWindow?: string;
+}
+
+/** Pro Roto switched the technician, date or arrival window on a work order
+ *  that was already scheduled. Shows the schedule as it stands now. */
+export function scheduleChangeEmail(data: ScheduleChangeEmailData): { subject: string; html: string } {
+  const issueLabelText = data.issueType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const ticketUrl = `${getAppUrl()}/dashboard/tickets/${encodeURIComponent(data.ticketId)}`;
+
+  return {
+    subject: `Work order #${data.ticketNumber} — Schedule updated`,
+    html: layout({
+      preheader: `New schedule for ${issueLabelText} at ${data.buildingName}`,
+      title: `Work order #${data.ticketNumber} schedule updated`,
+      body: `
+        <p style="margin:0 0 12px">Hi ${esc(data.recipientName)},</p>
+        <p style="margin:0 0 16px">Pro Roto has updated the schedule for this work order. Here is the current plan:</p>
+        ${detailTable([
+          ['Technician', data.technician ? esc(data.technician) : 'To be assigned'],
+          ['Date', data.scheduledDate ? esc(data.scheduledDate) : 'To be confirmed'],
+          ['Arrival window', data.timeWindow ? esc(data.timeWindow) : 'To be confirmed'],
+          ['Work order', `#${esc(data.ticketNumber)}`],
           ['Issue', esc(issueLabelText)],
           ['Building', esc(data.buildingName)],
           ['Unit / Space', esc(data.unitNumber)],

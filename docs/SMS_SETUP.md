@@ -1,8 +1,8 @@
-# PlumbTix — SMS Notifications Setup Guide
+# Pro Roto App — SMS Notifications Setup Guide
 
 ## Overview
 
-PlumbTix v0.7.0 adds Twilio SMS notifications as a complement to existing Resend email notifications. SMS is used only for high-urgency events to avoid costs and spam.
+Pro Roto App v0.7.0 adds Twilio SMS notifications as a complement to existing Resend email notifications. SMS is used only for high-urgency events to avoid costs and spam.
 
 ## SMS Flows
 
@@ -67,7 +67,7 @@ supabase functions deploy update-ticket
 
 ### Pricing
 - Twilio SMS to US numbers: ~$0.0079/segment (as of 2025)
-- Each SMS is max 160 chars (1 segment). PlumbTix messages are typically 1–2 segments.
+- Each SMS is max 160 chars (1 segment). Pro Roto App messages are typically 1–2 segments.
 - Emergency SMS: ~$0.01–0.02 per PM per emergency ticket
 - Completion SMS: ~$0.01 per resident per completion
 

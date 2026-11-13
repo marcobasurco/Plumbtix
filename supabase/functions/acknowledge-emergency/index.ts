@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — Edge Function: acknowledge-emergency
+// Pro Roto App — Edge Function: acknowledge-emergency
 // =============================================================================
 // Route:  POST /functions/v1/acknowledge-emergency
 // Auth:   proroto_admin only

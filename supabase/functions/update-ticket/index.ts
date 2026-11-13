@@ -14,7 +14,8 @@
 //
 // Restricted fields:
 //   - assigned_technician, technician_id, scheduled_date, scheduled_time_window: proroto_admin ONLY (00028)
-//   - quote_amount: proroto_admin ONLY (invoice_number retired in 00032 — invoices live in ServiceTitan)
+//   - no money fields: quote_amount retired in 00033 (estimates are sent from Pro Roto's
+//     estimating software), invoice_number retired in 00032 (invoices live in ServiceTitan)
 //
 // Transition matrix enforcement:
 //   - Edge Function validates FIRST (returns friendly error message)
@@ -35,7 +36,7 @@ import type { UserRole } from '../_shared/auth.ts';
 import { runInBackground } from '../_shared/background.ts';
 
 
-// ─── Transition matrix (MUST match transitions.ts and migration 00005) ───
+// ─── Transition matrix (MUST match transitions.ts and migration 00035) ───
 
 const TICKET_STATUSES = [
   'new', 'needs_info', 'scheduled', 'dispatched', 'on_site',
@@ -44,9 +45,11 @@ const TICKET_STATUSES = [
 type TicketStatus = typeof TICKET_STATUSES[number];
 
 const TRANSITION_MATRIX: Record<string, Partial<Record<UserRole, readonly string[]>>> = {
-  new:              { proroto_admin: ['needs_info', 'scheduled', 'cancelled'], pm_admin: ['needs_info'] },
-  needs_info:       { proroto_admin: ['new', 'scheduled', 'cancelled'], pm_admin: ['new'], pm_user: ['new'] },
-  scheduled:        { proroto_admin: ['dispatched', 'needs_info', 'cancelled'] },
+  // Only Pro Roto changes a status. 'needs_info' is legacy (00035): nothing
+  // moves into it; a historic row can be moved out.
+  new:              { proroto_admin: ['scheduled', 'cancelled'] },
+  needs_info:       { proroto_admin: ['new', 'scheduled', 'cancelled'] },
+  scheduled:        { proroto_admin: ['dispatched', 'cancelled'] },
   dispatched:       { proroto_admin: ['on_site', 'scheduled', 'cancelled'] },
   on_site:          { proroto_admin: ['in_progress', 'cancelled'] },
   in_progress:      { proroto_admin: ['waiting_approval', 'completed', 'cancelled'] },
@@ -65,6 +68,12 @@ function getAllowedTransitions(current: string, role: UserRole): readonly string
   return TRANSITION_MATRIX[current]?.[role] ?? [];
 }
 
+// Statuses in which a technician/date/window change is worth an email to the
+// property side: the job has been scheduled and is still open.
+const SCHEDULE_NOTICE_STATUSES: readonly string[] = [
+  'scheduled', 'dispatched', 'on_site', 'in_progress', 'waiting_approval',
+];
+
 // ─── Validation schema ───
 
 const UpdateTicketSchema = z.object({
@@ -74,7 +83,6 @@ const UpdateTicketSchema = z.object({
   technician_id: z.string().regex(UUID_REGEX, 'Invalid technician_id').nullable().optional(),
   scheduled_date: z.string().optional(),
   scheduled_time_window: z.string().max(100).optional(),
-  quote_amount: z.number().min(0).nullable().optional(),
   decline_reason: z.string().max(2000).optional(),
 });
 
@@ -113,7 +121,6 @@ Deno.serve(async (req: Request) => {
     technician_id,
     scheduled_date,
     scheduled_time_window,
-    quote_amount,
     decline_reason,
   } = parsed.data;
 
@@ -146,22 +153,12 @@ Deno.serve(async (req: Request) => {
 
     // ─── 6. Check restricted fields ───
     // Scheduling fields: proroto_admin ONLY (only Pro Roto dispatches, 00028)
-    // Financial fields: proroto_admin ONLY
     const schedulingFields: string[] = [];
-    const financialFields: string[] = [];
 
     if (assigned_technician !== undefined) schedulingFields.push('assigned_technician');
     if (technician_id !== undefined) schedulingFields.push('technician_id');
     if (scheduled_date !== undefined) schedulingFields.push('scheduled_date');
     if (scheduled_time_window !== undefined) schedulingFields.push('scheduled_time_window');
-    if (quote_amount !== undefined) financialFields.push('quote_amount');
-
-    // Financial fields: proroto_admin only
-    if (financialFields.length > 0 && !isProRotoAdmin(role)) {
-      return forbidden(
-        `Only Pro Roto admin can modify: ${financialFields.join(', ')}`,
-      );
-    }
 
     // Scheduling fields: proroto_admin only — only Pro Roto dispatches
     if (schedulingFields.length > 0 && !isProRotoAdmin(role)) {
@@ -206,7 +203,6 @@ Deno.serve(async (req: Request) => {
     }
     if (scheduled_date !== undefined) updatePayload.scheduled_date = scheduled_date;
     if (scheduled_time_window !== undefined) updatePayload.scheduled_time_window = scheduled_time_window;
-    if (quote_amount !== undefined) updatePayload.quote_amount = quote_amount;
 
     if (Object.keys(updatePayload).length === 0) {
       return err('NO_CHANGES', 'No fields to update', 400);
@@ -292,6 +288,53 @@ Deno.serve(async (req: Request) => {
           }
         } catch (emailErr) {
           console.error('[update-ticket] Email notification error (non-blocking):', emailErr);
+        }
+      })());
+    }
+
+    // ─── 11. Schedule changed on an already-scheduled work order ───
+    // Status emails (step 10) only go out when the status moves. If Pro Roto
+    // switches the technician, date or arrival window afterwards, tell the
+    // property side what the schedule is now. Not sent before the job is
+    // scheduled (the "scheduled" status email carries the first schedule).
+    const statusUnchanged = !targetStatus || targetStatus === ticket.status;
+    const scheduleChanged =
+      (updated.assigned_technician ?? null) !== (ticket.assigned_technician ?? null) ||
+      (updated.scheduled_date ?? null) !== (ticket.scheduled_date ?? null) ||
+      (updated.scheduled_time_window ?? null) !== (ticket.scheduled_time_window ?? null);
+
+    if (statusUnchanged && scheduleChanged && SCHEDULE_NOTICE_STATUSES.includes(ticket.status)) {
+      runInBackground((async () => {
+        try {
+          const svc = createServiceClient();
+          const [buildingRes, spaceRes, creatorRes] = await Promise.all([
+            svc.from('buildings').select('name, address_line1, city, state, company_id').eq('id', ticket.building_id).single(),
+            svc.from('spaces').select('space_type, unit_number, common_area_type, label').eq('id', ticket.space_id).single(),
+            svc.from('users').select('id, full_name, email').eq('id', ticket.created_by_user_id).single(),
+          ]);
+
+          if (buildingRes.data && spaceRes.data && creatorRes.data) {
+            const { notifyScheduleChange } = await import('../_shared/notifications.ts');
+            await notifyScheduleChange(svc, {
+              ticket_number: updated.ticket_number ?? ticket.ticket_number,
+              id: ticket_id,
+              issue_type: ticket.issue_type,
+              severity: ticket.severity,
+              status: ticket.status,
+              description: ticket.description,
+              assigned_technician: updated.assigned_technician ?? null,
+              scheduled_date: updated.scheduled_date ?? null,
+              scheduled_time_window: updated.scheduled_time_window ?? null,
+              quote_amount: null,
+              invoice_number: null,
+              building: buildingRes.data,
+              space: spaceRes.data,
+              location_note: ticket.location_note ?? null,
+              created_by: creatorRes.data,
+            }, ticket.building_id);
+          }
+        } catch (emailErr) {
+          console.error('[update-ticket] Schedule change email error (non-blocking):', emailErr);
         }
       })());
     }

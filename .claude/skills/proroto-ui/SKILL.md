@@ -1,10 +1,10 @@
 ---
-name: plumbtix-ui
-description: PlumbTix design-system reference — tokens, components, layout classes, status/severity conventions, mobile and print rules. Load before building or changing any screen so new UI matches the existing app instead of inventing a second style.
+name: proroto-ui
+description: Pro Roto App design-system reference — tokens, components, layout classes, status/severity conventions, mobile and print rules. Load before building or changing any screen so new UI matches the existing app instead of inventing a second style.
 user-invocable: false
 ---
 
-# PlumbTix UI reference
+# Pro Roto App UI reference
 
 Read this before touching anything in `src/components` or `src/routes`.
 Source of truth: `src/index.css` (tokens + layout classes), `tailwind.config.ts`
@@ -27,7 +27,7 @@ Source of truth: `src/index.css` (tokens + layout classes), `tailwind.config.ts`
   blue: `#0F5E93` by day, `#6CC0F5` by night). `--emergency` (`#C9302C`, white
   text) is the same in both themes and is used only for emergencies. Raw palette vars exist (`--slate-*`, `--blue-*`, `--red-*`
   …) for charts and badges only. Dark mode is the `.dark` class on `<html>`
-  (toggle in header; stored in `localStorage['plumbtix-theme']`). Every new
+  (toggle in header; daylight is the default and the person's choice is saved on their profile, `users.theme_preference` — see `src/lib/theme.ts`). Every new
   color must have a dark counterpart.
 - **Radii:** `--radius-sm` 2 · `md` 4 · `lg` 4 (cards) · `xl` 6 ·
   `full`. **Shadows:** none on cards (`--shadow-card` is `none`); `--shadow-md/lg` for

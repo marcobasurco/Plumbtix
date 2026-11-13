@@ -91,6 +91,9 @@ All schema changes live in `supabase/migrations/` and are applied in order
 | `00030` | Emergency acknowledgement + on-call escalation: `on_call_roster`, `ticket_escalation_log`, acknowledgement/escalation columns and triggers on `tickets`, pg_cron job calling `escalate-emergencies` every minute (URL + secret from Vault) |
 | `00031` | Phone standard: `normalize_phone()`, cleanup to E.164 with `phone_cleanup_log`, normalizing triggers + CHECK constraints on every phone column |
 | `00032` | Invoicing removed: `completed` is terminal (no `→ invoiced`); `invoice_number` and the `invoiced` enum value kept only for historic rows |
+| `00033` | Dollar amounts removed: `quote_amount` is no longer written or shown (estimates come from Pro Roto's estimating software); column kept only for historic rows |
+| `00034` | Light/dark theme saved on the user's profile (`users.theme_preference`); only the person can change it |
+| `00035` | "Needs Info" leaves the workflow: no transitions into it; customer roles change no status; the enum value stays for historic rows |
 
 **Phone numbers** are stored as E.164 (`+16505551234`) everywhere and shown as
 `(650) 555-1234`. Use `normalizePhone` / `formatPhone` / `telHref` from
@@ -165,9 +168,9 @@ work-orders/
 
 | Role | Scope | Ticket Transitions |
 |------|-------|-------------------|
-| `proroto_admin` | All companies | Full lifecycle (ends at `completed` — invoices live in ServiceTitan); only role that schedules, assigns technicians, cancels, records quote approvals (taken by phone), and sets the quote |
-| `pm_admin` | Own company | `new → needs_info`, `needs_info → new` only. No scheduling, assignment, approval or cancel — only Pro Roto dispatches (migration 00028). Invites Admins/Staff and sets Staff building access from the Team page |
-| `pm_user` | Entitled buildings | `needs_info → new` ("I've added the info") only |
+| `proroto_admin` | All companies | Full lifecycle (ends at `completed` — invoices live in ServiceTitan); only role that schedules, assigns technicians, cancels, and records customer approvals (taken by phone). No dollar amounts are stored |
+| `pm_admin` | Own company | None. Reports problems, comments, adds photos, watches progress. Only Pro Roto changes a status (migrations 00028, 00035). Invites Admins/Staff and sets Staff building access from the Team page |
+| `pm_user` | Entitled buildings | None (report + comment only) |
 | `resident` | Own space | None (create + comment only) |
 
 ---

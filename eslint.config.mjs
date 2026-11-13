@@ -1,5 +1,5 @@
 // =============================================================================
-// PlumbTix — ESLint 9 Flat Config
+// Pro Roto App — ESLint 9 Flat Config
 // =============================================================================
 // Lints src/ and shared/ (browser TypeScript/React code).
 // Edge functions (supabase/functions/) are excluded — they're Deno code with

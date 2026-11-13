@@ -5,8 +5,8 @@ import { fetchTechnicians } from '@/lib/technicians';
 import type { Technician } from '@shared/types/database';
 import type { UpdateTicketRequest } from '@shared/types/api';
 import { getAllowedTransitions, isTerminalStatus } from '@shared/types/transitions';
-import { STATUS_LABELS } from '@shared/types/enums';
-import type { TicketStatus, UserRole } from '@shared/types/enums';
+import { STATUS_LABELS, ARRIVAL_WINDOWS } from '@shared/types/enums';
+import type { TicketStatus } from '@shared/types/enums';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
@@ -17,49 +17,61 @@ interface ActionPanelProps {
   currentStatus: TicketStatus;
   /** Currently assigned technician (roster FK) — dropdown pre-selects this */
   currentTechnicianId: string | null;
-  /** Quote on the work order, if any — shown on Pro Roto's approval buttons */
-  quoteAmount?: number | null;
+  /** Current schedule — shown to Pro Roto and pre-filled so it can be changed */
+  currentTechnicianName?: string | null;
+  currentScheduledDate?: string | null;   // YYYY-MM-DD
+  currentTimeWindow?: string | null;
   onUpdated: () => void;
 }
 
-const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-
 /**
- * What the button *does*, not where the row ends up. A property manager on a
- * phone should read "I've added the info" — not "New" — and a dispatcher
- * should read "Customer approved — schedule", not "Scheduled". Quote
- * approvals happen by phone, so the approval buttons are Pro Roto's only.
+ * What the button *does*, not where the row ends up: a dispatcher should
+ * read "Customer approved — schedule", not "Scheduled". Only Pro Roto changes
+ * a status (00035) — customers see no buttons here. Estimates are
+ * sent from Pro Roto's estimating software and approved by phone — no dollar
+ * amounts live here — so the approval buttons are Pro Roto's only.
  * Falls back to the status label for any pair not listed here, so a new
  * transition can't render an empty button.
  */
-function actionLabel(from: TicketStatus, to: TicketStatus, role: UserRole, quote: number | null | undefined): string {
-  const isPm = role === 'pm_admin' || role === 'pm_user';
-  const quoteText = quote != null ? ` (${currency.format(quote)})` : '';
-  if (to === 'cancelled') return from === 'waiting_approval' ? `Customer declined${quoteText}` : 'Cancel work order';
-  if (to === 'needs_info') return isPm ? 'Need more info from reporter' : 'Ask for more info';
-  if (from === 'needs_info' && to === 'new') return isPm ? "I've added the info" : 'Info received';
+function actionLabel(from: TicketStatus, to: TicketStatus): string {
+  if (to === 'cancelled') return from === 'waiting_approval' ? 'Customer declined' : 'Cancel work order';
+  // Legacy rows only (00035): a work order still in Needs Info can be put back
+  if (from === 'needs_info' && to === 'new') return 'Back to new';
   if (to === 'scheduled') {
-    if (from === 'waiting_approval') return `Customer approved${quoteText} — schedule`;
+    if (from === 'waiting_approval') return 'Customer approved — schedule';
     if (from === 'dispatched') return 'Back to scheduled';
     return 'Schedule';
   }
   if (to === 'dispatched') return 'Dispatch technician';
   if (to === 'on_site') return 'Technician on site';
-  if (to === 'in_progress') return from === 'waiting_approval' ? `Customer approved${quoteText} — resume` : 'Start work';
+  if (to === 'in_progress') return from === 'waiting_approval' ? 'Customer approved — resume' : 'Start work';
   if (to === 'waiting_approval') return 'Waiting on customer approval';
   if (to === 'completed') return 'Mark completed';
   return STATUS_LABELS[to];
 }
 
-export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quoteAmount: quote, onUpdated }: ActionPanelProps) {
+/** 'YYYY-MM-DD' → 'Thu, Nov 12' without the UTC shift `new Date(string)` causes */
+function formatDay(ymd: string): string {
+  const [y, m, d] = ymd.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return ymd;
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+export function ActionPanel({
+  ticketId, currentStatus, currentTechnicianId,
+  currentTechnicianName = null, currentScheduledDate = null, currentTimeWindow = null,
+  onUpdated,
+}: ActionPanelProps) {
+  const currentDate = currentScheduledDate ? currentScheduledDate.slice(0, 10) : '';
+  const currentWindow = currentTimeWindow ?? '';
   const { role } = useAuth();
   const isAdmin = role === 'proroto_admin';
-  // Only Pro Roto dispatches (migration 00028): technician, scheduling and
-  // billing are editable by proroto_admin alone. PM roles see the values in
+  // Only Pro Roto dispatches (migration 00028): technician and scheduling
+  // are editable by proroto_admin alone. PM roles see the values in
   // the "Work details" card on the page instead.
   const canEditFields = isAdmin;
   const ids = {
-    tech: useId(), date: useId(), window: useId(), quote: useId(),
+    tech: useId(), date: useId(), window: useId(),
   };
 
   const [submitting, setSubmitting] = useState(false);
@@ -77,9 +89,12 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
   useEffect(() => {
     setTechnicianId(currentTechnicianId ?? '');
   }, [currentTechnicianId]);
-  const [scheduledDate, setScheduledDate] = useState('');
-  const [timeWindow, setTimeWindow] = useState('');
-  const [quoteAmount, setQuoteAmount] = useState('');
+  // Date and window also mirror the CURRENT schedule, so Pro Roto sees what
+  // is booked and changes it in place; only a real change is sent.
+  const [scheduledDate, setScheduledDate] = useState(currentDate);
+  const [timeWindow, setTimeWindow] = useState(currentWindow);
+  useEffect(() => { setScheduledDate(currentDate); }, [currentDate]);
+  useEffect(() => { setTimeWindow(currentWindow); }, [currentWindow]);
   const [declineReason, setDeclineReason] = useState('');
 
   // Load the roster for the assignment dropdown (proroto_admin only)
@@ -108,12 +123,9 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     // Attach scheduling fields if set (proroto_admin only)
     if (canEditFields) {
       if (technicianId !== (currentTechnicianId ?? '')) payload.technician_id = technicianId || null;
-      if (scheduledDate) payload.scheduled_date = scheduledDate;
-      if (timeWindow.trim()) payload.scheduled_time_window = timeWindow.trim();
+      if (scheduledDate && scheduledDate !== currentDate) payload.scheduled_date = scheduledDate;
+      if (timeWindow && timeWindow !== currentWindow) payload.scheduled_time_window = timeWindow;
     }
-    // Quote: proroto_admin only
-    if (isAdmin && quoteAmount) payload.quote_amount = parseFloat(quoteAmount);
-
     if (targetStatus === 'cancelled' && declineReason.trim()) {
       payload.decline_reason = declineReason.trim();
     }
@@ -122,8 +134,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
 
     if (result.ok) {
       setSuccess(`Work order is now ${STATUS_LABELS[targetStatus].toLowerCase()}.`);
-      setScheduledDate(''); setTimeWindow('');
-      setQuoteAmount(''); setDeclineReason('');
+      setDeclineReason('');
       onUpdated();
     } else {
       setError(result.error.message);
@@ -141,9 +152,8 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
     let hasChanges = false;
 
     if (technicianId !== (currentTechnicianId ?? '')) { payload.technician_id = technicianId || null; hasChanges = true; }
-    if (scheduledDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
-    if (timeWindow.trim()) { payload.scheduled_time_window = timeWindow.trim(); hasChanges = true; }
-    if (quoteAmount) { payload.quote_amount = parseFloat(quoteAmount); hasChanges = true; }
+    if (scheduledDate && scheduledDate !== currentDate) { payload.scheduled_date = scheduledDate; hasChanges = true; }
+    if (timeWindow && timeWindow !== currentWindow) { payload.scheduled_time_window = timeWindow; hasChanges = true; }
 
     if (!hasChanges) {
       setError('Nothing to save yet — change a field first.');
@@ -153,9 +163,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
 
     const result = await updateTicket(payload as UpdateTicketRequest);
     if (result.ok) {
-      setSuccess('Changes saved.');
-      setScheduledDate(''); setTimeWindow('');
-      setQuoteAmount('');
+      setSuccess('Schedule saved.');
       onUpdated();
     } else {
       setError(result.error.message);
@@ -187,8 +195,8 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
       ) : allowed.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {currentStatus === 'waiting_approval'
-            ? <>Pro Roto will call you to go over the quote{quote != null ? ` (${currency.format(quote)})` : ''} before any work continues. Nothing to do here.</>
-            : <>Nothing for you to do right now — it's {STATUS_LABELS[currentStatus].toLowerCase()}. You'll be notified when that changes.</>}
+            ? <>Pro Roto will call you to go over the estimate before any work continues. Nothing to do here.</>
+            : <>Nothing for you to do here — Pro Roto has this work order and will call if anything more is needed. You'll be notified as it moves along.</>}
         </p>
       ) : (
         <div className="mb-4">
@@ -210,7 +218,7 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   }`}
                 >
-                  {actionLabel(currentStatus, target, role, quote)}
+                  {actionLabel(currentStatus, target)}
                 </button>
               );
             })}
@@ -218,10 +226,23 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
         </div>
       )}
 
-      {/* Editable fields — Pro Roto only: scheduling + billing */}
+      {/* Editable fields — Pro Roto only: scheduling */}
       {canEditFields && !terminal && (
         <div className="border-t border-border pt-4 mt-2">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduling & quote</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Scheduling</p>
+          <p className="text-sm mb-3">
+            {currentTechnicianName || currentDate || currentWindow ? (
+              <>
+                <span className="text-muted-foreground">Scheduled now: </span>
+                <strong className="text-foreground">
+                  {[currentTechnicianName || 'No technician yet', currentDate ? formatDay(currentDate) : 'no date yet', currentWindow || 'no arrival window yet'].join(' · ')}
+                </strong>
+                <span className="text-muted-foreground"> — change any field below and save.</span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">Nothing scheduled yet. Pick a technician, date and arrival window.</span>
+            )}
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -238,20 +259,24 @@ export function ActionPanel({ ticketId, currentStatus, currentTechnicianId, quot
               <input id={ids.date} type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label htmlFor={ids.window} className={labelClass}>Time window</label>
-              <input id={ids.window} type="text" value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} placeholder="e.g. 9am–12pm" className={fieldClass} />
-            </div>
-
-            <div>
-              <label htmlFor={ids.quote} className={labelClass}>Quote amount ($)</label>
-              <input id={ids.quote} type="number" inputMode="decimal" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" className={fieldClass} />
+              <label htmlFor={ids.window} className={labelClass}>Arrival window (2 hours)</label>
+              <select id={ids.window} value={timeWindow} onChange={(e) => setTimeWindow(e.target.value)} className={fieldClass}>
+                <option value="">— Choose a window —</option>
+                {/* A window typed before the drop-down existed stays selectable */}
+                {currentWindow && !ARRIVAL_WINDOWS.includes(currentWindow) && (
+                  <option value={currentWindow}>{currentWindow}</option>
+                )}
+                {ARRIVAL_WINDOWS.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
             </div>
           </div>
 
           <Button size="sm" onClick={handleFieldUpdate} disabled={submitting} className="mt-3 min-h-[44px] sm:min-h-0">
             {submitting ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Saving…</>
-            ) : 'Save changes'}
+            ) : 'Save schedule'}
           </Button>
         </div>
       )}

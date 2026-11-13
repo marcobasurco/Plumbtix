@@ -1,6 +1,6 @@
 {
-  "name": "PlumbTix Work Orders",
-  "short_name": "PlumbTix",
+  "name": "Pro Roto App",
+  "short_name": "Pro Roto App",
   "description": "Work Order Management for Plumbing Services",
   "start_url": "/",
   "display": "standalone",

@@ -139,14 +139,20 @@ export function OnCallPage() {
               ) : (
                 <ol className="m-0 p-0 list-none divide-y divide-border">
                   {roster.map((r, i) => (
-                    <li key={r.id} className={`py-3 flex items-center gap-3 flex-wrap ${r.active ? '' : 'opacity-60'}`}>
+                    <li key={r.id} className={`py-3 flex items-center gap-x-3 gap-y-2 flex-wrap ${r.active ? '' : 'opacity-60'}`}>
                       <span aria-hidden="true" className="h-8 w-8 shrink-0 rounded-full bg-muted text-sm font-bold flex items-center justify-center">{i + 1}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-sm truncate">{r.user?.full_name ?? 'Unknown'}</div>
-                        <div className="text-xs text-muted-foreground truncate">
+                      {/* Phone (390 px): line 1 = number, name + phone, On/Off; line 2 = wait time and the move/remove buttons.
+                          The basis leaves room for exactly the number and the switch, so the name is not cut off. */}
+                      <div className="min-w-0 basis-[calc(100%-8.5rem)] sm:basis-0 sm:flex-1">
+                        <div className="font-semibold text-sm break-words sm:truncate">{r.user?.full_name ?? 'Unknown'}</div>
+                        <div className="text-xs text-muted-foreground break-words sm:truncate">
                           {r.user?.phone ? formatPhone(r.user.phone) : <span className="text-destructive font-medium">No phone on file — can't be called</span>}
                         </div>
                       </div>
+                      <label className="flex items-center gap-2 text-sm shrink-0 min-h-[44px]">
+                        <Switch checked={r.active} onCheckedChange={(v: boolean) => run(`active-${r.id}`, () => updateOnCall(r.id, { active: v }))} aria-label={`${r.user?.full_name ?? 'This person'} on call`} />
+                        <span className="text-muted-foreground w-6">{r.active ? 'On' : 'Off'}</span>
+                      </label>
                       <label className="flex items-center gap-2 text-sm">
                         <span className="text-muted-foreground">Wait</span>
                         <input
@@ -155,7 +161,7 @@ export function OnCallPage() {
                           max={120}
                           value={r.wait_minutes}
                           aria-label={`Minutes before paging the next person after ${r.user?.full_name ?? 'this person'}`}
-                          className="form-input w-20 text-center"
+                          className="form-input w-16 text-center"
                           onChange={(e) => {
                             const v = Math.max(1, Math.min(120, Number(e.target.value) || 1));
                             setRoster((prev) => prev.map((x) => x.id === r.id ? { ...x, wait_minutes: v } : x));
@@ -167,14 +173,10 @@ export function OnCallPage() {
                         />
                         <span className="text-muted-foreground">min</span>
                       </label>
-                      <label className="flex items-center gap-2 text-sm">
-                        <Switch checked={r.active} onCheckedChange={(v: boolean) => run(`active-${r.id}`, () => updateOnCall(r.id, { active: v }))} aria-label={`${r.user?.full_name ?? 'This person'} on call`} />
-                        <span className="text-muted-foreground">{r.active ? 'On' : 'Off'}</span>
-                      </label>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-10 w-10 p-0" aria-label="Move up" disabled={i === 0 || busy !== null} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" aria-hidden="true" /></Button>
-                        <Button variant="ghost" size="sm" className="h-10 w-10 p-0" aria-label="Move down" disabled={i === roster.length - 1 || busy !== null} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" aria-hidden="true" /></Button>
-                        <Button variant="ghost" size="sm" className="h-10 w-10 p-0 text-muted-foreground hover:text-destructive" aria-label={`Remove ${r.user?.full_name ?? ''} from on-call`} disabled={busy !== null} onClick={() => setRemoveTarget(r)}><X className="h-4 w-4" aria-hidden="true" /></Button>
+                      <div className="flex gap-1 ml-auto">
+                        <Button variant="ghost" size="sm" className="h-11 w-11 p-0" aria-label="Move up" disabled={i === 0 || busy !== null} onClick={() => move(i, -1)}><ArrowUp className="h-4 w-4" aria-hidden="true" /></Button>
+                        <Button variant="ghost" size="sm" className="h-11 w-11 p-0" aria-label="Move down" disabled={i === roster.length - 1 || busy !== null} onClick={() => move(i, 1)}><ArrowDown className="h-4 w-4" aria-hidden="true" /></Button>
+                        <Button variant="ghost" size="sm" className="h-11 w-11 p-0 text-muted-foreground hover:text-destructive" aria-label={`Remove ${r.user?.full_name ?? ''} from on-call`} disabled={busy !== null} onClick={() => setRemoveTarget(r)}><X className="h-4 w-4" aria-hidden="true" /></Button>
                       </div>
                     </li>
                   ))}

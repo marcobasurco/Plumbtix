@@ -1,9 +1,16 @@
 // =============================================================================
-// Work Orders — Analytics Page (Role-Aware, Mobile-First)
+// Pro Roto App — Analytics Page (Role-Aware, Mobile-First)
 // =============================================================================
-// Admin: platform-wide → drill into company → drill into building
-// PM:    own company → drill into building
-// Responsive: iPhone-optimized cards, charts, and building table
+// Admin: all companies → one company → one building
+// PM:    own company → one building
+//
+// Written to be read by a facilities director, not an analyst: every number
+// has a plain label above it and a short sentence under it saying what it
+// counts; every chart has a title that is a statement and a one-line hint.
+// Layout uses Tailwind utilities + design tokens only (the old `analytics-*`
+// classes were never defined in index.css, so the page rendered unstyled).
+// Shared pieces (tiles, sections, count rows, monthly bars) live in
+// components/StatBlocks.tsx and are also used by the Overview.
 // =============================================================================
 
 import { useEffect, useState, useCallback } from 'react';
@@ -20,13 +27,8 @@ import { fetchCompanyOptions, type CompanyOption } from '@/lib/admin';
 import { ISSUE_TYPE_LABELS, STATUS_LABELS, SEVERITY_LABELS } from '@shared/types/enums';
 import type { TicketSeverity, IssueType } from '@shared/types/enums';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, AreaChart, Area,
-} from 'recharts';
-import {
-  Building2, Users2, Ticket, TrendingUp,
-  ArrowUpRight, AlertTriangle, BarChart3,
-  ChevronRight, MapPin, Home, Search, X,
+  Building2, Users2, Ticket, CalendarDays, BarChart3,
+  ChevronRight, MapPin, Search, X,
 } from 'lucide-react';
 import { useRealtime } from '@/hooks/useRealtime';
 import { PageTransition } from '@/components/PageTransition';
@@ -35,105 +37,60 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { Button } from '@/components/ui/button';
+import {
+  SummaryTile, Section, CountRows, MonthlyBars, plural,
+  SEVERITY_ORDER, SEVERITY_BAR, type CountRow,
+} from '@/components/StatBlocks';
 
-// ---------------------------------------------------------------------------
-// Colors
-// ---------------------------------------------------------------------------
-
-const SEVERITY_COLORS: Record<TicketSeverity, string> = {
-  emergency: '#ef4444', urgent: '#f59e0b', standard: '#3b82f6',
-};
-const SEVERITY_BADGE: Record<string, 'destructive' | 'warning' | 'secondary'> = {
+const SEVERITY_BADGE: Record<TicketSeverity, 'destructive' | 'warning' | 'secondary'> = {
   emergency: 'destructive', urgent: 'warning', standard: 'secondary',
 };
-const PIE_COLORS = ['#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#10b981', '#f97316', '#ec4899', '#22c55e', '#6366f1', '#94a3b8'];
 
 // ---------------------------------------------------------------------------
-// KPI Card (mobile-optimized)
+// Small labelled number used in the phone cards
 // ---------------------------------------------------------------------------
 
-function KPICard({ label, value, subtext, icon, color }: {
-  label: string; value: string | number; subtext?: string;
-  icon: React.ReactNode; color: string;
-}) {
+function MiniStat({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
   return (
-    <div className="analytics-kpi">
-      <div className="analytics-kpi-icon" style={{ background: color + '14', color }}>{icon}</div>
-      <div className="analytics-kpi-body">
-        <div className="analytics-kpi-value">{value}</div>
-        <div className="analytics-kpi-label">{label}</div>
-        {subtext && <div className="analytics-kpi-sub">{subtext}</div>}
-      </div>
+    <div className="min-w-0">
+      <div className={`text-base tabular-nums ${strong ? 'font-bold text-foreground' : 'font-semibold text-foreground'}`}>{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Chart tooltip
+// Building card (phones)
 // ---------------------------------------------------------------------------
 
-function ChartTooltip({ active, payload, label }: {
-  active?: boolean; payload?: Array<{ value: number; name?: string }>; label?: string;
-}) {
-  if (!active || !payload?.length) return null;
+function BuildingCard({ b, onSelect }: { b: BuildingAnalyticsRow; onSelect: () => void }) {
+  const emergencies = b.severity_breakdown.find(s => s.severity === 'emergency')?.count ?? 0;
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 shadow-md text-xs">
-      <div className="font-semibold mb-1">{label}</div>
-      {payload.map((p, i) => (
-        <div key={i} className="text-muted-foreground">{p.name ?? 'Count'}: {p.value}</div>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Building card (mobile)
-// ---------------------------------------------------------------------------
-
-function BuildingCard({ b, isSelected, onSelect }: {
-  b: BuildingAnalyticsRow; isSelected: boolean; onSelect: () => void;
-}) {
-  return (
-    <div className={`analytics-building-card ${isSelected ? 'selected' : ''}`} onClick={onSelect}>
-      <div className="analytics-building-top">
-        <div className="analytics-building-info">
-          <div className="analytics-building-name">
-            {b.building_name || b.address}
-          </div>
+    <button type="button" onClick={onSelect}
+      className="w-full text-left rounded-lg border border-border bg-card p-3 min-h-[44px] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-semibold text-sm text-foreground truncate">{b.building_name || b.address}</div>
           {b.building_name && (
-            <div className="analytics-building-addr">
-              <MapPin className="h-3 w-3 shrink-0" /> {b.address}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+              <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">{b.address}</span>
             </div>
           )}
         </div>
-        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
       </div>
-      <div className="analytics-building-stats">
-        <div className="analytics-building-stat">
-          <span className="analytics-stat-num">{b.total_tickets}</span>
-          <span className="analytics-stat-lbl">Total</span>
-        </div>
-        <div className="analytics-building-stat">
-          <span className="analytics-stat-num" style={{ color: b.open_tickets > 0 ? '#f59e0b' : undefined }}>
-            {b.open_tickets}
-          </span>
-          <span className="analytics-stat-lbl">Open</span>
-        </div>
-        <div className="analytics-building-stat">
-          <span className="analytics-stat-num">{b.tickets_this_month}</span>
-          <span className="analytics-stat-lbl">This Mo.</span>
-        </div>
-        <div className="analytics-building-stat">
-          <span className="analytics-stat-num">{b.unit_count}</span>
-          <span className="analytics-stat-lbl">Units</span>
-        </div>
-        {b.severity_breakdown.filter(s => s.severity === 'emergency' && s.count > 0).map(s => (
-          <Badge key="em" variant="destructive" className="text-[10px] px-1.5 py-0">
-            {s.count} emergency
-          </Badge>
-        ))}
+      <div className="grid grid-cols-3 gap-2 mt-3">
+        <MiniStat label="Open now" value={b.open_tickets} strong={b.open_tickets > 0} />
+        <MiniStat label="This month" value={b.tickets_this_month} />
+        <MiniStat label="All time" value={b.total_tickets} />
       </div>
-    </div>
+      {emergencies > 0 && (
+        <Badge variant="destructive" className="mt-3 text-xs">
+          {emergencies} {plural(emergencies, 'emergency', 'emergencies')}
+        </Badge>
+      )}
+    </button>
   );
 }
 
@@ -143,15 +100,18 @@ function BuildingCard({ b, isSelected, onSelect }: {
 
 function AnalyticsSkeleton() {
   return (
-    <div className="space-y-4 animate-pulse">
-      <div className="analytics-kpi-grid">
-        {[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}
+    <div className="space-y-4">
+      <Skeleton className="h-12 w-64" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28" />)}
       </div>
-      <Skeleton className="h-64" />
+      <Skeleton className="h-72" />
       <Skeleton className="h-64" />
     </div>
   );
 }
+
+const TH = 'py-2 px-3 text-xs font-semibold text-muted-foreground';
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -197,283 +157,248 @@ export function AnalyticsPage() {
         setCompanies(ca);
         setCompanyOptions(co);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load analytics');
+    } catch {
+      setError("We couldn't load the analytics. Check your connection and try again.");
     } finally { setLoading(false); }
   }, [effectiveCompany, selectedBuilding, isAdmin]);
 
   useEffect(() => { load(); }, [load]);
   useRealtime('tickets', load, { enabled: !loading });
 
-  // Filtered buildings for the list
-  const filteredBuildings = buildings
+  if (loading) return <PageTransition><AnalyticsSkeleton /></PageTransition>;
+  if (error) return <ErrorBanner message={error} onRetry={load} />;
+  if (!summary) return null;
+
+  // Buildings for the dropdown and the "By building" list
+  const companyBuildings = buildings.filter(b => !effectiveCompany || b.company_id === effectiveCompany);
+  const filteredBuildings = companyBuildings
     .filter(b => {
-      if (effectiveCompany && b.company_id !== effectiveCompany) return false;
-      if (buildingSearch) {
-        const q = buildingSearch.toLowerCase();
-        return (b.building_name + b.address + b.company_name).toLowerCase().includes(q);
-      }
-      return true;
+      if (!buildingSearch) return true;
+      const q = buildingSearch.toLowerCase();
+      return (b.building_name + b.address + b.company_name).toLowerCase().includes(q);
     })
     .sort((a, b) => b.total_tickets - a.total_tickets);
 
   const selectedBuildingObj = buildings.find(b => b.building_id === selectedBuilding);
-
-  // Chart data
-  const issueChartData = summary?.top_issue_types.map(({ issue_type, count }) => ({
-    name: ISSUE_TYPE_LABELS[issue_type as IssueType] ?? issue_type.replace(/_/g, ' '),
-    count,
-  })) ?? [];
-
-  const sevPieData = summary?.severity_breakdown.map(({ severity, count }) => ({
-    name: SEVERITY_LABELS[severity], value: count, fill: SEVERITY_COLORS[severity],
-  })) ?? [];
-
-  if (loading) return <PageTransition><AnalyticsSkeleton /></PageTransition>;
-  if (error) return <ErrorBanner message={error} />;
-  if (!summary) return null;
-
-  // Breadcrumb context
   const selectedCompanyName = companyOptions.find(c => c.id === selectedCompany)?.name;
+
+  // What the numbers on this page cover, in words
+  const scopeName = selectedBuildingObj
+    ? (selectedBuildingObj.building_name || selectedBuildingObj.address)
+    : selectedCompanyName
+      ? selectedCompanyName
+      : isAdmin ? 'all companies' : 'all your buildings';
+
+  const total = summary.total_tickets;
+  const monthName = new Date().toLocaleDateString('en-US', { month: 'long' });
+
+  // Rows for the three breakdowns
+  const issueRows: CountRow[] = summary.top_issue_types.map(({ issue_type, count }) => ({
+    key: issue_type,
+    label: ISSUE_TYPE_LABELS[issue_type as IssueType] ?? issue_type.replace(/_/g, ' '),
+    count,
+  }));
+  const severityRows: CountRow[] = SEVERITY_ORDER
+    .map(sev => ({
+      key: sev,
+      label: SEVERITY_LABELS[sev],
+      count: summary.severity_breakdown.find(s => s.severity === sev)?.count ?? 0,
+      barClass: SEVERITY_BAR[sev],
+    }))
+    .filter(r => r.count > 0);
+  const statusRows: CountRow[] = summary.status_breakdown.map(({ status, count }) => ({
+    key: status, label: STATUS_LABELS[status], count,
+  }));
+
+  const usersNote = isAdmin
+    ? (selectedCompany ? 'Can sign in for this company' : 'Can sign in, across all companies')
+    : 'Can sign in for your company';
 
   return (
     <PageTransition>
       {/* Header + filters */}
-      <div className="analytics-header">
-        <div className="analytics-header-top">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              Analytics
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {selectedBuildingObj
-                ? `${selectedBuildingObj.building_name || selectedBuildingObj.address}`
-                : selectedCompanyName
-                  ? selectedCompanyName
-                  : isAdmin ? 'Platform-wide metrics' : 'Your company metrics'}
-            </p>
-          </div>
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold tracking-tight flex items-center gap-2 text-foreground">
+            <BarChart3 className="h-5 w-5 text-primary shrink-0" aria-hidden="true" />
+            Analytics
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Plumbing problems reported and where they stand.
+            {' '}Showing <span className="font-semibold text-foreground">{scopeName}</span>.
+          </p>
         </div>
 
-        {/* Filter bar */}
-        <div className="analytics-filter-bar">
+        <div className="flex flex-wrap items-end gap-3 w-full sm:w-auto">
           {isAdmin && (
-            <select className="form-select analytics-filter-select" value={selectedCompany}
-              onChange={(e) => { setSelectedCompany(e.target.value); setSelectedBuilding(''); }}>
-              <option value="">All Companies</option>
-              {companyOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="flex-1 sm:flex-none min-w-[180px]">
+              <label htmlFor="analytics-company" className="block text-xs font-medium text-muted-foreground mb-1">Company</label>
+              <select id="analytics-company" className="form-select w-full min-h-[44px]" value={selectedCompany}
+                onChange={(e) => { setSelectedCompany(e.target.value); setSelectedBuilding(''); }}>
+                <option value="">All companies</option>
+                {companyOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
           )}
-          <select className="form-select analytics-filter-select" value={selectedBuilding}
-            onChange={(e) => setSelectedBuilding(e.target.value)}>
-            <option value="">All Buildings</option>
-            {buildings
-              .filter(b => !effectiveCompany || b.company_id === effectiveCompany)
-              .map(b => (
+          <div className="flex-1 sm:flex-none min-w-[180px]">
+            <label htmlFor="analytics-building" className="block text-xs font-medium text-muted-foreground mb-1">Building</label>
+            <select id="analytics-building" className="form-select w-full min-h-[44px]" value={selectedBuilding}
+              onChange={(e) => setSelectedBuilding(e.target.value)}>
+              <option value="">All buildings</option>
+              {companyBuildings.map(b => (
                 <option key={b.building_id} value={b.building_id}>
                   {b.building_name || b.address}
                 </option>
               ))}
-          </select>
+            </select>
+          </div>
           {(selectedCompany || selectedBuilding) && (
-            <Button variant="ghost" size="sm" className="text-xs shrink-0"
+            <Button variant="outline" className="min-h-[44px] shrink-0"
               onClick={() => { setSelectedCompany(''); setSelectedBuilding(''); }}>
-              <X className="h-3 w-3" /> Clear
+              <X className="h-4 w-4" aria-hidden="true" /> Show everything
             </Button>
           )}
         </div>
       </div>
 
-      {/* KPI Row */}
-      <div className="analytics-kpi-grid">
-        <KPICard label="Open work orders" value={summary.open_tickets}
-          subtext={`${summary.total_tickets} total`}
-          icon={<Ticket className="h-4 w-4" />} color="#f59e0b" />
-        <KPICard label="This Month" value={summary.tickets_this_month}
-          subtext={summary.total_buildings > 0 ? `~${summary.avg_tickets_per_building}/bldg` : ''}
-          icon={<TrendingUp className="h-4 w-4" />} color="#06b6d4" />
-        <KPICard label="Buildings" value={selectedBuilding ? 1 : summary.total_buildings}
-          subtext={`${summary.total_spaces} units`}
-          icon={<Building2 className="h-4 w-4" />} color="#3b82f6" />
-        <KPICard label="Users" value={summary.total_users}
-          icon={<Users2 className="h-4 w-4" />} color="#8b5cf6" />
+      {/* Summary tiles */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <SummaryTile
+          label="Open work orders"
+          value={summary.open_tickets}
+          note={total === 0
+            ? 'Nothing has been reported yet'
+            : `Not finished yet, out of ${total} reported in total`}
+          icon={<Ticket className="h-4 w-4" />} />
+        <SummaryTile
+          label="Reported this month"
+          value={summary.tickets_this_month}
+          note={`New work orders since ${monthName} 1`}
+          icon={<CalendarDays className="h-4 w-4" />} />
+        {selectedBuildingObj ? (
+          <SummaryTile
+            label="Units in this building"
+            value={selectedBuildingObj.unit_count}
+            note="Units set up for this building"
+            icon={<Building2 className="h-4 w-4" />} />
+        ) : (
+          <SummaryTile
+            label="Buildings"
+            value={summary.total_buildings}
+            note={`${summary.total_spaces} ${plural(summary.total_spaces, 'location', 'locations')} inside them`}
+            icon={<Building2 className="h-4 w-4" />} />
+        )}
+        <SummaryTile
+          label="People with access"
+          value={summary.total_users}
+          note={usersNote}
+          icon={<Users2 className="h-4 w-4" />} />
       </div>
 
-      {/* Charts */}
-      <div className="analytics-charts-grid">
-        {/* Ticket trend */}
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-              Work orders (6 months)
-            </div>
-            {summary.ticket_trend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={summary.ticket_trend}>
-                  <defs>
-                    <linearGradient id="ticketFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Area type="monotone" dataKey="count" stroke="#3b82f6" fill="url(#ticketFill)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">No data</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Reported each month */}
+      <Section className="mb-4"
+        title="Work orders reported each month"
+        hint="The last 6 months. The number above each bar is how many were reported that month.">
+        <MonthlyBars data={summary.ticket_trend} />
+      </Section>
 
-        {/* Issue types */}
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              Issue Types
-            </div>
-            {issueChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={issueChartData} layout="vertical" margin={{ left: 0 }}>
-                  <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={100} axisLine={false} tickLine={false} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={18}>
-                    {issueChartData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">No data</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Breakdowns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <Section title="What was reported"
+          hint="The most common problems, out of every work order.">
+          <CountRows rows={issueRows} total={total} />
+        </Section>
+        <Section title="How urgent they were"
+          hint="Every work order, by the urgency it was reported with.">
+          <CountRows rows={severityRows} total={total} />
+        </Section>
+        <Section title="Where they stand now"
+          hint="Every work order, by its current status.">
+          <CountRows rows={statusRows} total={total} />
+        </Section>
       </div>
 
-      {/* Severity + Status */}
-      <div className="analytics-breakdown-grid">
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="text-sm font-semibold mb-3">Severity</div>
-            {sevPieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={sevPieData} dataKey="value" nameKey="name"
-                    cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={3} strokeWidth={0}>
-                    {sevPieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-                  </Pie>
-                  <Tooltip formatter={(val: number, name: string) => [val, name]}
-                    contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11 }} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">No data</div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="text-sm font-semibold mb-3">Status Breakdown</div>
-            <div className="space-y-1.5">
-              {summary.status_breakdown.map(({ status, count }) => {
-                const pct = summary.total_tickets > 0 ? Math.round((count / summary.total_tickets) * 100) : 0;
-                return (
-                  <div key={status} className="analytics-status-row">
-                    <div className="analytics-status-label">{STATUS_LABELS[status]}</div>
-                    <div className="analytics-status-bar-wrap">
-                      <div className="analytics-status-bar"
-                        style={{ width: `${Math.max(pct, 2)}%`, background: PIE_COLORS[Object.keys(STATUS_LABELS).indexOf(status) % PIE_COLORS.length] }} />
-                    </div>
-                    <div className="analytics-status-count">{count}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Building Analytics Table / Cards */}
+      {/* By building */}
       {!selectedBuilding && (
-        <Card className="mt-4">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                Building Analytics
-                <span className="text-xs font-normal text-muted-foreground">({filteredBuildings.length})</span>
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-end justify-between gap-3 mb-4 flex-wrap">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">
+                  By building
+                  <span className="font-normal text-muted-foreground"> ({filteredBuildings.length})</span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Busiest first. Choose a building to see only its numbers.
+                </p>
               </div>
-              <div className="analytics-building-search-wrap">
-                <Search className="analytics-building-search-icon" />
-                <input type="text" placeholder="Search buildings…"
-                  className="form-input analytics-building-search"
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
+                <input type="search" aria-label="Search buildings" placeholder="Search buildings…"
+                  className="form-input w-full pl-9 min-h-[44px]"
                   value={buildingSearch} onChange={(e) => setBuildingSearch(e.target.value)} />
               </div>
             </div>
 
             {filteredBuildings.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-8 text-center">No buildings</div>
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                {buildingSearch ? 'No buildings match your search.' : 'No buildings have been set up yet.'}
+              </p>
             ) : (
               <>
-                {/* Mobile: card list */}
+                {/* Phones: cards */}
                 <div className="md:hidden space-y-2">
                   {filteredBuildings.map(b => (
                     <BuildingCard key={b.building_id} b={b}
-                      isSelected={selectedBuilding === b.building_id}
                       onSelect={() => setSelectedBuilding(b.building_id)} />
                   ))}
                 </div>
 
                 {/* Desktop: table */}
-                <div className="hidden md:block overflow-x-auto -mx-4 px-4">
-                  <table className="w-full text-sm" style={{ minWidth: 700 }}>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b-2 border-border">
-                        <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Building</th>
+                        <th scope="col" className={`${TH} text-left`}>Building</th>
                         {isAdmin && !effectiveCompany && (
-                          <th className="text-left py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Company</th>
+                          <th scope="col" className={`${TH} text-left`}>Company</th>
                         )}
-                        <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Units</th>
-                        <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</th>
-                        <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Open</th>
-                        <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">This Mo.</th>
-                        <th className="text-center py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Severity</th>
+                        <th scope="col" className={`${TH} text-right`}>Open now</th>
+                        <th scope="col" className={`${TH} text-right`}>This month</th>
+                        <th scope="col" className={`${TH} text-right`}>All time</th>
+                        <th scope="col" className={`${TH} text-right`}>Units</th>
+                        <th scope="col" className={`${TH} text-left`}>Urgency (all time)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredBuildings.map(b => (
-                        <tr key={b.building_id}
-                          className="border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => setSelectedBuilding(b.building_id)}>
+                        <tr key={b.building_id} className="border-b border-border hover:bg-muted/50 transition-colors">
                           <td className="py-2 px-3">
-                            <div className="font-semibold">{b.building_name || b.address}</div>
+                            <button type="button" onClick={() => setSelectedBuilding(b.building_id)}
+                              className="text-left font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+                              {b.building_name || b.address}
+                            </button>
                             {b.building_name && <div className="text-xs text-muted-foreground">{b.address}</div>}
                           </td>
                           {isAdmin && !effectiveCompany && (
-                            <td className="py-2 px-2 text-xs text-muted-foreground">{b.company_name}</td>
+                            <td className="py-2 px-3 text-muted-foreground">{b.company_name}</td>
                           )}
-                          <td className="py-2 px-2 text-right tabular-nums">{b.unit_count}</td>
-                          <td className="py-2 px-2 text-right tabular-nums font-semibold">{b.total_tickets}</td>
-                          <td className="py-2 px-2 text-right tabular-nums">
-                            <span style={{ color: b.open_tickets > 0 ? '#f59e0b' : undefined, fontWeight: b.open_tickets > 0 ? 600 : 400 }}>
-                              {b.open_tickets}
-                            </span>
+                          <td className={`py-2 px-3 text-right tabular-nums ${b.open_tickets > 0 ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
+                            {b.open_tickets}
                           </td>
-                          <td className="py-2 px-2 text-right tabular-nums">{b.tickets_this_month}</td>
-                          <td className="py-2 px-2 text-center">
-                            <div className="flex gap-1 justify-center">
-                              {b.severity_breakdown.map(s => (
-                                <Badge key={s.severity} variant={SEVERITY_BADGE[s.severity]} className="text-[10px] px-1.5 py-0">
-                                  {s.count} {SEVERITY_LABELS[s.severity].toLowerCase()}
-                                </Badge>
-                              ))}
+                          <td className="py-2 px-3 text-right tabular-nums">{b.tickets_this_month}</td>
+                          <td className="py-2 px-3 text-right tabular-nums">{b.total_tickets}</td>
+                          <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">{b.unit_count}</td>
+                          <td className="py-2 px-3">
+                            <div className="flex flex-wrap gap-1">
+                              {SEVERITY_ORDER.map(sev => {
+                                const n = b.severity_breakdown.find(s => s.severity === sev)?.count ?? 0;
+                                return n > 0 ? (
+                                  <Badge key={sev} variant={SEVERITY_BADGE[sev]} className="text-xs">
+                                    {n} {SEVERITY_LABELS[sev].toLowerCase()}
+                                  </Badge>
+                                ) : null;
+                              })}
                             </div>
                           </td>
                         </tr>
@@ -487,76 +412,67 @@ export function AnalyticsPage() {
         </Card>
       )}
 
-      {/* Admin-only: Company table */}
+      {/* Admin-only: by company */}
       {isAdmin && !selectedCompany && !selectedBuilding && companies.length > 0 && (
-        <Card className="mt-4">
-          <CardContent className="p-3 sm:p-4">
-            <div className="text-sm font-semibold flex items-center gap-2 mb-3">
-              <Home className="h-4 w-4 text-muted-foreground" />
-              Company Overview
-            </div>
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="text-base font-semibold text-foreground">By company</h3>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+              Busiest first. Choose a company to see only its numbers.
+            </p>
 
-            {/* Mobile: cards */}
+            {/* Phones: cards */}
             <div className="md:hidden space-y-2">
               {companies.map(c => (
-                <div key={c.company_id} className="analytics-company-card"
-                  onClick={() => { setSelectedCompany(c.company_id); setSelectedBuilding(''); }}>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="font-semibold text-sm truncate">{c.company_name}</div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                <button key={c.company_id} type="button"
+                  onClick={() => { setSelectedCompany(c.company_id); setSelectedBuilding(''); }}
+                  className="w-full text-left rounded-lg border border-border bg-card p-3 min-h-[44px] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold text-sm text-foreground truncate">{c.company_name}</div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
                   </div>
-                  <div className="analytics-building-stats">
-                    <div className="analytics-building-stat">
-                      <span className="analytics-stat-num">{c.building_count}</span>
-                      <span className="analytics-stat-lbl">Bldgs</span>
-                    </div>
-                    <div className="analytics-building-stat">
-                      <span className="analytics-stat-num">{c.user_count}</span>
-                      <span className="analytics-stat-lbl">Users</span>
-                    </div>
-                    <div className="analytics-building-stat">
-                      <span className="analytics-stat-num" style={{ color: c.open_tickets > 0 ? '#f59e0b' : undefined }}>
-                        {c.open_tickets}
-                      </span>
-                      <span className="analytics-stat-lbl">Open</span>
-                    </div>
-                    <div className="analytics-building-stat">
-                      <span className="analytics-stat-num">{c.total_tickets}</span>
-                      <span className="analytics-stat-lbl">Total</span>
-                    </div>
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    <MiniStat label="Open now" value={c.open_tickets} strong={c.open_tickets > 0} />
+                    <MiniStat label="This month" value={c.tickets_this_month} />
+                    <MiniStat label="All time" value={c.total_tickets} />
                   </div>
-                </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    {c.building_count} {plural(c.building_count, 'building', 'buildings')} · {c.user_count} {plural(c.user_count, 'person', 'people')} with access
+                  </div>
+                </button>
               ))}
             </div>
 
             {/* Desktop: table */}
-            <div className="hidden md:block overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-sm" style={{ minWidth: 600 }}>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-2 border-border">
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Company</th>
-                    <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Buildings</th>
-                    <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Users</th>
-                    <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Open</th>
-                    <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">This Mo.</th>
-                    <th className="text-right py-2 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</th>
+                    <th scope="col" className={`${TH} text-left`}>Company</th>
+                    <th scope="col" className={`${TH} text-right`}>Open now</th>
+                    <th scope="col" className={`${TH} text-right`}>This month</th>
+                    <th scope="col" className={`${TH} text-right`}>All time</th>
+                    <th scope="col" className={`${TH} text-right`}>Buildings</th>
+                    <th scope="col" className={`${TH} text-right`}>People with access</th>
                   </tr>
                 </thead>
                 <tbody>
                   {companies.map(c => (
-                    <tr key={c.company_id}
-                      className="border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => { setSelectedCompany(c.company_id); setSelectedBuilding(''); }}>
-                      <td className="py-2 px-3 font-semibold">{c.company_name}</td>
-                      <td className="py-2 px-2 text-right tabular-nums">{c.building_count}</td>
-                      <td className="py-2 px-2 text-right tabular-nums">{c.user_count}</td>
-                      <td className="py-2 px-2 text-right tabular-nums">
-                        <span style={{ color: c.open_tickets > 0 ? '#f59e0b' : undefined, fontWeight: c.open_tickets > 0 ? 600 : 400 }}>
-                          {c.open_tickets}
-                        </span>
+                    <tr key={c.company_id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                      <td className="py-2 px-3">
+                        <button type="button"
+                          onClick={() => { setSelectedCompany(c.company_id); setSelectedBuilding(''); }}
+                          className="text-left font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">
+                          {c.company_name}
+                        </button>
                       </td>
-                      <td className="py-2 px-2 text-right tabular-nums">{c.tickets_this_month}</td>
-                      <td className="py-2 px-2 text-right tabular-nums font-semibold">{c.total_tickets}</td>
+                      <td className={`py-2 px-3 text-right tabular-nums ${c.open_tickets > 0 ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
+                        {c.open_tickets}
+                      </td>
+                      <td className="py-2 px-3 text-right tabular-nums">{c.tickets_this_month}</td>
+                      <td className="py-2 px-3 text-right tabular-nums">{c.total_tickets}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">{c.building_count}</td>
+                      <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">{c.user_count}</td>
                     </tr>
                   ))}
                 </tbody>

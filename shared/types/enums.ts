@@ -69,10 +69,12 @@ export const TICKET_STATUSES = [
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 
 /**
- * Statuses a work order can still reach. 'invoiced' is kept in the enum and
- * the database for historic rows only — invoices live in ServiceTitan (00032).
+ * Statuses a work order can still reach. Two are kept in the enum and the
+ * database for historic rows only:
+ *   • 'invoiced'   — invoices live in ServiceTitan (00032).
+ *   • 'needs_info' — if Pro Roto needs more information, Pro Roto calls (00035).
  */
-export const LEGACY_TICKET_STATUSES: readonly TicketStatus[] = ['invoiced'];
+export const LEGACY_TICKET_STATUSES: readonly TicketStatus[] = ['needs_info', 'invoiced'];
 export const SELECTABLE_TICKET_STATUSES: readonly TicketStatus[] =
   TICKET_STATUSES.filter((s) => !LEGACY_TICKET_STATUSES.includes(s));
 
@@ -100,9 +102,20 @@ export const SEVERITY_LABELS: Record<TicketSeverity, string> = {
   standard: 'Standard',
 };
 
+/**
+ * Arrival windows Pro Roto can pick when scheduling: two hours each, around
+ * the clock (emergencies are dispatched at any hour), daytime first. The text
+ * is stored as-is in tickets.scheduled_time_window and shown on the work
+ * order, PDF, public page and "scheduled" email.
+ */
+export const ARRIVAL_WINDOWS: readonly string[] = [
+  '8am–10am', '10am–12pm', '12pm–2pm', '2pm–4pm', '4pm–6pm', '6pm–8pm',
+  '8pm–10pm', '10pm–12am', '12am–2am', '2am–4am', '4am–6am', '6am–8am',
+];
+
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   new: 'New',
-  needs_info: 'Needs Info',
+  needs_info: 'Needs Info (legacy)',
   scheduled: 'Scheduled',
   dispatched: 'Dispatched',
   on_site: 'On Site',
