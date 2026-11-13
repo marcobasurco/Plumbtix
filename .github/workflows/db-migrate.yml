@@ -14,12 +14,14 @@
 # It always reads the migration files from the `main` branch: merge the pull
 # request first, then run this.
 #
-# Required GitHub Secrets:
-#   SUPABASE_ACCESS_TOKEN  — already used by "Deploy Edge Functions"
-#   SUPABASE_PROJECT_REF   — already used by "Deploy Edge Functions"
-#   SUPABASE_DB_PASSWORD   — the database password (Supabase dashboard →
-#                            Project Settings → Database). Add once under
-#                            repo Settings → Secrets and variables → Actions.
+# GitHub Secrets:
+#   SUPABASE_ACCESS_TOKEN  — required; already used by "Deploy Edge Functions"
+#   SUPABASE_PROJECT_REF   — required; already used by "Deploy Edge Functions"
+#   SUPABASE_DB_PASSWORD   — OPTIONAL. Without it the Supabase CLI signs in to
+#                            the database with a temporary login role created
+#                            through the access token, so no database password
+#                            has to be known or stored. Add the secret only if
+#                            that passwordless sign-in is refused.
 # =============================================================================
 
 name: Database migration
@@ -71,11 +73,12 @@ jobs:
           echo "::error::Nothing was changed. To apply, choose 'apply' AND type APPLY in the confirm box."
           exit 1
 
-      - name: Database password is set
+      - name: How this run signs in to the database
         run: |
           if [ -z "$SUPABASE_DB_PASSWORD" ]; then
-            echo "::error::The SUPABASE_DB_PASSWORD secret is missing. Add it under Settings → Secrets and variables → Actions."
-            exit 1
+            echo "No SUPABASE_DB_PASSWORD secret: using the CLI's temporary login role (access token)."
+          else
+            echo "Using the SUPABASE_DB_PASSWORD secret."
           fi
 
       - name: Checkout
@@ -87,25 +90,33 @@ jobs:
           version: latest
 
       - name: Connect to the project
-        run: supabase link --project-ref "$PROJECT_REF"
+        run: |
+          supabase --version
+          supabase link --project-ref "$PROJECT_REF"
+          # Newer CLIs name the hosted project --remote, older ones --linked.
+          if supabase db push --help 2>&1 | grep -q -- '--remote'; then
+            echo "TARGET=--remote" >> "$GITHUB_ENV"
+          else
+            echo "TARGET=--linked" >> "$GITHUB_ENV"
+          fi
 
       - name: What is applied and what is pending
         run: |
           echo "Left column = file in the repo, right column = applied in production."
-          supabase migration list --linked
+          supabase migration list $TARGET
           echo
           echo "---- would be applied ----"
-          supabase db push --linked --dry-run
+          supabase db push $TARGET --dry-run
 
       - name: Apply pending migrations
         if: inputs.action == 'apply'
         run: |
           # --yes answers the CLI's "apply these migrations?" question (no terminal here).
-          supabase db push --linked --yes
+          supabase db push $TARGET --yes
 
       - name: After
         if: inputs.action == 'apply'
-        run: supabase migration list --linked
+        run: supabase migration list $TARGET
 
       - name: Summary
         if: always()
