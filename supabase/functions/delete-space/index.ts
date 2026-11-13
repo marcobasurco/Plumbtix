@@ -62,8 +62,8 @@ Deno.serve(async (req: Request) => {
         ? `Unit ${existing.unit_number}`
         : (existing.common_area_type ?? 'Space');
       return conflict(
-        `Cannot delete ${label}: it has ${ticketCount} ticket(s). ` +
-          'Delete or reassign tickets first.'
+        `Cannot delete ${label}: it has ${ticketCount} work order(s). ` +
+          'A location with work orders is kept for the record.'
       );
     }
 

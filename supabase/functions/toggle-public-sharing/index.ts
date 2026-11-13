@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
       return serverError('Failed to load ticket');
     }
     if (!ticket) {
-      return notFound('Ticket not found or access denied');
+      return notFound('Work order not found or access denied');
     }
 
     // ─── 5. Build update payload ───

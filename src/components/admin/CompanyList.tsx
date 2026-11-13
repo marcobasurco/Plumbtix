@@ -89,7 +89,7 @@ export function CompanyList() {
           </p>
         </div>
         <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
-          <Plus className="h-4 w-4" /> New Company
+          <Plus className="h-4 w-4" /> New company
         </Button>
       </div>
 
@@ -113,7 +113,7 @@ export function CompanyList() {
             Add your first property management company to get started.
           </div>
           <Button size="sm" className="mt-4" onClick={() => { resetForm(); setDialogOpen(true); }}>
-            <Plus className="h-3.5 w-3.5" /> New Company
+            <Plus className="h-3.5 w-3.5" /> New company
           </Button>
         </div>
       ) : (
@@ -137,11 +137,11 @@ export function CompanyList() {
         </StaggerChildren>
       )}
 
-      {/* Create Company Dialog */}
+      {/* Create company Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open: boolean) => { if (!open) resetForm(); setDialogOpen(open); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New Company</DialogTitle>
+            <DialogTitle>New company</DialogTitle>
             <DialogDescription>
               Add a property management company. Buildings and users will be scoped to this company.
             </DialogDescription>
@@ -175,7 +175,7 @@ export function CompanyList() {
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</> : 'Create Company'}
+                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</> : 'Create company'}
               </Button>
             </DialogFooter>
           </form>

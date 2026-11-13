@@ -244,7 +244,7 @@ export function SettingsPage() {
               className="gap-2"
             >
               <Save className="h-4 w-4" />
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? 'Saving…' : 'Save changes'}
             </Button>
           </div>
         </CardContent>

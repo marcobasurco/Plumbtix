@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
         return err('FORBIDDEN', 'You do not have access to attach files to this ticket', 403);
       }
       if (insertErr.message?.includes('foreign key')) {
-        return err('INVALID_REFERENCE', 'Ticket not found', 400);
+        return err('INVALID_REFERENCE', 'Work order not found', 400);
       }
       console.error('[register-attachment] Insert failed:', insertErr.message);
       return serverError('Failed to register attachment');

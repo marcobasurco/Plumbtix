@@ -216,7 +216,7 @@ export function UsersPage() {
   };
 
   const handleDeleteInvitation = (inv: InvitationRow) => {
-    setConfirmTitle('Delete Invitation');
+    setConfirmTitle('Delete invitation');
     setConfirmDesc(`Delete the invitation for ${inv.name} (${inv.email})?\n\nThis will also remove any partially-created account so the email can be invited again.`);
     setConfirmAction(() => async () => {
       setDeleting(inv.id);
@@ -509,7 +509,7 @@ export function UsersPage() {
                                     : <Send className="h-3.5 w-3.5" />}
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                                  title="Delete Invitation"
+                                  title="Delete invitation"
                                   disabled={deleting === inv.id}
                                   onClick={() => handleDeleteInvitation(inv)}>
                                   {deleting === inv.id

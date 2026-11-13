@@ -178,7 +178,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-bold">
-          {isEdit ? 'Edit Space' : 'Add Space'}
+          {isEdit ? 'Edit location' : 'Add location'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -310,7 +310,7 @@ export function SpaceForm({ buildingId, editSpace, onSaved, onCancel }: SpaceFor
               ) : isEdit ? (
                 'Save'
               ) : (
-                'Add Space'
+                'Add location'
               )}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>

@@ -71,7 +71,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (ticketErr || !ticket) {
-      return notFound('Ticket not found or access denied');
+      return notFound('Work order not found or access denied');
     }
 
     // ─── 5. Read comments via SERVICE ROLE (bypasses REVOKE from 00006) ───

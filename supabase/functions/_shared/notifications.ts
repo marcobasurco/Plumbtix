@@ -80,22 +80,31 @@ interface TicketContext {
   };
 }
 
-/** Get all PM users (pm_admin + pm_user) for a company who want email notifications */
-async function getCompanyPMEmails(
+/** The building a work order belongs to (recipients are always resolved per building). */
+async function getTicketBuildingId(svc: SupabaseClient, ticketId: string): Promise<string | null> {
+  const { data, error } = await svc.from('tickets').select('building_id').eq('id', ticketId).single();
+  if (error || !data) {
+    console.error('[notifications] Failed to fetch building for ticket:', error?.message);
+    return null;
+  }
+  return (data as { building_id: string }).building_id;
+}
+
+/**
+ * Customer-side recipients for one work order: the company's Admins plus the
+ * Staff assigned to its building. NEVER the whole company — Staff must not
+ * hear about buildings they cannot see (same rule as the buildings RLS).
+ * Returns nobody if the building cannot be resolved: failing closed is the
+ * safe direction for a tenant-visibility rule.
+ */
+async function getTicketPMRecipients(
   svc: SupabaseClient,
   companyId: string,
+  ticketId: string,
 ): Promise<Array<{ id: string; email: string; full_name: string; phone: string | null; sms_notifications_enabled: boolean }>> {
-  const { data, error } = await svc
-    .from('users')
-    .select('id, email, full_name, phone, sms_notifications_enabled')
-    .eq('company_id', companyId)
-    .in('role', ['pm_admin', 'pm_user']);
-
-  if (error) {
-    console.error('[notifications] Failed to fetch PM emails:', error.message);
-    return [];
-  }
-  return data ?? [];
+  const buildingId = await getTicketBuildingId(svc, ticketId);
+  if (!buildingId || !companyId) return [];
+  return getBuildingPMRecipients(svc, companyId, buildingId);
 }
 
 /**
@@ -108,9 +117,9 @@ async function getBuildingPMRecipients(
   svc: SupabaseClient,
   companyId: string,
   buildingId: string,
-): Promise<Array<{ id: string; email: string; full_name: string }>> {
+): Promise<Array<{ id: string; email: string; full_name: string; phone: string | null; sms_notifications_enabled: boolean }>> {
   const [usersRes, entRes] = await Promise.all([
-    svc.from('users').select('id, email, full_name, role')
+    svc.from('users').select('id, email, full_name, role, phone, sms_notifications_enabled')
       .eq('company_id', companyId).in('role', ['pm_admin', 'pm_user']),
     svc.from('building_entitlements').select('user_id').eq('building_id', buildingId),
   ]);
@@ -292,10 +301,20 @@ export async function notifyNewTicket(
 
     const { subject, html } = newTicketEmail(emailData);
 
-    // Send to Pro Roto
-    const recipients = ticket.severity === 'emergency'
+    // Send to Pro Roto: the configured address list plus every Pro Roto
+    // admin's own email, so "every Pro Roto admin is emailed" is true even
+    // when the shared mailbox is not being watched.
+    const adminUsers = await getProRotoAdminUsers(svc);
+    const listed = ticket.severity === 'emergency'
       ? getProRotoEmergencyEmails()
       : getProRotoEmails();
+    const seenEmails = new Set<string>();
+    const recipients = [...listed, ...adminUsers.map((a) => a.email)].filter((e) => {
+      const key = (e || '').trim().toLowerCase();
+      if (!key || seenEmails.has(key)) return false;
+      seenEmails.add(key);
+      return true;
+    });
 
     await sendEmail({
       to: recipients,
@@ -314,14 +333,13 @@ export async function notifyNewTicket(
     // ─── SMS: Emergency tickets → SMS to PMs + Pro Roto admins ─────────
     if (ticket.severity === 'emergency') {
       try {
-        const [pmUsers, adminUsers] = await Promise.all([
-          getCompanyPMEmails(svc, ticket.building.company_id),
-          getProRotoAdminUsers(svc),
-        ]);
+        // Customer side: Admins + the Staff assigned to this building only.
+        const pmUsers = await getTicketPMRecipients(svc, ticket.building.company_id, ticket.id);
 
-        // Merge PMs + admins, deduplicate by user ID
+        // Pro Roto FIRST: texts go out one at a time, and the people who
+        // must respond are never queued behind the customer's list.
         const seen = new Set<string>();
-        const allRecipients = [...pmUsers, ...adminUsers].filter(u => {
+        const allRecipients = [...adminUsers, ...pmUsers].filter(u => {
           if (seen.has(u.id)) return false;
           seen.add(u.id);
           return true;
@@ -330,8 +348,8 @@ export async function notifyNewTicket(
         if (allRecipients.length > 0) {
           await smsEmergencyToPMs(svc, ticket, allRecipients);
           const withPhone = allRecipients.filter(p => normalizePhone(p.phone)).length;
-          console.log('[notifications] Emergency SMS sent to %d recipients (%d PMs + admins with phone) for #%d',
-            withPhone, withPhone, ticket.ticket_number);
+          console.log('[notifications] Emergency SMS sent to %d recipients with a phone (%d Pro Roto, %d customer) for #%d',
+            withPhone, adminUsers.length, pmUsers.length, ticket.ticket_number);
         }
       } catch (smsErr) {
         console.error('[notifications] Emergency SMS error (non-blocking):', smsErr);
@@ -379,8 +397,8 @@ export async function notifyStatusChange(
 
     // Determine who to notify based on who made the change
     if (updatedByRole === 'proroto_admin') {
-      // Pro Roto updated → notify PM company + ticket creator
-      const pmUsers = await getCompanyPMEmails(svc, ticket.building.company_id);
+      // Pro Roto updated → notify the Admins and the Staff assigned to this building
+      const pmUsers = await getTicketPMRecipients(svc, ticket.building.company_id, ticket.id);
 
       for (const pm of pmUsers) {
         const { subject, html } = statusChangeEmail({ ...baseData, recipientName: pm.full_name });
@@ -530,8 +548,8 @@ export async function notifyComment(
     } else {
       // Public comment → notify the other side
       if (data.authorRole === 'proroto_admin') {
-        // Pro Roto commented → notify PMs
-        const pmUsers = await getCompanyPMEmails(svc, data.companyId);
+        // Pro Roto commented → notify the Admins and the Staff assigned to this building
+        const pmUsers = await getTicketPMRecipients(svc, data.companyId, data.ticketId);
         for (const pm of pmUsers) {
           const { subject, html } = commentEmail({
             ticketNumber: data.ticketNumber,
@@ -554,7 +572,7 @@ export async function notifyComment(
           ticketId: data.ticketId,
           buildingName: data.buildingName,
           authorName: data.authorName,
-          authorRole: data.authorRole === 'pm_admin' ? 'Property Manager' : 'Resident',
+          authorRole: data.authorRole === 'pm_admin' ? 'Admin' : data.authorRole === 'pm_user' ? 'Staff' : 'Resident',
           commentText: data.commentText,
           recipientName: 'Pro Roto',
           isInternal: false,

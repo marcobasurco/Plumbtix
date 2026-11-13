@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (fetchErr || !ticket) {
-      return notFound('Ticket not found or access denied');
+      return notFound('Work order not found or access denied');
     }
 
     // ─── 5. Validate status transition ───
@@ -342,6 +342,6 @@ Deno.serve(async (req: Request) => {
     return ok({ ticket: updated });
   } catch (e) {
     console.error('[update-ticket] Unexpected error:', e);
-    return serverError('Unexpected error during ticket update');
+    return serverError('Unexpected error while updating the work order');
   }
 });

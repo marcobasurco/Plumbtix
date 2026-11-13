@@ -136,7 +136,7 @@ export function PublicTicketView() {
     fetch(`${base}/get-public-ticket?token=${encodeURIComponent(token)}`)
       .then(async (res) => {
         const json = await res.json();
-        if (!json.ok) throw new Error(json.error?.message || 'Failed to load ticket');
+        if (!json.ok) throw new Error(json.error?.message || 'Could not load this work order');
         setTicket(json.data.ticket);
         setComments(json.data.comments ?? []);
         setStatusLog(json.data.statusLog ?? []);
@@ -238,7 +238,7 @@ export function PublicTicketView() {
         </div>
 
         {/* ── Ticket Details ── */}
-        <Section title="Ticket Details">
+        <Section title="Work order details">
           <Row label="Issue Type" value={ISSUE_TYPE_LABELS[ticket.issue_type as IssueType] ?? ticket.issue_type} />
           {ticket.description && <Row label="Description" value={ticket.description} />}
           {ticket.assigned_technician && <Row label="Technician" value={ticket.assigned_technician} />}

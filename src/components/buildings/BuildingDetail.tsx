@@ -255,7 +255,7 @@ export function BuildingDetail() {
           </div>
           {canWrite && !showSpaceForm && (
             <Button size="sm" onClick={() => { setEditingSpace(null); setShowSpaceForm(true); }}>
-              <Plus className="h-3.5 w-3.5" /> Add Space
+              <Plus className="h-3.5 w-3.5" /> Add location
             </Button>
           )}
         </div>
@@ -480,7 +480,7 @@ export function BuildingDetail() {
             </div>
             {canWrite && (
               <Button size="sm" className="mt-4" onClick={() => { setEditingSpace(null); setShowSpaceForm(true); }}>
-                <Plus className="h-3.5 w-3.5" /> Add Space
+                <Plus className="h-3.5 w-3.5" /> Add location
               </Button>
             )}
           </div>

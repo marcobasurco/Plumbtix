@@ -179,7 +179,7 @@ export function AcceptInvitePage() {
           >
             {submitting ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</>
-            ) : 'Create Account'}
+            ) : 'Create account'}
           </Button>
         </form>
 

@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
 
     if (ticketErr) {
       console.error('[get-public-ticket] Query error:', ticketErr.message);
-      return serverError('Failed to load ticket');
+      return serverError('Could not load this work order');
     }
     if (!ticket) {
       // Same 404 whether the token never existed or sharing was revoked —
@@ -183,6 +183,6 @@ Deno.serve(async (req: Request) => {
 
   } catch (e) {
     console.error('[get-public-ticket] Unexpected error:', e);
-    return serverError('Unexpected error loading ticket');
+    return serverError('Unexpected error loading this work order');
   }
 });

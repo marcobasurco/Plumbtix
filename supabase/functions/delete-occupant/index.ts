@@ -46,14 +46,14 @@ Deno.serve(async (req: Request) => {
       const { data: openTickets } = await userClient
         .from('tickets')
         .select('id')
-        .eq('reported_by_user_id', occupant.user_id)
+        .eq('created_by_user_id', occupant.user_id)
         .not('status', 'in', '("completed","invoiced","cancelled")')
         .limit(1);
 
       if (openTickets && openTickets.length > 0) {
         return err(
           'HAS_DEPENDENCIES',
-          `Cannot delete ${occupant.name} — they have open tickets. Close or reassign first.`,
+          `Cannot delete ${occupant.name} — they have open work orders. Close those first.`,
           409,
         );
       }

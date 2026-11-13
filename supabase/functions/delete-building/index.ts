@@ -71,7 +71,7 @@ Deno.serve(async (req: Request) => {
     if ((ticketCount ?? 0) > 0) {
       return conflict(
         `Cannot delete building "${existing.name || existing.address_line1}": ` +
-          `it has ${ticketCount} ticket(s). Delete or reassign tickets first.`
+          `it has ${ticketCount} work order(s). A building with work orders is kept for the record.`
       );
     }
 
